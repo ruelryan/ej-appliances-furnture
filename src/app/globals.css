@@ -3,6 +3,16 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Chart tokens (validated palette — see dataviz reference) */
+  --chart-1: #2a78d6;      /* categorical slot 1: blue */
+  --chart-2: #008300;      /* categorical slot 2: green */
+  --chart-grid: #e1e0d9;
+  --chart-axis: #898781;
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
 }
 
 @theme inline {
@@ -16,6 +26,18 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    --chart-1: #3987e5;
+    --chart-2: #008300;
+    --chart-grid: #2c2c2a;
+    --chart-axis: #898781;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff;
+    color: #000000;
   }
 }
 
