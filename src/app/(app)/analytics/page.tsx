@@ -50,7 +50,7 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-navy">
+      <h1 className="text-xl font-semibold text-navy">
         Analytics
       </h1>
 
@@ -115,7 +115,7 @@ export default async function AnalyticsPage() {
       </div>
 
       <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-1 text-sm font-bold text-navy">
+        <h2 className="mb-1 text-sm font-semibold text-navy">
           Top customers
         </h2>
         <p className="mb-3 text-xs text-muted">
@@ -162,7 +162,7 @@ function ChartCard({
 }) {
   return (
     <section className="rounded-card border border-surface bg-white p-4">
-      <h2 className="text-sm font-bold text-navy">
+      <h2 className="text-sm font-semibold text-navy">
         {title}
       </h2>
       <p className="mb-3 text-xs text-muted">{sub}</p>

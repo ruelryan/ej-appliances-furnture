@@ -36,7 +36,7 @@ export default async function CollectionsPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-navy">
+      <h1 className="text-xl font-semibold text-navy">
         Collections Worklist
       </h1>
 
@@ -68,7 +68,7 @@ export default async function CollectionsPage({
                 <div className="min-w-0">
                   <Link
                     href={`/contracts/${c.id}`}
-                    className="font-semibold text-navy hover:underline"
+                    className="font-display font-semibold text-navy hover:underline"
                   >
                     {c.display_name}
                   </Link>

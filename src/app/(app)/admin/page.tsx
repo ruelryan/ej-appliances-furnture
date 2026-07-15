@@ -32,13 +32,13 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-navy">
+      <h1 className="text-xl font-semibold text-navy">
         Admin
       </h1>
 
       {/* Users */}
       <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-3 text-sm font-bold text-navy">
+        <h2 className="mb-3 text-sm font-semibold text-navy">
           Users
         </h2>
         <div className="mb-4 space-y-2">
@@ -77,7 +77,7 @@ export default async function AdminPage() {
 
       {/* Exports */}
       <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-1 text-sm font-bold text-navy">
+        <h2 className="mb-1 text-sm font-semibold text-navy">
           Data exports
         </h2>
         <p className="mb-3 text-xs text-muted">
@@ -99,7 +99,7 @@ export default async function AdminPage() {
 
       {/* Audit log */}
       <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-3 text-sm font-bold text-navy">
+        <h2 className="mb-3 text-sm font-semibold text-navy">
           Recent changes (audit log)
         </h2>
         <div className="overflow-x-auto">

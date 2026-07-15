@@ -141,7 +141,7 @@ export default async function ContractPage({
 
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold text-navy">
+          <h1 className="text-xl font-semibold text-navy">
             <Link
               href={`/customers/${c.customer_id}`}
               className="hover:underline"
@@ -179,7 +179,7 @@ export default async function ContractPage({
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Contract info */}
         <section className="rounded-card border border-surface bg-white p-4">
-          <h2 className="mb-3 text-sm font-bold text-navy">
+          <h2 className="mb-3 text-sm font-semibold text-navy">
             Contract
           </h2>
           <dl className="space-y-1.5 text-sm">
@@ -222,7 +222,7 @@ export default async function ContractPage({
 
         {/* Money */}
         <section className="rounded-card border border-surface bg-white p-4">
-          <h2 className="mb-3 text-sm font-bold text-navy">
+          <h2 className="mb-3 text-sm font-semibold text-navy">
             Account
           </h2>
           <PaidProgress
@@ -251,7 +251,7 @@ export default async function ContractPage({
 
       {/* Term comparison — the contract's term highlighted, others what-if */}
       <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-1 text-sm font-bold text-navy">
+        <h2 className="mb-1 text-sm font-semibold text-navy">
           Terms
         </h2>
         <p className="mb-3 text-xs text-muted">
@@ -316,7 +316,7 @@ export default async function ContractPage({
 
       {/* Payment history */}
       <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-3 text-sm font-bold text-navy">
+        <h2 className="mb-3 text-sm font-semibold text-navy">
           Payments ({(payments ?? []).filter((p) => !p.voided_at).length})
         </h2>
         <div className="overflow-x-auto">
@@ -393,7 +393,7 @@ export default async function ContractPage({
       {/* Follow-up message */}
       <section className="rounded-card border border-surface bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-navy">
+          <h2 className="text-sm font-semibold text-navy">
             Follow-up message
           </h2>
           <div className="flex gap-2">
@@ -415,7 +415,7 @@ export default async function ContractPage({
 
       {/* Notes */}
       <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-3 text-sm font-bold text-navy">
+        <h2 className="mb-3 text-sm font-semibold text-navy">
           Notes
         </h2>
         <div className="space-y-2">

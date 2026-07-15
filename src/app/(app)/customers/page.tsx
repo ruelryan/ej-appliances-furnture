@@ -25,7 +25,7 @@ export default async function CustomersPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-navy">
+      <h1 className="text-xl font-semibold text-navy">
         Customers
       </h1>
 

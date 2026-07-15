@@ -33,7 +33,7 @@ export default async function PaymentsPage({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-navy">
+        <h1 className="text-xl font-semibold text-navy">
           Payments
         </h1>
         <Link
@@ -76,7 +76,7 @@ export default async function PaymentsPage({
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="font-semibold text-navy">
+                  <div className="font-display font-semibold text-navy">
                     {contract?.customers?.display_name ?? "—"}
                     {p.voided_at && (
                       <span className="ml-2 rounded bg-danger-bg px-1.5 py-0.5 text-[10px] font-bold text-danger">

@@ -28,7 +28,7 @@ export default async function ContractPrintPage({
     <div className="text-[13px] leading-relaxed">
       <PrintControls />
       <Letterhead />
-      <h1 className="mb-4 text-center text-base font-bold">
+      <h1 className="mb-4 text-center text-base font-semibold">
         INSTALLMENT SALES CONTRACT
       </h1>
 

@@ -43,7 +43,7 @@ export default async function ReceiptPage({
     <div className="text-sm">
       <PrintControls />
       <Letterhead />
-      <h1 className="mb-4 text-center text-base font-bold">
+      <h1 className="mb-4 text-center text-base font-semibold">
         PAYMENT ACKNOWLEDGMENT
       </h1>
 

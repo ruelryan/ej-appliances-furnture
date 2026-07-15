@@ -38,7 +38,7 @@ export default async function ContractsPage({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-navy">
+        <h1 className="text-xl font-semibold text-navy">
           Contracts
         </h1>
         <Link
@@ -89,7 +89,7 @@ export default async function ContractsPage({
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="font-semibold text-navy">
+                <div className="font-display font-semibold text-navy">
                   {c.display_name}
                 </div>
                 <div className="truncate text-sm text-muted">

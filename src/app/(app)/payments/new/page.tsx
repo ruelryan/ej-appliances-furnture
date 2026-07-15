@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PaymentForm } from "./payment-form";
+import { BackLink } from "@/components/back-link";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +26,8 @@ export default async function NewPaymentPage({
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <h1 className="text-xl font-bold text-navy">
-        Record Payment
+      <h1 className="flex items-center gap-2 text-xl font-semibold text-navy">
+        <BackLink /> Record Payment
       </h1>
       <PaymentForm preselected={preselected} />
     </div>

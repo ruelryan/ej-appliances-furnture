@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
 import { TierBadge } from "@/components/tier-badge";
+import { BackLink } from "@/components/back-link";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +34,8 @@ export default async function CustomerPage({
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-navy">
-          {customer.display_name}
+        <h1 className="flex items-center gap-2 text-xl font-semibold text-navy">
+          <BackLink /> {customer.display_name}
         </h1>
         <div className="mt-1 space-y-0.5 text-sm text-muted">
           <div>📞 {(customer.phones ?? []).join(" / ") || "no phone"}</div>
@@ -63,7 +64,7 @@ export default async function CustomerPage({
       </div>
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-navy">
+        <h2 className="mb-2 text-sm font-semibold text-navy">
           Contracts ({contracts?.length ?? 0})
         </h2>
         <div className="space-y-2">

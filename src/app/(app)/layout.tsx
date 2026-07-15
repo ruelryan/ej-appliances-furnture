@@ -18,7 +18,7 @@ export default async function AppLayout({
     <div className="min-h-dvh bg-white">
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-surface bg-white px-4 py-3">
-        <Link href="/" className="text-lg font-bold text-navy">
+        <Link href="/" className="font-display text-lg font-semibold text-navy">
           E &amp; J
         </Link>
         <div className="flex items-center gap-3">

@@ -65,7 +65,7 @@ export function VoidPaymentButton({
             className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-1 text-base font-bold text-danger">
+            <h3 className="mb-1 text-base font-semibold text-danger">
               Void this payment?
             </h3>
             <p className="mb-3 text-xs text-muted">

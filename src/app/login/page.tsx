@@ -10,7 +10,7 @@ export default function LoginPage() {
     <main className="flex min-h-dvh items-center justify-center bg-white p-4">
       <div className="w-full max-w-sm rounded-card border border-surface bg-white p-8 shadow-sm">
         <div className="mb-8 text-center">
-          <div className="text-2xl font-bold text-navy">
+          <div className="font-display text-2xl font-semibold text-navy">
             E &amp; J
           </div>
           <div className="text-sm text-muted">

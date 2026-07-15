@@ -49,7 +49,7 @@ export default async function CustomerCardPrintPage({
     <div className="text-sm">
       <PrintControls />
       <Letterhead />
-      <h1 className="mb-4 text-center text-base font-bold">CUSTOMER CARD</h1>
+      <h1 className="mb-4 text-center text-base font-semibold">CUSTOMER CARD</h1>
 
       <div className="mb-4 grid grid-cols-2 gap-x-8 gap-y-1 text-xs">
         {[...left, ...right].map(([k, v]) => (
@@ -79,7 +79,7 @@ export default async function CustomerCardPrintPage({
         </div>
       </div>
 
-      <h2 className="mb-1 text-xs font-bold">PAYMENT HISTORY</h2>
+      <h2 className="mb-1 text-xs font-semibold">PAYMENT HISTORY</h2>
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-muted text-left">
