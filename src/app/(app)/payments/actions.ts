@@ -41,6 +41,17 @@ export async function voidPayment(paymentId: string, reason: string) {
   return {};
 }
 
+export async function unvoidPayment(paymentId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("unvoid_payment", {
+    p_payment_id: paymentId,
+  });
+
+  if (error) return { error: error.message };
+  revalidatePath("/payments");
+  return {};
+}
+
 export async function searchContracts(term: string) {
   const supabase = await createClient();
   const q = term.trim();

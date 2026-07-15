@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
-import { VoidPaymentButton } from "./void-button";
+import { RestorePaymentButton, VoidPaymentButton } from "./void-button";
 
 export const dynamic = "force-dynamic";
 
@@ -105,7 +105,21 @@ export default async function PaymentsPage({
                   <div className="text-right font-bold text-slate-900 dark:text-slate-100">
                     {peso(p.amount)}
                   </div>
-                  {isOwner && !p.voided_at && <VoidPaymentButton paymentId={p.id} />}
+                  {isOwner &&
+                    (p.voided_at ? (
+                      <RestorePaymentButton
+                        paymentId={p.id}
+                        paymentNo={p.payment_no}
+                      />
+                    ) : (
+                      <VoidPaymentButton
+                        paymentId={p.id}
+                        paymentNo={p.payment_no}
+                        customerName={contract?.customers?.display_name ?? "—"}
+                        amount={Number(p.amount)}
+                        paymentDate={p.payment_date}
+                      />
+                    ))}
                 </div>
               </div>
             </div>
