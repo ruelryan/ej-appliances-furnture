@@ -44,12 +44,12 @@ function MoneyTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-md dark:border-slate-700 dark:bg-slate-800">
-      <div className="mb-1 font-semibold text-slate-700 dark:text-slate-200">
+    <div className="rounded-card border border-surface bg-white px-3 py-2 text-xs shadow-md">
+      <div className="mb-1 font-semibold text-navy">
         {label}
       </div>
       {payload.map((p) => (
-        <div key={p.name} className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+        <div key={p.name} className="flex items-center gap-1.5 text-navy">
           <span
             className="inline-block h-2 w-2 rounded-full"
             style={{ background: p.color }}
@@ -172,12 +172,12 @@ export function AgingChart({
             if (!active || !payload?.length) return null;
             const row = payload[0].payload as { Contracts: number; overdue: number };
             return (
-              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-md dark:border-slate-700 dark:bg-slate-800">
-                <div className="font-semibold text-slate-700 dark:text-slate-200">{label}</div>
-                <div className="text-slate-600 dark:text-slate-300">
+              <div className="rounded-card border border-surface bg-white px-3 py-2 text-xs shadow-md">
+                <div className="font-semibold text-navy">{label}</div>
+                <div className="text-navy">
                   {row.Contracts} contract(s)
                 </div>
-                <div className="text-slate-600 dark:text-slate-300">
+                <div className="text-navy">
                   Past due: <span className="font-medium">{peso(row.overdue)}</span>
                 </div>
               </div>
@@ -223,9 +223,9 @@ export function AgentBars({
             if (!active || !payload?.length) return null;
             const row = payload[0].payload as { name: string; value: number; count: number };
             return (
-              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-md dark:border-slate-700 dark:bg-slate-800">
-                <div className="font-semibold text-slate-700 dark:text-slate-200">{row.name}</div>
-                <div className="text-slate-600 dark:text-slate-300">
+              <div className="rounded-card border border-surface bg-white px-3 py-2 text-xs shadow-md">
+                <div className="font-semibold text-navy">{row.name}</div>
+                <div className="text-navy">
                   {peso(row.value)} · {row.count} contract(s)
                 </div>
               </div>

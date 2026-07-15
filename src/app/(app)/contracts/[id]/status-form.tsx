@@ -25,16 +25,16 @@ export function StatusForm({
           setTimeout(() => setSaved(false), 2000);
         })
       }
-      className="flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+      className="flex flex-wrap items-end gap-2 rounded-card border border-surface bg-white p-4"
     >
       <div className="min-w-40 flex-1">
-        <label className="mb-1 block text-xs font-medium text-slate-500">
+        <label className="mb-1 block text-xs font-medium text-muted">
           Collection status
         </label>
         <select
           name="collection_status"
           defaultValue={collectionStatus ?? ""}
-          className="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="w-full rounded-card border border-surface px-2 py-2 text-sm"
         >
           <option value="">— none —</option>
           {COLLECTION_STATUSES.map((s) => (
@@ -45,13 +45,13 @@ export function StatusForm({
         </select>
       </div>
       <div className="min-w-40 flex-1">
-        <label className="mb-1 block text-xs font-medium text-slate-500">
+        <label className="mb-1 block text-xs font-medium text-muted">
           Delivery status
         </label>
         <select
           name="delivery_status"
           defaultValue={deliveryStatus}
-          className="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="w-full rounded-card border border-surface px-2 py-2 text-sm"
         >
           {DELIVERY_STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -63,7 +63,7 @@ export function StatusForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-sky-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
+        className="rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
       >
         {saved ? "✅ Saved" : pending ? "Saving…" : "Update status"}
       </button>

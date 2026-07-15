@@ -7,11 +7,11 @@ export function CreateUserForm() {
   const [state, formAction, pending] = useActionState(createUser, null);
 
   const input =
-    "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100";
+    "w-full rounded-card border border-surface px-3 py-2 text-sm";
 
   return (
-    <form action={formAction} className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+    <form action={formAction} className="space-y-3 border-t border-surface pt-4">
+      <h3 className="text-sm font-semibold text-navy">
         Add user
       </h3>
       <div className="grid grid-cols-2 gap-3">
@@ -32,12 +32,12 @@ export function CreateUserForm() {
       </div>
 
       {state && "error" in state && state.error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <p className="rounded-card bg-danger-bg px-3 py-2 text-sm text-danger">
           {state.error}
         </p>
       )}
       {state && "success" in state && state.success && (
-        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+        <p className="rounded-card bg-surface px-3 py-2 text-sm text-teal-dark">
           {state.success}
         </p>
       )}
@@ -45,7 +45,7 @@ export function CreateUserForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-sky-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
+        className="rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
       >
         {pending ? "Creating…" : "Create account"}
       </button>

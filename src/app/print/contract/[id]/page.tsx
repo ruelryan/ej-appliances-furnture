@@ -51,32 +51,32 @@ export default async function ContractPrintPage({
               ["Sales agent", c.sales_agent ?? "—"],
             ] as Array<[string, string]>
           ).map(([k, v]) => (
-            <tr key={k} className="border-b border-slate-200">
-              <td className="w-1/3 py-1.5 text-slate-500">{k}</td>
+            <tr key={k} className="border-b border-surface">
+              <td className="w-1/3 py-1.5 text-muted">{k}</td>
               <td className="py-1.5 font-medium">{v}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <div className="mb-4 rounded border border-slate-400 p-3">
+      <div className="mb-4 rounded border border-muted p-3">
         <div className="mb-2 text-xs font-bold">PAYMENT TERMS</div>
         <table className="w-full text-xs">
           <tbody>
             <tr>
-              <td className="py-0.5 text-slate-500">Cash price</td>
+              <td className="py-0.5 text-muted">Cash price</td>
               <td className="py-0.5 text-right font-medium">{peso(c.cash_price)}</td>
             </tr>
             <tr>
-              <td className="py-0.5 text-slate-500">Term</td>
+              <td className="py-0.5 text-muted">Term</td>
               <td className="py-0.5 text-right font-medium">{termLabel(c.term_months)}</td>
             </tr>
             <tr>
-              <td className="py-0.5 text-slate-500">Total contract price</td>
+              <td className="py-0.5 text-muted">Total contract price</td>
               <td className="py-0.5 text-right font-medium">{peso(c.total_price)}</td>
             </tr>
             <tr>
-              <td className="py-0.5 text-slate-500">Downpayment (25%)</td>
+              <td className="py-0.5 text-muted">Downpayment (25%)</td>
               <td className="py-0.5 text-right font-medium">{peso(c.downpayment)}</td>
             </tr>
             <tr>

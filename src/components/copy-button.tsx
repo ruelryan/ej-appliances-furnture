@@ -24,7 +24,7 @@ export function CopyButton({ text, label = "📋 Copy" }: { text: string; label?
     <button
       type="button"
       onClick={copy}
-      className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
+      className="rounded-card bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-dark"
     >
       {copied ? "✅ Copied!" : label}
     </button>

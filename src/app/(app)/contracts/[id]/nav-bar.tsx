@@ -29,18 +29,18 @@ export function ContractNavBar({
       <Link
         href={`/contracts/${id}?nav=${sort}`}
         title={title}
-        className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-600"
+        className="rounded-card bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal-dark"
       >
         {symbol}
       </Link>
     ) : (
-      <span className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-bold text-slate-400 dark:bg-slate-800 dark:text-slate-600">
+      <span className="rounded-card bg-surface px-4 py-2 text-sm font-bold text-muted">
         {symbol}
       </span>
     );
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+    <div className="flex flex-wrap items-center gap-2 rounded-card border border-surface bg-white p-3">
       {arrow(prevId, "◀", "Previous open contract")}
       {arrow(nextId, "▶", "Next open contract")}
       <select
@@ -48,7 +48,7 @@ export function ContractNavBar({
         onChange={(e) =>
           router.replace(`?nav=${e.target.value}`, { scroll: false })
         }
-        className="rounded-lg border border-slate-300 px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="rounded-card border border-surface px-2 py-2 text-sm"
         aria-label="Browse order"
       >
         {NAV_SORTS.map((s) => (
@@ -57,7 +57,7 @@ export function ContractNavBar({
           </option>
         ))}
       </select>
-      <span className="ml-auto text-xs text-slate-400">
+      <span className="ml-auto text-xs text-muted">
         {position !== null
           ? `${position} of ${total} open`
           : `${total} open contracts`}

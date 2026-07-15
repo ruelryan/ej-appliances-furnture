@@ -25,7 +25,7 @@ export default async function CustomersPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+      <h1 className="text-xl font-bold text-navy">
         Customers
       </h1>
 
@@ -35,11 +35,11 @@ export default async function CustomersPage({
           name="q"
           defaultValue={q}
           placeholder="Search by name…"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="w-full rounded-card border border-surface px-3 py-2 text-sm"
         />
         <button
           type="submit"
-          className="rounded-lg bg-sky-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+          className="rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
         >
           Search
         </button>
@@ -50,25 +50,25 @@ export default async function CustomersPage({
           <Link
             key={c.id}
             href={`/customers/${c.id}`}
-            className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 hover:border-sky-400 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-sky-600"
+            className="flex items-center justify-between rounded-card border border-surface bg-white p-4 hover:border-brand"
           >
             <div className="min-w-0">
-              <div className="font-semibold text-slate-900 dark:text-slate-100">
+              <div className="font-semibold text-navy">
                 {c.display_name}
               </div>
-              <div className="truncate text-xs text-slate-500">
+              <div className="truncate text-xs text-muted">
                 {(c.phones ?? []).join(" / ") || "no phone"}
                 {c.address ? ` · ${c.address}` : ""}
               </div>
             </div>
-            <div className="shrink-0 text-xs text-slate-400">
+            <div className="shrink-0 text-xs text-muted">
               {(c.contracts as unknown as { count: number }[])?.[0]?.count ?? 0}{" "}
               contract(s)
             </div>
           </Link>
         ))}
         {customers?.length === 0 && (
-          <p className="py-8 text-center text-sm text-slate-500">
+          <p className="py-8 text-center text-sm text-muted">
             No customers found.
           </p>
         )}

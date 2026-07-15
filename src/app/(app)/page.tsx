@@ -20,7 +20,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+      <h1 className="text-xl font-bold text-navy">
         Dashboard
       </h1>
 
@@ -28,16 +28,16 @@ export default async function DashboardPage() {
         {tiles.map((t) => (
           <div
             key={t.label}
-            className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+            className="rounded-card border border-surface bg-white p-4"
           >
-            <div className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="text-xs text-muted">
               {t.label}
             </div>
             <div
               className={`mt-1 text-lg font-bold ${
                 t.alert
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-slate-900 dark:text-slate-100"
+                  ? "text-danger"
+                  : "text-navy"
               }`}
             >
               {t.value}
@@ -49,30 +49,30 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-3">
         <Link
           href="/payments/new"
-          className="rounded-xl bg-sky-800 p-4 text-center font-semibold text-white hover:bg-sky-700"
+          className="rounded-card bg-brand p-4 text-center font-semibold text-white hover:bg-brand-dark"
         >
           💵 Record Payment
         </Link>
         <Link
           href="/contracts/new"
-          className="rounded-xl bg-emerald-700 p-4 text-center font-semibold text-white hover:bg-emerald-600"
+          className="rounded-card bg-teal p-4 text-center font-semibold text-white hover:bg-teal-dark"
         >
           📄 New Contract
         </Link>
         <Link
           href="/collections"
-          className="rounded-xl border border-slate-300 bg-white p-4 text-center font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          className="rounded-card border border-surface bg-white p-4 text-center font-semibold text-navy hover:bg-surface"
         >
           📢 Collections worklist
           {(stats?.demand_tier_count ?? 0) + (stats?.overdue_tier_count ?? 0) > 0 && (
-            <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900 dark:text-red-200">
+            <span className="ml-2 rounded-full bg-danger-bg px-2 py-0.5 text-xs font-bold text-danger">
               {(stats?.demand_tier_count ?? 0) + (stats?.overdue_tier_count ?? 0)}
             </span>
           )}
         </Link>
         <Link
           href="/contracts"
-          className="rounded-xl border border-slate-300 bg-white p-4 text-center font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          className="rounded-card border border-surface bg-white p-4 text-center font-semibold text-navy hover:bg-surface"
         >
           🔍 Find a contract
         </Link>
@@ -82,13 +82,13 @@ export default async function DashboardPage() {
         <div className="flex gap-3">
           <Link
             href="/analytics"
-            className="text-sm font-medium text-sky-700 hover:underline dark:text-sky-300"
+            className="text-sm font-medium text-brand hover:underline"
           >
             📊 Analytics →
           </Link>
           <Link
             href="/admin"
-            className="text-sm font-medium text-sky-700 hover:underline dark:text-sky-300"
+            className="text-sm font-medium text-brand hover:underline"
           >
             ⚙️ Admin →
           </Link>

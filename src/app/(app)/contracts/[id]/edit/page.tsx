@@ -24,10 +24,10 @@ export default async function EditContractPage({
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+      <h1 className="text-xl font-bold text-navy">
         Edit Contract #{contract.contract_no}
       </h1>
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-muted">
         {(contract.customers as unknown as { display_name: string })?.display_name}
         {" — "}every change is recorded in the audit log. Price and term are
         locked after creation; void the contract and create a new one if those

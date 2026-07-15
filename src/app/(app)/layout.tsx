@@ -15,17 +15,17 @@ export default async function AppLayout({
   const isOwner = profile.role === "owner";
 
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-dvh bg-white">
       {/* Top bar */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-        <Link href="/" className="text-lg font-bold text-sky-900 dark:text-sky-300">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-surface bg-white px-4 py-3">
+        <Link href="/" className="text-lg font-bold text-navy">
           E &amp; J
         </Link>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500 dark:text-slate-400">
+          <span className="text-xs text-muted">
             {profile.full_name}
             {isOwner && (
-              <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+              <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
                 OWNER
               </span>
             )}
@@ -33,7 +33,7 @@ export default async function AppLayout({
           <form action={logout}>
             <button
               type="submit"
-              className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="rounded-card border border-surface px-2.5 py-1 text-xs text-navy hover:bg-surface"
             >
               Sign out
             </button>
@@ -43,7 +43,7 @@ export default async function AppLayout({
 
       <div className="mx-auto flex w-full max-w-6xl">
         {/* Desktop sidebar */}
-        <aside className="sticky top-[53px] hidden h-[calc(100dvh-53px)] w-48 shrink-0 border-r border-slate-200 p-3 md:block dark:border-slate-800">
+        <aside className="sticky top-[53px] hidden h-[calc(100dvh-53px)] w-48 shrink-0 border-r border-surface p-3 md:block">
           <NavLinks isOwner={isOwner} variant="sidebar" />
         </aside>
 
@@ -52,7 +52,7 @@ export default async function AppLayout({
       </div>
 
       {/* Mobile bottom tabs */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden dark:border-slate-800 dark:bg-slate-900">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
         <NavLinks isOwner={isOwner} variant="tabs" />
       </nav>
     </div>

@@ -33,10 +33,10 @@ export default async function CustomerPage({
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+        <h1 className="text-xl font-bold text-navy">
           {customer.display_name}
         </h1>
-        <div className="mt-1 space-y-0.5 text-sm text-slate-500 dark:text-slate-400">
+        <div className="mt-1 space-y-0.5 text-sm text-muted">
           <div>📞 {(customer.phones ?? []).join(" / ") || "no phone"}</div>
           {customer.address && <div>🏠 {customer.address}</div>}
           <div className="flex gap-3 pt-1">
@@ -44,7 +44,7 @@ export default async function CustomerPage({
               <a
                 href={customer.messenger_url}
                 target="_blank"
-                className="font-medium text-sky-700 hover:underline dark:text-sky-300"
+                className="font-medium text-brand hover:underline"
               >
                 💬 Messenger
               </a>
@@ -53,7 +53,7 @@ export default async function CustomerPage({
               <a
                 href={customer.gps_url}
                 target="_blank"
-                className="font-medium text-sky-700 hover:underline dark:text-sky-300"
+                className="font-medium text-brand hover:underline"
               >
                 📍 Map
               </a>
@@ -63,7 +63,7 @@ export default async function CustomerPage({
       </div>
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+        <h2 className="mb-2 text-sm font-bold text-navy">
           Contracts ({contracts?.length ?? 0})
         </h2>
         <div className="space-y-2">
@@ -71,13 +71,13 @@ export default async function CustomerPage({
             <Link
               key={c.id}
               href={`/contracts/${c.id}`}
-              className="flex items-start justify-between gap-2 rounded-xl border border-slate-200 bg-white p-4 hover:border-sky-400 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-sky-600"
+              className="flex items-start justify-between gap-2 rounded-card border border-surface bg-white p-4 hover:border-brand"
             >
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <div className="truncate text-sm font-semibold text-navy">
                   {c.item_description}
                 </div>
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-muted">
                   #{c.contract_no} · {fmtDateShort(c.contract_date)}
                 </div>
               </div>

@@ -25,7 +25,7 @@ export default async function NewPaymentPage({
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+      <h1 className="text-xl font-bold text-navy">
         Record Payment
       </h1>
       <PaymentForm preselected={preselected} />

@@ -8,13 +8,13 @@ export function PrintControls() {
     <div className="mb-4 flex gap-2 print:hidden">
       <button
         onClick={() => router.back()}
-        className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+        className="rounded-card border border-surface px-4 py-2 text-sm font-semibold text-navy hover:bg-surface"
       >
         ← Back
       </button>
       <button
         onClick={() => window.print()}
-        className="rounded-lg bg-sky-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+        className="rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
       >
         🖨️ Print / Save as PDF
       </button>

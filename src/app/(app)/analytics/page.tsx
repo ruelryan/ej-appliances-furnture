@@ -50,7 +50,7 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+      <h1 className="text-xl font-bold text-navy">
         Analytics
       </h1>
 
@@ -58,12 +58,12 @@ export default async function AnalyticsPage() {
         {tiles.map((t) => (
           <div
             key={t.label}
-            className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+            className="rounded-card border border-surface bg-white p-4"
           >
-            <div className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="text-xs text-muted">
               {t.label}
             </div>
-            <div className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">
+            <div className="mt-1 text-lg font-bold text-navy">
               {t.value}
             </div>
           </div>
@@ -114,17 +114,17 @@ export default async function AnalyticsPage() {
         </ChartCard>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="mb-1 text-sm font-bold text-slate-700 dark:text-slate-300">
+      <section className="rounded-card border border-surface bg-white p-4">
+        <h2 className="mb-1 text-sm font-bold text-navy">
           Top customers
         </h2>
-        <p className="mb-3 text-xs text-slate-400">
+        <p className="mb-3 text-xs text-muted">
           By lifetime contract value
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-slate-700">
+              <tr className="border-b border-surface text-left text-xs text-muted">
                 <th className="py-1.5 pr-3">Customer</th>
                 <th className="py-1.5 pr-3 text-right">Contracts</th>
                 <th className="py-1.5 pr-3 text-right">Lifetime value</th>
@@ -135,7 +135,7 @@ export default async function AnalyticsPage() {
               {(topCustomers ?? []).map((c) => (
                 <tr
                   key={c.customer_id}
-                  className="border-b border-slate-100 dark:border-slate-800"
+                  className="border-b border-surface"
                 >
                   <td className="py-1.5 pr-3">{c.display_name}</td>
                   <td className="py-1.5 pr-3 text-right">{c.contract_count}</td>
@@ -161,11 +161,11 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-      <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300">
+    <section className="rounded-card border border-surface bg-white p-4">
+      <h2 className="text-sm font-bold text-navy">
         {title}
       </h2>
-      <p className="mb-3 text-xs text-slate-400">{sub}</p>
+      <p className="mb-3 text-xs text-muted">{sub}</p>
       {children}
     </section>
   );

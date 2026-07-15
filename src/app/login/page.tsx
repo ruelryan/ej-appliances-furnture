@@ -7,13 +7,13 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, null);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <main className="flex min-h-dvh items-center justify-center bg-white p-4">
+      <div className="w-full max-w-sm rounded-card border border-surface bg-white p-8 shadow-sm">
         <div className="mb-8 text-center">
-          <div className="text-2xl font-bold text-sky-900 dark:text-sky-300">
+          <div className="text-2xl font-bold text-navy">
             E &amp; J
           </div>
-          <div className="text-sm text-slate-500 dark:text-slate-400">
+          <div className="text-sm text-muted">
             Appliances &amp; Furniture
           </div>
         </div>
@@ -22,7 +22,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
+              className="mb-1 block text-sm font-medium text-navy"
             >
               Email
             </label>
@@ -32,13 +32,13 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               required
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-card border border-surface px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
             />
           </div>
           <div>
             <label
               htmlFor="password"
-              className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
+              className="mb-1 block text-sm font-medium text-navy"
             >
               Password
             </label>
@@ -48,12 +48,12 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-card border border-surface px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
             />
           </div>
 
           {state?.error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+            <p className="rounded-card bg-danger-bg px-3 py-2 text-sm text-danger">
               {state.error}
             </p>
           )}
@@ -61,7 +61,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-lg bg-sky-800 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-60"
+            className="w-full rounded-card bg-brand py-3 text-base font-bold text-white shadow-[0_2px_8px_rgba(244,77,85,0.3)] transition hover:bg-brand-dark disabled:opacity-60 disabled:shadow-none"
           >
             {pending ? "Signing in…" : "Sign in"}
           </button>

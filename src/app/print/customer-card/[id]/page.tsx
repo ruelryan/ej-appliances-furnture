@@ -53,28 +53,28 @@ export default async function CustomerCardPrintPage({
 
       <div className="mb-4 grid grid-cols-2 gap-x-8 gap-y-1 text-xs">
         {[...left, ...right].map(([k, v]) => (
-          <div key={k} className="flex justify-between border-b border-slate-200 py-1">
-            <span className="text-slate-500">{k}</span>
+          <div key={k} className="flex justify-between border-b border-surface py-1">
+            <span className="text-muted">{k}</span>
             <span className="text-right font-medium">{v}</span>
           </div>
         ))}
       </div>
 
-      <div className="mb-4 grid grid-cols-4 gap-2 rounded border border-slate-300 p-2 text-center text-xs">
+      <div className="mb-4 grid grid-cols-4 gap-2 rounded border border-surface p-2 text-center text-xs">
         <div>
-          <div className="text-slate-500">Total price</div>
+          <div className="text-muted">Total price</div>
           <div className="font-bold">{peso(c.total_price)}</div>
         </div>
         <div>
-          <div className="text-slate-500">Monthly</div>
+          <div className="text-muted">Monthly</div>
           <div className="font-bold">{peso(c.monthly_amortization)}</div>
         </div>
         <div>
-          <div className="text-slate-500">Total paid</div>
+          <div className="text-muted">Total paid</div>
           <div className="font-bold">{peso(c.total_paid)}</div>
         </div>
         <div>
-          <div className="text-slate-500">Balance</div>
+          <div className="text-muted">Balance</div>
           <div className="font-bold">{peso(c.remaining_balance)}</div>
         </div>
       </div>
@@ -82,7 +82,7 @@ export default async function CustomerCardPrintPage({
       <h2 className="mb-1 text-xs font-bold">PAYMENT HISTORY</h2>
       <table className="w-full text-xs">
         <thead>
-          <tr className="border-b border-slate-400 text-left">
+          <tr className="border-b border-muted text-left">
             <th className="py-1">Date</th>
             <th className="py-1">OR#</th>
             <th className="py-1">Payment ID</th>
@@ -91,7 +91,7 @@ export default async function CustomerCardPrintPage({
         </thead>
         <tbody>
           {(payments ?? []).map((p) => (
-            <tr key={p.id} className="border-b border-slate-200">
+            <tr key={p.id} className="border-b border-surface">
               <td className="py-1">{fmtDateShort(p.payment_date)}</td>
               <td className="py-1">{p.receipt_no ?? "—"}</td>
               <td className="py-1 font-mono">{p.payment_no}</td>
@@ -100,7 +100,7 @@ export default async function CustomerCardPrintPage({
           ))}
           {(payments ?? []).length === 0 && (
             <tr>
-              <td colSpan={4} className="py-2 text-center text-slate-400">
+              <td colSpan={4} className="py-2 text-center text-muted">
                 No payments yet
               </td>
             </tr>
@@ -108,7 +108,7 @@ export default async function CustomerCardPrintPage({
         </tbody>
       </table>
 
-      <div className="mt-4 text-right text-[10px] text-slate-400">
+      <div className="mt-4 text-right text-[10px] text-muted">
         Printed {fmtDate(new Date())}
       </div>
     </div>

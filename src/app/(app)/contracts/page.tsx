@@ -37,12 +37,12 @@ export default async function ContractsPage({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+        <h1 className="text-xl font-bold text-navy">
           Contracts
         </h1>
         <Link
           href="/contracts/new"
-          className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-600"
+          className="rounded-card bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal-dark"
         >
           + New
         </Link>
@@ -54,12 +54,12 @@ export default async function ContractsPage({
           name="q"
           defaultValue={q}
           placeholder="Search name, contract no., or item…"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="w-full rounded-card border border-surface px-3 py-2 text-sm"
         />
         <select
           name="status"
           defaultValue={status}
-          className="rounded-lg border border-slate-300 px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="rounded-card border border-surface px-2 py-2 text-sm"
         >
           <option value="open">Open</option>
           <option value="closed">Closed</option>
@@ -67,14 +67,14 @@ export default async function ContractsPage({
         </select>
         <button
           type="submit"
-          className="rounded-lg bg-sky-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+          className="rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
         >
           Search
         </button>
       </form>
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <p className="rounded-card bg-danger-bg px-3 py-2 text-sm text-danger">
           Could not load contracts: {error.message}
         </p>
       )}
@@ -84,33 +84,33 @@ export default async function ContractsPage({
           <Link
             key={c.id}
             href={`/contracts/${c.id}`}
-            className="block rounded-xl border border-slate-200 bg-white p-4 hover:border-sky-400 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-sky-600"
+            className="block rounded-card border border-surface bg-white p-4 hover:border-brand"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="font-semibold text-slate-900 dark:text-slate-100">
+                <div className="font-semibold text-navy">
                   {c.display_name}
                 </div>
-                <div className="truncate text-sm text-slate-500 dark:text-slate-400">
+                <div className="truncate text-sm text-muted">
                   {c.item_description}
                 </div>
-                <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <div className="mt-1 text-xs text-muted">
                   #{c.contract_no} · {fmtDateShort(c.contract_date)}
                   {c.sales_agent ? ` · ${c.sales_agent}` : ""}
                 </div>
               </div>
               <div className="shrink-0 text-right">
                 <TierBadge tier={c.followup_tier} />
-                <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <div className="mt-1 text-sm font-semibold text-navy">
                   {peso(c.remaining_balance)}
                 </div>
-                <div className="text-[11px] text-slate-400">balance</div>
+                <div className="text-[11px] text-muted">balance</div>
               </div>
             </div>
           </Link>
         ))}
         {contracts?.length === 0 && (
-          <p className="py-8 text-center text-sm text-slate-500">
+          <p className="py-8 text-center text-sm text-muted">
             No contracts found{term ? ` for “${term}”` : ""}.
           </p>
         )}

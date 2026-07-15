@@ -38,12 +38,12 @@ export function EditForm({ contract }: { contract: Contract }) {
   }
 
   const input =
-    "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100";
+    "w-full rounded-card border border-surface px-3 py-2 text-sm";
   const label =
-    "mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300";
+    "mb-1 block text-sm font-medium text-navy";
 
   return (
-    <form action={submit} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <form action={submit} className="space-y-3 rounded-card border border-surface bg-white p-4">
       <div>
         <label className={label}>Item description</label>
         <input
@@ -120,7 +120,7 @@ export function EditForm({ contract }: { contract: Contract }) {
       </div>
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <p className="rounded-card bg-danger-bg px-3 py-2 text-sm text-danger">
           {error}
         </p>
       )}
@@ -128,7 +128,7 @@ export function EditForm({ contract }: { contract: Contract }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-xl bg-sky-800 py-3 text-sm font-bold text-white hover:bg-sky-700 disabled:opacity-50"
+        className="w-full rounded-card bg-brand py-3 text-sm font-bold text-white hover:bg-brand-dark disabled:opacity-50"
       >
         {pending ? "Saving…" : "Save Changes"}
       </button>

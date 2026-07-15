@@ -22,12 +22,12 @@ export function NoteForm({ contractId }: { contractId: string }) {
         name="body"
         placeholder="Add a note…"
         required
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-full rounded-card border border-surface px-3 py-2 text-sm"
       />
       <button
         type="submit"
         disabled={pending}
-        className="shrink-0 rounded-lg bg-sky-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
+        className="shrink-0 rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
       >
         {pending ? "…" : "Add"}
       </button>

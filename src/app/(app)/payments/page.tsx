@@ -33,12 +33,12 @@ export default async function PaymentsPage({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+        <h1 className="text-xl font-bold text-navy">
           Payments
         </h1>
         <Link
           href="/payments/new"
-          className="rounded-lg bg-sky-800 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+          className="rounded-card bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
         >
           + Record
         </Link>
@@ -50,11 +50,11 @@ export default async function PaymentsPage({
           name="q"
           defaultValue={q}
           placeholder="Search PAY# or OR#…"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="w-full rounded-card border border-surface px-3 py-2 text-sm"
         />
         <button
           type="submit"
-          className="rounded-lg bg-sky-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+          className="rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
         >
           Search
         </button>
@@ -70,21 +70,21 @@ export default async function PaymentsPage({
           return (
             <div
               key={p.id}
-              className={`rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 ${
+              className={`rounded-card border border-surface bg-white p-4 ${
                 p.voided_at ? "opacity-60" : ""
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="font-semibold text-slate-900 dark:text-slate-100">
+                  <div className="font-semibold text-navy">
                     {contract?.customers?.display_name ?? "—"}
                     {p.voided_at && (
-                      <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-900 dark:text-red-200">
+                      <span className="ml-2 rounded bg-danger-bg px-1.5 py-0.5 text-[10px] font-bold text-danger">
                         VOIDED
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-muted">
                     <span className="font-mono">{p.payment_no}</span> ·{" "}
                     {fmtDateShort(p.payment_date)}
                     {p.receipt_no ? ` · OR# ${p.receipt_no}` : ""}
@@ -93,7 +93,7 @@ export default async function PaymentsPage({
                         {" · "}
                         <Link
                           href={`/contracts/${contract.id}`}
-                          className="text-sky-700 hover:underline dark:text-sky-300"
+                          className="text-brand hover:underline"
                         >
                           #{contract.contract_no}
                         </Link>
@@ -102,7 +102,7 @@ export default async function PaymentsPage({
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <div className="text-right font-bold text-slate-900 dark:text-slate-100">
+                  <div className="text-right font-bold text-navy">
                     {peso(p.amount)}
                   </div>
                   {isOwner &&
@@ -126,7 +126,7 @@ export default async function PaymentsPage({
           );
         })}
         {payments?.length === 0 && (
-          <p className="py-8 text-center text-sm text-slate-500">
+          <p className="py-8 text-center text-sm text-muted">
             No payments found.
           </p>
         )}

@@ -36,7 +36,7 @@ export default async function CollectionsPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+      <h1 className="text-xl font-bold text-navy">
         Collections Worklist
       </h1>
 
@@ -47,8 +47,8 @@ export default async function CollectionsPage({
             href={`/collections?tier=${t.key}`}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
               tier === t.key
-                ? "bg-sky-800 text-white"
-                : "border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                ? "bg-brand text-white"
+                : "border border-surface text-navy hover:bg-surface"
             }`}
           >
             {t.label}
@@ -62,20 +62,20 @@ export default async function CollectionsPage({
           return (
             <div
               key={c.id}
-              className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+              className="rounded-card border border-surface bg-white p-4"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <Link
                     href={`/contracts/${c.id}`}
-                    className="font-semibold text-slate-900 hover:underline dark:text-slate-100"
+                    className="font-semibold text-navy hover:underline"
                   >
                     {c.display_name}
                   </Link>
-                  <div className="truncate text-xs text-slate-500">
+                  <div className="truncate text-xs text-muted">
                     #{c.contract_no} · {c.item_description}
                   </div>
-                  <div className="mt-1 text-xs text-slate-400">
+                  <div className="mt-1 text-xs text-muted">
                     Last payment:{" "}
                     {c.last_payment_date ? fmtDateShort(c.last_payment_date) : "never"}
                     {c.collection_status ? ` · ${c.collection_status}` : ""}
@@ -83,10 +83,10 @@ export default async function CollectionsPage({
                 </div>
                 <div className="shrink-0 text-right">
                   <TierBadge tier={c.followup_tier} />
-                  <div className="mt-1 text-sm font-bold text-red-600 dark:text-red-400">
+                  <div className="mt-1 text-sm font-bold text-danger">
                     {peso(c.overdue_amount)}
                   </div>
-                  <div className="text-[11px] text-slate-400">past due</div>
+                  <div className="text-[11px] text-muted">past due</div>
                 </div>
               </div>
 
@@ -96,7 +96,7 @@ export default async function CollectionsPage({
                   <a
                     href={c.messenger_url}
                     target="_blank"
-                    className="rounded-lg bg-[#0084ff] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                    className="rounded-card bg-[#0084ff] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
                   >
                     💬 Messenger
                   </a>
@@ -105,7 +105,7 @@ export default async function CollectionsPage({
                   <a
                     href={c.gps_url}
                     target="_blank"
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                    className="rounded-card border border-surface px-3 py-1.5 text-xs font-semibold text-navy hover:bg-surface"
                   >
                     📍 Map
                   </a>
@@ -113,7 +113,7 @@ export default async function CollectionsPage({
                 {c.followup_tier === "demand" && (
                   <Link
                     href={`/print/demand-letter/${c.id}`}
-                    className="rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600"
+                    className="rounded-card bg-danger px-3 py-1.5 text-xs font-semibold text-white hover:bg-danger/90"
                   >
                     📄 Demand letter
                   </Link>
@@ -123,7 +123,7 @@ export default async function CollectionsPage({
           );
         })}
         {contracts?.length === 0 && (
-          <p className="py-8 text-center text-sm text-slate-500">
+          <p className="py-8 text-center text-sm text-muted">
             🎉 No overdue accounts in this view.
           </p>
         )}

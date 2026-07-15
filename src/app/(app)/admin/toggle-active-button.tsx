@@ -24,10 +24,10 @@ export function ToggleActiveButton({
           return;
         startTransition(() => setUserActive(userId, !active));
       }}
-      className={`rounded-lg border px-2.5 py-1 text-xs font-semibold disabled:opacity-50 ${
+      className={`rounded-card border px-2.5 py-1 text-xs font-semibold disabled:opacity-50 ${
         active
-          ? "border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
-          : "border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950"
+          ? "border-danger/40 text-danger hover:bg-danger-bg"
+          : "border-teal text-teal-dark hover:bg-surface"
       }`}
     >
       {pending ? "…" : active ? "Deactivate" : "Reactivate"}

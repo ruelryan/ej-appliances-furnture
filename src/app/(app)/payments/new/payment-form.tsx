@@ -74,17 +74,17 @@ export function PaymentForm({
   return (
     <form action={submit} className="space-y-4">
       {/* Contract picker */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+      <div className="rounded-card border border-surface bg-white p-4">
+        <label className="mb-1 block text-sm font-medium text-navy">
           Contract
         </label>
         {contract ? (
           <div className="flex items-start justify-between gap-2">
             <div>
-              <div className="font-semibold text-slate-900 dark:text-slate-100">
+              <div className="font-semibold text-navy">
                 {contract.display_name}
               </div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-muted">
                 #{contract.contract_no} · {contract.item_description}
               </div>
               <div className="mt-1 text-xs">
@@ -101,7 +101,7 @@ export function PaymentForm({
                 setContract(null);
                 setTerm("");
               }}
-              className="text-xs text-sky-700 hover:underline dark:text-sky-300"
+              className="text-xs text-brand hover:underline"
             >
               Change
             </button>
@@ -113,22 +113,22 @@ export function PaymentForm({
               onChange={(e) => setTerm(e.target.value)}
               placeholder="Search name or contract no.…"
               autoFocus
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-card border border-surface px-3 py-2 text-sm"
             />
             {(hits.length > 0 || searching) && (
-              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-card border border-surface bg-white shadow-lg">
                 {searching && (
-                  <div className="px-3 py-2 text-xs text-slate-400">Searching…</div>
+                  <div className="px-3 py-2 text-xs text-muted">Searching…</div>
                 )}
                 {hits.map((h) => (
                   <button
                     key={h.id}
                     type="button"
                     onClick={() => setContract(h)}
-                    className="block w-full px-3 py-2 text-left text-sm hover:bg-sky-50 dark:hover:bg-slate-700"
+                    className="block w-full px-3 py-2 text-left text-sm hover:bg-surface"
                   >
                     <span className="font-semibold">{h.display_name}</span>{" "}
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-muted">
                       #{h.contract_no} · {peso(h.remaining_balance)} bal
                     </span>
                   </button>
@@ -140,10 +140,10 @@ export function PaymentForm({
       </div>
 
       {/* Payment fields */}
-      <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <div className="space-y-3 rounded-card border border-surface bg-white p-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className="mb-1 block text-sm font-medium text-navy">
               Amount (₱)
             </label>
             <input
@@ -153,11 +153,11 @@ export function PaymentForm({
               min="0.01"
               required
               inputMode="decimal"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-card border border-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className="mb-1 block text-sm font-medium text-navy">
               Date
             </label>
             <input
@@ -165,16 +165,16 @@ export function PaymentForm({
               type="date"
               required
               defaultValue={phTodayISO()}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-card border border-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className="mb-1 block text-sm font-medium text-navy">
               Receipt type
             </label>
             <select
               name="receipt_type"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-card border border-surface px-3 py-2 text-sm"
             >
               <option>Collection Receipt</option>
               <option>Official Receipt</option>
@@ -182,29 +182,29 @@ export function PaymentForm({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className="mb-1 block text-sm font-medium text-navy">
               Receipt no. (OR#)
             </label>
             <input
               name="receipt_no"
               required
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-card border border-surface px-3 py-2 text-sm"
             />
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            Reference no. <span className="text-slate-400">(optional, e.g. GCash)</span>
+          <label className="mb-1 block text-sm font-medium text-navy">
+            Reference no. <span className="text-muted">(optional, e.g. GCash)</span>
           </label>
           <input
             name="reference_no"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="w-full rounded-card border border-surface px-3 py-2 text-sm"
           />
         </div>
       </div>
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <p className="rounded-card bg-danger-bg px-3 py-2 text-sm text-danger">
           {error}
         </p>
       )}
@@ -212,7 +212,7 @@ export function PaymentForm({
       <button
         type="submit"
         disabled={pending || !contract}
-        className="w-full rounded-xl bg-sky-800 py-3 text-sm font-bold text-white hover:bg-sky-700 disabled:opacity-50"
+        className="w-full rounded-card bg-brand py-3 text-sm font-bold text-white hover:bg-brand-dark disabled:opacity-50"
       >
         {pending ? "Recording…" : "Record Payment"}
       </button>
