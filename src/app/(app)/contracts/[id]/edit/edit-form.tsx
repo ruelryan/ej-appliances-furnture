@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateContract } from "../../actions";
 import { COLLECTION_STATUSES, DELIVERY_STATUSES, ITEM_TYPES } from "@/lib/messages";
+import { btnPrimaryHero, input, label } from "@/components/ui";
 
 interface Contract {
   id: string;
@@ -37,13 +38,8 @@ export function EditForm({ contract }: { contract: Contract }) {
     });
   }
 
-  const input =
-    "w-full rounded-card border border-surface px-3 py-2.5 text-base";
-  const label =
-    "mb-1 block text-sm font-medium text-navy";
-
   return (
-    <form action={submit} className="space-y-3 rounded-card border border-surface bg-white p-4">
+    <form action={submit} className="space-y-3 rounded-card border border-line bg-white p-4">
       <div>
         <label className={label}>Item description</label>
         <input
@@ -128,7 +124,7 @@ export function EditForm({ contract }: { contract: Contract }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-card bg-brand py-3 text-base font-bold text-white shadow-[0_2px_8px_rgba(244,77,85,0.3)] hover:bg-brand-dark disabled:opacity-50 disabled:shadow-none"
+        className={btnPrimaryHero}
       >
         {pending ? "Saving…" : "Save Changes"}
       </button>

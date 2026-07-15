@@ -25,7 +25,7 @@ export default async function EditContractPage({
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <h1 className="flex items-center gap-2 text-xl font-semibold text-navy">
+      <h1 className="flex items-center gap-2 text-xl font-semibold text-ink">
         <BackLink /> Edit Contract #{contract.contract_no}
       </h1>
       <p className="text-sm text-muted">

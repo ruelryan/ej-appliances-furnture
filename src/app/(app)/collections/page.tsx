@@ -36,7 +36,7 @@ export default async function CollectionsPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-navy">
+      <h1 className="text-xl font-semibold text-ink">
         Collections Worklist
       </h1>
 
@@ -45,10 +45,10 @@ export default async function CollectionsPage({
           <Link
             key={t.key}
             href={`/collections?tier=${t.key}`}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+            className={`rounded-full px-3.5 py-2 text-xs font-semibold ${
               tier === t.key
                 ? "bg-brand text-white"
-                : "border border-surface text-navy hover:bg-surface"
+                : "border border-line bg-white text-ink hover:bg-surface"
             }`}
           >
             {t.label}
@@ -62,13 +62,13 @@ export default async function CollectionsPage({
           return (
             <div
               key={c.id}
-              className="rounded-card border border-surface bg-white p-4"
+              className="rounded-card border border-line bg-white p-4"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <Link
                     href={`/contracts/${c.id}`}
-                    className="font-display font-semibold text-navy hover:underline"
+                    className="font-display font-semibold text-ink hover:underline"
                   >
                     {c.display_name}
                   </Link>
@@ -83,7 +83,7 @@ export default async function CollectionsPage({
                 </div>
                 <div className="shrink-0 text-right">
                   <TierBadge tier={c.followup_tier} />
-                  <div className="mt-1 text-sm font-bold text-danger">
+                  <div className="mt-1 text-sm font-semibold text-danger">
                     {peso(c.overdue_amount)}
                   </div>
                   <div className="text-[11px] text-muted">past due</div>
@@ -91,23 +91,23 @@ export default async function CollectionsPage({
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <CopyButton text={message} label="📋 Copy message" />
+                <CopyButton text={message} label="Copy message" />
                 {c.messenger_url && (
                   <a
                     href={c.messenger_url}
                     target="_blank"
-                    className="rounded-card bg-[#0084ff] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                    className="rounded-card border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface"
                   >
-                    💬 Messenger
+                    Messenger
                   </a>
                 )}
                 {c.gps_url && (
                   <a
                     href={c.gps_url}
                     target="_blank"
-                    className="rounded-card border border-surface px-3 py-1.5 text-xs font-semibold text-navy hover:bg-surface"
+                    className="rounded-card border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface"
                   >
-                    📍 Map
+                    Map
                   </a>
                 )}
                 {c.followup_tier === "demand" && (
@@ -115,7 +115,7 @@ export default async function CollectionsPage({
                     href={`/print/demand-letter/${c.id}`}
                     className="rounded-card bg-danger px-3 py-1.5 text-xs font-semibold text-white hover:bg-danger/90"
                   >
-                    📄 Demand letter
+                    Demand letter
                   </Link>
                 )}
               </div>
@@ -124,7 +124,7 @@ export default async function CollectionsPage({
         })}
         {contracts?.length === 0 && (
           <p className="py-8 text-center text-sm text-muted">
-            🎉 No overdue accounts in this view.
+            All clear — no overdue accounts in this view.
           </p>
         )}
       </div>

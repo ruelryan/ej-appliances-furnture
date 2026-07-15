@@ -61,10 +61,11 @@ npx tsx scripts/migrate/import.ts --dir <csvs> [--load]  # Sheet re-import
 ## Design system
 
 Follow the project skills in `.claude/skills/`:
-- `popular-web-designs` — the token vocabulary (coral #f44d55 primary, navy
-  ink, teal secondary, `rounded-card` 14px, Poppins 600 headings via
-  `font-display font-semibold` — NEVER `font-bold` on headings, 700 isn't
-  loaded — Lato body, 16px inputs).
+- `popular-web-designs` — the token vocabulary ("fintech light", chosen
+  2026-07: blue #2563eb primary, ink #111827, `rounded-card` 12px, hairline
+  `border-line`, Inter everywhere with `font-semibold` max — no `font-bold`
+  in UI — 16px inputs; shared primitives in `src/components/ui.ts`,
+  `section-card.tsx`, `stat-tile.tsx`; no emoji in UI).
 - `claude-design` — process: surface-first (customer card > collections >
   lists), anti-slop audit before shipping, variants for new designs.
 - `sketch` — disposable HTML mockups in scratchpad before big new screens.

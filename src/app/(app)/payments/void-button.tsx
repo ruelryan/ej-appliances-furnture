@@ -74,19 +74,19 @@ export function VoidPaymentButton({
             </p>
 
             <div className="mb-3 rounded-card bg-surface p-3 text-sm">
-              <div className="font-semibold text-navy">
+              <div className="font-semibold text-ink">
                 {customerName}
               </div>
               <div className="text-xs text-muted">
                 <span className="font-mono">{paymentNo}</span> ·{" "}
                 {fmtDateShort(paymentDate)}
               </div>
-              <div className="mt-1 text-lg font-bold text-navy">
+              <div className="mt-1 text-lg font-semibold text-ink">
                 {peso(amount)}
               </div>
             </div>
 
-            <label className="mb-1 block text-xs font-medium text-navy">
+            <label className="mb-1 block text-xs font-medium text-ink">
               Reason (required)
             </label>
             <input
@@ -94,7 +94,7 @@ export function VoidPaymentButton({
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. duplicate entry, wrong amount"
               autoFocus
-              className="mb-3 w-full rounded-card border border-surface px-3 py-2.5 text-base"
+              className="mb-3 w-full rounded-card border border-line px-3 py-2.5 text-base"
             />
 
             {error && (
@@ -107,7 +107,7 @@ export function VoidPaymentButton({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex-1 rounded-card border border-surface py-2 text-sm font-semibold text-navy hover:bg-surface"
+                className="flex-1 rounded-card border border-line py-2 text-sm font-semibold text-ink hover:bg-surface"
               >
                 Cancel
               </button>
@@ -115,7 +115,7 @@ export function VoidPaymentButton({
                 type="button"
                 onClick={confirm}
                 disabled={pending || !reason.trim()}
-                className="flex-1 rounded-card bg-danger py-2 text-sm font-bold text-white hover:bg-danger/90 disabled:opacity-40"
+                className="flex-1 rounded-card bg-danger py-2 text-sm font-semibold text-white hover:bg-danger/90 disabled:opacity-40"
               >
                 {pending ? "Voiding…" : `Void ${paymentNo}`}
               </button>
@@ -154,7 +154,7 @@ export function RestorePaymentButton({
       type="button"
       onClick={onClick}
       disabled={pending}
-      className="rounded-card border border-teal px-2 py-1 text-xs font-semibold text-teal-dark hover:bg-surface disabled:opacity-50"
+      className="rounded-card border border-positive px-2 py-1 text-xs font-semibold text-positive-dark hover:bg-surface disabled:opacity-50"
     >
       {pending ? "…" : "Restore"}
     </button>

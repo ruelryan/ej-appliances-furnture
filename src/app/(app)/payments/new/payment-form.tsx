@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { recordPayment, searchContracts } from "../actions";
 import { peso, phTodayISO } from "@/lib/format";
+import { btnPrimaryHero, input, label } from "@/components/ui";
 
 interface ContractHit {
   id: string;
@@ -74,14 +75,14 @@ export function PaymentForm({
   return (
     <form action={submit} className="space-y-4">
       {/* Contract picker */}
-      <div className="rounded-card border border-surface bg-white p-4">
-        <label className="mb-1 block text-sm font-medium text-navy">
+      <div className="rounded-card border border-line bg-white p-4">
+        <label className={label}>
           Contract
         </label>
         {contract ? (
           <div className="flex items-start justify-between gap-2">
             <div>
-              <div className="font-semibold text-navy">
+              <div className="font-semibold text-ink">
                 {contract.display_name}
               </div>
               <div className="text-xs text-muted">
@@ -113,10 +114,10 @@ export function PaymentForm({
               onChange={(e) => setTerm(e.target.value)}
               placeholder="Search name or contract no.…"
               autoFocus
-              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+              className={input}
             />
             {(hits.length > 0 || searching) && (
-              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-card border border-surface bg-white shadow-lg">
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-card border border-line bg-white shadow-lg">
                 {searching && (
                   <div className="px-3 py-2 text-xs text-muted">Searching…</div>
                 )}
@@ -140,10 +141,10 @@ export function PaymentForm({
       </div>
 
       {/* Payment fields */}
-      <div className="space-y-3 rounded-card border border-surface bg-white p-4">
+      <div className="space-y-3 rounded-card border border-line bg-white p-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-navy">
+            <label className={label}>
               Amount (₱)
             </label>
             <input
@@ -153,11 +154,11 @@ export function PaymentForm({
               min="0.01"
               required
               inputMode="decimal"
-              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+              className={input}
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-navy">
+            <label className={label}>
               Date
             </label>
             <input
@@ -165,16 +166,16 @@ export function PaymentForm({
               type="date"
               required
               defaultValue={phTodayISO()}
-              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+              className={input}
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-navy">
+            <label className={label}>
               Receipt type
             </label>
             <select
               name="receipt_type"
-              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+              className={input}
             >
               <option>Collection Receipt</option>
               <option>Official Receipt</option>
@@ -182,23 +183,23 @@ export function PaymentForm({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-navy">
+            <label className={label}>
               Receipt no. (OR#)
             </label>
             <input
               name="receipt_no"
               required
-              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+              className={input}
             />
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Reference no. <span className="text-muted">(optional, e.g. GCash)</span>
           </label>
           <input
             name="reference_no"
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
       </div>
@@ -212,7 +213,7 @@ export function PaymentForm({
       <button
         type="submit"
         disabled={pending || !contract}
-        className="w-full rounded-card bg-brand py-3 text-base font-bold text-white shadow-[0_2px_8px_rgba(244,77,85,0.3)] hover:bg-brand-dark disabled:opacity-50 disabled:shadow-none"
+        className={btnPrimaryHero}
       >
         {pending ? "Recording…" : "Record Payment"}
       </button>

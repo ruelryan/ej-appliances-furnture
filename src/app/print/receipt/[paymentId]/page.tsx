@@ -50,20 +50,20 @@ export default async function ReceiptPage({
       <table className="w-full">
         <tbody>
           {rows.map(([k, v]) => (
-            <tr key={k} className="border-b border-surface">
+            <tr key={k} className="border-b border-line">
               <td className="py-1.5 pr-4 text-muted">{k}</td>
               <td className="py-1.5 text-right font-medium">{v}</td>
             </tr>
           ))}
           <tr>
-            <td className="py-3 pr-4 font-bold">Amount paid</td>
-            <td className="py-3 text-right text-lg font-bold">{peso(p.amount)}</td>
+            <td className="py-3 pr-4 font-semibold">Amount paid</td>
+            <td className="py-3 text-right text-lg font-semibold">{peso(p.amount)}</td>
           </tr>
         </tbody>
       </table>
 
       {p.voided_at && (
-        <div className="mt-4 border-2 border-danger p-2 text-center font-bold text-danger">
+        <div className="mt-4 border-2 border-danger p-2 text-center font-semibold text-danger">
           VOIDED
         </div>
       )}

@@ -10,7 +10,7 @@ export function BackLink() {
       type="button"
       onClick={() => router.back()}
       aria-label="Go back"
-      className="-ml-1 rounded-full p-1 text-xl leading-none text-navy hover:bg-surface"
+      className="-ml-1 rounded-full p-1 text-xl leading-none text-ink hover:bg-surface"
     >
       ←
     </button>

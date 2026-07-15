@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { btnSecondary, input } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function CustomersPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-navy">
+      <h1 className="text-xl font-semibold text-ink">
         Customers
       </h1>
 
@@ -35,17 +36,14 @@ export default async function CustomersPage({
           name="q"
           defaultValue={q}
           placeholder="Search by name…"
-          className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+          className={input}
         />
-        <button
-          type="submit"
-          className="rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
-        >
+        <button type="submit" className={btnSecondary}>
           Search
         </button>
       </form>
 
-      <div>
+      <div className="divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
         {(customers ?? []).map((c) => {
           const count =
             (c.contracts as unknown as { count: number }[])?.[0]?.count ?? 0;
@@ -60,10 +58,10 @@ export default async function CustomersPage({
             <Link
               key={c.id}
               href={`/customers/${c.id}`}
-              className="flex items-center justify-between gap-3 border-b border-surface py-3.5 hover:bg-surface"
+              className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-surface"
             >
               <div className="min-w-0">
-                <div className="font-display font-semibold text-navy">
+                <div className="font-display font-semibold text-ink">
                   {c.display_name}
                 </div>
                 <div className="mt-0.5 truncate text-sm text-muted">{meta}</div>

@@ -15,17 +15,17 @@ export default async function AppLayout({
   const isOwner = profile.role === "owner";
 
   return (
-    <div className="min-h-dvh bg-white">
+    <div className="min-h-dvh bg-surface">
       {/* Top bar */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-surface bg-white px-4 py-3">
-        <Link href="/" className="font-display text-lg font-semibold text-navy">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-white px-4 py-3">
+        <Link href="/" className="font-display text-lg font-semibold text-ink">
           E &amp; J
         </Link>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted">
             {profile.full_name}
             {isOwner && (
-              <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+              <span className="ml-1 rounded-full bg-warning-bg px-2 py-0.5 text-[10px] font-semibold text-warning">
                 OWNER
               </span>
             )}
@@ -33,7 +33,7 @@ export default async function AppLayout({
           <form action={logout}>
             <button
               type="submit"
-              className="rounded-card border border-surface px-2.5 py-1 text-xs text-navy hover:bg-surface"
+              className="rounded-card border border-line px-2.5 py-1 text-xs text-ink hover:bg-surface"
             >
               Sign out
             </button>
@@ -43,7 +43,7 @@ export default async function AppLayout({
 
       <div className="mx-auto flex w-full max-w-6xl">
         {/* Desktop sidebar */}
-        <aside className="sticky top-[53px] hidden h-[calc(100dvh-53px)] w-48 shrink-0 border-r border-surface p-3 md:block">
+        <aside className="sticky top-[53px] hidden h-[calc(100dvh-53px)] w-48 shrink-0 border-r border-line p-3 md:block">
           <NavLinks isOwner={isOwner} variant="sidebar" />
         </aside>
 
@@ -52,7 +52,7 @@ export default async function AppLayout({
       </div>
 
       {/* Mobile bottom tabs */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
         <NavLinks isOwner={isOwner} variant="tabs" />
       </nav>
     </div>

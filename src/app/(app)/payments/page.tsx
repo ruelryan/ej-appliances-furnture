@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
 import { RestorePaymentButton, VoidPaymentButton } from "./void-button";
+import { btnPrimary, btnSecondary, input } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -33,14 +34,11 @@ export default async function PaymentsPage({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-navy">
+        <h1 className="text-xl font-semibold text-ink">
           Payments
         </h1>
-        <Link
-          href="/payments/new"
-          className="rounded-card bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
-        >
-          + Record
+        <Link href="/payments/new" className={btnPrimary}>
+          Record payment
         </Link>
       </div>
 
@@ -50,17 +48,14 @@ export default async function PaymentsPage({
           name="q"
           defaultValue={q}
           placeholder="Search PAY# or OR#…"
-          className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+          className={input}
         />
-        <button
-          type="submit"
-          className="rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
-        >
+        <button type="submit" className={btnSecondary}>
           Search
         </button>
       </form>
 
-      <div className="space-y-2">
+      <div className="divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
         {(payments ?? []).map((p) => {
           const contract = p.contracts as unknown as {
             id: string;
@@ -70,16 +65,14 @@ export default async function PaymentsPage({
           return (
             <div
               key={p.id}
-              className={`rounded-card border border-surface bg-white p-4 ${
-                p.voided_at ? "opacity-60" : ""
-              }`}
+              className={`p-4 ${p.voided_at ? "opacity-60" : ""}`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="font-display font-semibold text-navy">
+                  <div className="font-display font-semibold text-ink">
                     {contract?.customers?.display_name ?? "—"}
                     {p.voided_at && (
-                      <span className="ml-2 rounded bg-danger-bg px-1.5 py-0.5 text-[10px] font-bold text-danger">
+                      <span className="ml-2 rounded-full bg-danger-bg px-2 py-0.5 text-[10px] font-semibold text-danger">
                         VOIDED
                       </span>
                     )}
@@ -102,7 +95,7 @@ export default async function PaymentsPage({
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <div className="text-right font-bold text-navy">
+                  <div className="text-right font-semibold text-ink">
                     {peso(p.amount)}
                   </div>
                   {isOwner &&

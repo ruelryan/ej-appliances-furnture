@@ -6,6 +6,7 @@ import { searchCustomers } from "./customer-actions";
 import { computeTerms, TERM_OPTIONS, termLabel } from "@/lib/amortization";
 import { peso, phTodayISO } from "@/lib/format";
 import { ITEM_TYPES } from "@/lib/messages";
+import { btnPrimaryHero, input, label } from "@/components/ui";
 
 interface CustomerHit {
   id: string;
@@ -93,9 +94,9 @@ export function ContractForm() {
   return (
     <form action={submit} className="space-y-4">
       {/* Customer */}
-      <div className="rounded-card border border-surface bg-white p-4">
+      <div className="rounded-card border border-line bg-white p-4">
         <div className="mb-2 flex items-center justify-between">
-          <label className="text-sm font-medium text-navy">
+          <label className="text-sm font-medium text-ink">
             Customer
           </label>
           <button
@@ -117,35 +118,35 @@ export function ContractForm() {
               name="last_name"
               placeholder="Last name"
               required
-              className="rounded-card border border-surface px-3 py-2.5 text-base"
+              className={input}
             />
             <input
               name="first_name"
               placeholder="First name"
               required
-              className="rounded-card border border-surface px-3 py-2.5 text-base"
+              className={input}
             />
             <input
               name="phone"
               placeholder="Phone (09…) — use / for two"
-              className="col-span-2 rounded-card border border-surface px-3 py-2.5 text-base"
+              className={`col-span-2 ${input}`}
             />
             <input
               name="address"
               placeholder="Full address"
               required
-              className="col-span-2 rounded-card border border-surface px-3 py-2.5 text-base"
+              className={`col-span-2 ${input}`}
             />
             <input
               name="messenger_url"
               placeholder="Facebook/Messenger link (optional)"
-              className="col-span-2 rounded-card border border-surface px-3 py-2.5 text-base"
+              className={`col-span-2 ${input}`}
             />
           </div>
         ) : customer ? (
           <div className="flex items-start justify-between">
             <div>
-              <div className="font-semibold text-navy">
+              <div className="font-semibold text-ink">
                 {customer.display_name}
               </div>
               <div className="text-xs text-muted">
@@ -170,10 +171,10 @@ export function ContractForm() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="Search existing customer…"
-              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+              className={input}
             />
             {hits.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-card border border-surface bg-white shadow-lg">
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-card border border-line bg-white shadow-lg">
                 {hits.map((h) => (
                   <button
                     key={h.id}
@@ -194,25 +195,25 @@ export function ContractForm() {
       </div>
 
       {/* Item */}
-      <div className="grid grid-cols-2 gap-3 rounded-card border border-surface bg-white p-4">
+      <div className="grid grid-cols-2 gap-3 rounded-card border border-line bg-white p-4">
         <div className="col-span-2">
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Item description
           </label>
           <input
             name="item_description"
             placeholder="e.g. Sharp Refrigerator 6 cu ft"
             required
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Item type
           </label>
           <select
             name="item_type"
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           >
             {ITEM_TYPES.map((t) => (
               <option key={t}>{t}</option>
@@ -220,7 +221,7 @@ export function ContractForm() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Quantity
           </label>
           <input
@@ -230,11 +231,11 @@ export function ContractForm() {
             step="1"
             defaultValue="1"
             required
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Cash price (₱)
           </label>
           <input
@@ -246,17 +247,17 @@ export function ContractForm() {
             inputMode="decimal"
             value={cashPrice}
             onChange={(e) => setCashPrice(e.target.value)}
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Term
           </label>
           <select
             value={termMonths}
             onChange={(e) => setTermMonths(Number(e.target.value))}
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           >
             {TERM_OPTIONS.map((t) => (
               <option key={t} value={t}>
@@ -266,7 +267,7 @@ export function ContractForm() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Contract date
           </label>
           <input
@@ -274,54 +275,54 @@ export function ContractForm() {
             type="date"
             required
             defaultValue={phTodayISO()}
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Sales agent
           </label>
           <input
             name="sales_agent"
             required
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
         <div className="col-span-2">
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Notes <span className="text-muted">(optional)</span>
           </label>
           <input
             name="note"
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
       </div>
 
       {/* Live amortization preview */}
       {preview && (
-        <div className="rounded-card border border-surface bg-surface p-4 text-sm">
-          <div className="mb-2 font-bold text-navy">
+        <div className="rounded-card border border-line bg-surface p-4 text-sm">
+          <div className="mb-2 font-semibold text-ink">
             {termLabel(termMonths)}
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
-              <div className="text-xs text-brand">Total price</div>
-              <div className="font-bold text-navy">
+              <div className="text-xs text-muted">Total price</div>
+              <div className="font-semibold text-ink">
                 {peso(preview.totalPrice)}
               </div>
             </div>
             <div>
-              <div className="text-xs text-brand">
+              <div className="text-xs text-muted">
                 Downpayment (25%)
               </div>
-              <div className="font-bold text-navy">
+              <div className="font-semibold text-ink">
                 {peso(preview.downpayment)}
               </div>
             </div>
             <div>
-              <div className="text-xs text-brand">Monthly</div>
-              <div className="font-bold text-navy">
+              <div className="text-xs text-muted">Monthly</div>
+              <div className="font-semibold text-ink">
                 {peso(preview.monthlyAmortization)}
               </div>
             </div>
@@ -338,7 +339,7 @@ export function ContractForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-card bg-brand py-3 text-base font-bold text-white shadow-[0_2px_8px_rgba(244,77,85,0.3)] hover:bg-brand-dark disabled:opacity-50 disabled:shadow-none"
+        className={btnPrimaryHero}
       >
         {pending ? "Creating…" : "Create Contract"}
       </button>

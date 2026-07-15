@@ -34,20 +34,20 @@ export default async function CustomerPage({
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold text-navy">
+        <h1 className="flex items-center gap-2 text-xl font-semibold text-ink">
           <BackLink /> {customer.display_name}
         </h1>
         <div className="mt-1 space-y-0.5 text-sm text-muted">
-          <div>📞 {(customer.phones ?? []).join(" / ") || "no phone"}</div>
-          {customer.address && <div>🏠 {customer.address}</div>}
-          <div className="flex gap-3 pt-1">
+          <div>{(customer.phones ?? []).join(" / ") || "No phone on file"}</div>
+          {customer.address && <div>{customer.address}</div>}
+          <div className="flex gap-4 pt-1">
             {customer.messenger_url && (
               <a
                 href={customer.messenger_url}
                 target="_blank"
                 className="font-medium text-brand hover:underline"
               >
-                💬 Messenger
+                Messenger
               </a>
             )}
             {customer.gps_url && (
@@ -56,7 +56,7 @@ export default async function CustomerPage({
                 target="_blank"
                 className="font-medium text-brand hover:underline"
               >
-                📍 Map
+                Map
               </a>
             )}
           </div>
@@ -64,18 +64,18 @@ export default async function CustomerPage({
       </div>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-navy">
+        <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
           Contracts ({contracts?.length ?? 0})
         </h2>
-        <div className="space-y-2">
+        <div className="divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
           {(contracts ?? []).map((c) => (
             <Link
               key={c.id}
               href={`/contracts/${c.id}`}
-              className="flex items-start justify-between gap-2 rounded-card border border-surface bg-white p-4 hover:border-brand"
+              className="flex items-start justify-between gap-2 p-4 hover:bg-surface"
             >
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-navy">
+                <div className="truncate text-sm font-semibold text-ink">
                   {c.item_description}
                 </div>
                 <div className="text-xs text-muted">

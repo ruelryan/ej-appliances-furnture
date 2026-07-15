@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { peso } from "@/lib/format";
+import { StatTile } from "@/components/stat-tile";
 
 export default async function DashboardPage() {
   const profile = await getProfile();
@@ -20,61 +21,45 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-navy">
+      <h1 className="text-xl font-semibold text-ink">
         Dashboard
       </h1>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles.map((t) => (
-          <div
-            key={t.label}
-            className="rounded-card border border-surface bg-white p-4"
-          >
-            <div className="text-xs text-muted">
-              {t.label}
-            </div>
-            <div
-              className={`mt-1 text-lg font-bold ${
-                t.alert
-                  ? "text-danger"
-                  : "text-navy"
-              }`}
-            >
-              {t.value}
-            </div>
-          </div>
+          <StatTile key={t.label} label={t.label} value={t.value} alert={t.alert} />
         ))}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <Link
           href="/payments/new"
-          className="rounded-card bg-brand p-4 text-center font-semibold text-white hover:bg-brand-dark"
+          className="rounded-card bg-brand p-4 text-center font-semibold text-white shadow-cta hover:bg-brand-dark"
         >
-          💵 Record Payment
+          Record payment
         </Link>
         <Link
           href="/contracts/new"
-          className="rounded-card bg-teal p-4 text-center font-semibold text-white hover:bg-teal-dark"
+          className="rounded-card border border-line bg-white p-4 text-center font-semibold text-ink hover:bg-surface"
         >
-          📄 New Contract
+          New contract
         </Link>
         <Link
           href="/collections"
-          className="rounded-card border border-surface bg-white p-4 text-center font-semibold text-navy hover:bg-surface"
+          className="rounded-card border border-line bg-white p-4 text-center font-semibold text-ink hover:bg-surface"
         >
-          📢 Collections worklist
+          Collections worklist
           {(stats?.demand_tier_count ?? 0) + (stats?.overdue_tier_count ?? 0) > 0 && (
-            <span className="ml-2 rounded-full bg-danger-bg px-2 py-0.5 text-xs font-bold text-danger">
+            <span className="ml-2 rounded-full bg-danger-bg px-2 py-0.5 text-xs font-semibold text-danger">
               {(stats?.demand_tier_count ?? 0) + (stats?.overdue_tier_count ?? 0)}
             </span>
           )}
         </Link>
         <Link
           href="/contracts"
-          className="rounded-card border border-surface bg-white p-4 text-center font-semibold text-navy hover:bg-surface"
+          className="rounded-card border border-line bg-white p-4 text-center font-semibold text-ink hover:bg-surface"
         >
-          🔍 Find a contract
+          Find a contract
         </Link>
       </div>
 
@@ -84,13 +69,13 @@ export default async function DashboardPage() {
             href="/analytics"
             className="text-sm font-medium text-brand hover:underline"
           >
-            📊 Analytics →
+            Analytics →
           </Link>
           <Link
             href="/admin"
             className="text-sm font-medium text-brand hover:underline"
           >
-            ⚙️ Admin →
+            Admin →
           </Link>
         </div>
       )}

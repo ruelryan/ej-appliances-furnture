@@ -1,16 +1,9 @@
 import type { Metadata } from "next";
-import { Lato, Poppins } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const lato = Lato({
-  weight: ["400", "700"],
-  variable: "--font-lato",
-  subsets: ["latin"],
-});
-
-const poppins = Poppins({
-  weight: ["500", "600"],
-  variable: "--font-poppins",
+const inter = Inter({
+  variable: "--font-body",
   subsets: ["latin"],
 });
 
@@ -27,7 +20,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${lato.variable} ${poppins.variable} h-full antialiased`}
+      className={`${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
