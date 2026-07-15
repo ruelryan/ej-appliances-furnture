@@ -229,6 +229,14 @@ for (let r = cMap.headerRow + 1; r < contractRows.length; r++) {
   const paymentStatus: "open" | "closed" =
     rawStatus.startsWith("clos") || rawStatus === "close" ? "closed" : "open";
 
+  // item_type is constrained to Appliances/Furniture in the DB — coerce
+  // anything else to null (with a warning) so the load can't fail on it
+  let itemType = get("itemType");
+  if (itemType && !["Appliances", "Furniture"].includes(itemType)) {
+    warn(`${ctx}: item type "${itemType}" is not Appliances/Furniture — imported as blank`);
+    itemType = "";
+  }
+
   const qty = Number(get("quantity")) || 1;
 
   contracts.push({
@@ -239,7 +247,7 @@ for (let r = cMap.headerRow + 1; r < contractRows.length; r++) {
     fb: get("fb"),
     address: get("address"),
     item: get("item"),
-    itemType: get("itemType"),
+    itemType,
     quantity: qty >= 1 ? Math.round(qty) : 1,
     cashPrice: parseMoney(get("cashPrice"), ctx),
     agent: get("agent"),

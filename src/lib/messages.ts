@@ -113,3 +113,5 @@ export const DELIVERY_STATUSES = [
   "Delivered",
   "Pending",
 ] as const;
+
+export const ITEM_TYPES = ["Appliances", "Furniture"] as const;

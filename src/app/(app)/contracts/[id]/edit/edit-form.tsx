@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateContract } from "../../actions";
-import { COLLECTION_STATUSES, DELIVERY_STATUSES } from "@/lib/messages";
+import { COLLECTION_STATUSES, DELIVERY_STATUSES, ITEM_TYPES } from "@/lib/messages";
 
 interface Contract {
   id: string;
@@ -56,7 +56,12 @@ export function EditForm({ contract }: { contract: Contract }) {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className={label}>Item type</label>
-          <input name="item_type" defaultValue={contract.item_type ?? ""} className={input} />
+          <select name="item_type" defaultValue={contract.item_type ?? ""} className={input}>
+            <option value="">— none —</option>
+            {ITEM_TYPES.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={label}>Quantity</label>

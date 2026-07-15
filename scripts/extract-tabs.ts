@@ -35,8 +35,8 @@ for (const [tab, file] of WANTED) {
     console.warn(`⚠️ Tab "${tab}" not found — skipped`);
     continue;
   }
-  // raw:false → formatted strings (dates/currency as displayed in the sheet)
-  const csv = XLSX.utils.sheet_to_csv(ws, { raw: false, blankrows: false });
+  // sheet_to_csv emits formatted strings (dates/currency as displayed)
+  const csv = XLSX.utils.sheet_to_csv(ws, { blankrows: false });
   fs.writeFileSync(path.join(outDir, file), csv, "utf8");
   const rows = csv.split("\n").length;
   console.log(`✅ ${tab} → ${file} (${rows} lines)`);

@@ -3,7 +3,8 @@
  * Needs SUPABASE_DB_PASSWORD in .env.local (the database password from
  * project creation). Tries the direct host first, then the IPv4 poolers.
  *
- *   npx tsx scripts/apply-migrations.ts
+ *   npx tsx scripts/apply-migrations.ts              # all files (fresh DB only)
+ *   npx tsx scripts/apply-migrations.ts 0003         # only files matching "0003"
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -63,8 +64,16 @@ async function connect(): Promise<Client> {
 async function main() {
   const client = await connect();
 
+  const filter = process.argv[2];
   const dir = path.join("supabase", "migrations");
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith(".sql") && (!filter || f.includes(filter)))
+    .sort();
+  if (files.length === 0) {
+    console.error(`No migration files match "${filter}"`);
+    process.exit(1);
+  }
 
   for (const f of files) {
     const sql = fs.readFileSync(path.join(dir, f), "utf8");

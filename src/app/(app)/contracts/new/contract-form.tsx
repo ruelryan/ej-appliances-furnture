@@ -5,6 +5,7 @@ import { createContract } from "../actions";
 import { searchCustomers } from "./customer-actions";
 import { computeTerms, TERM_OPTIONS, termLabel } from "@/lib/amortization";
 import { peso, phTodayISO } from "@/lib/format";
+import { ITEM_TYPES } from "@/lib/messages";
 
 interface CustomerHit {
   id: string;
@@ -13,8 +14,6 @@ interface CustomerHit {
   address: string | null;
   messenger_url: string | null;
 }
-
-const ITEM_TYPES = ["Appliances", "Furniture", "Foam/Bed", "Others"];
 
 export function ContractForm() {
   const [customer, setCustomer] = useState<CustomerHit | null>(null);
