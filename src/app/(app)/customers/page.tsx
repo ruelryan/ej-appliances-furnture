@@ -45,28 +45,33 @@ export default async function CustomersPage({
         </button>
       </form>
 
-      <div className="space-y-2">
-        {(customers ?? []).map((c) => (
-          <Link
-            key={c.id}
-            href={`/customers/${c.id}`}
-            className="flex items-center justify-between rounded-card border border-surface bg-white p-4 hover:border-brand"
-          >
-            <div className="min-w-0">
-              <div className="font-semibold text-navy">
-                {c.display_name}
+      <div>
+        {(customers ?? []).map((c) => {
+          const count =
+            (c.contracts as unknown as { count: number }[])?.[0]?.count ?? 0;
+          const meta = [
+            `${count} contract${count === 1 ? "" : "s"}`,
+            (c.phones ?? []).join(" / ") || null,
+            c.address || null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          return (
+            <Link
+              key={c.id}
+              href={`/customers/${c.id}`}
+              className="flex items-center justify-between gap-3 border-b border-surface py-3.5 hover:bg-surface"
+            >
+              <div className="min-w-0">
+                <div className="font-display font-semibold text-navy">
+                  {c.display_name}
+                </div>
+                <div className="mt-0.5 truncate text-sm text-muted">{meta}</div>
               </div>
-              <div className="truncate text-xs text-muted">
-                {(c.phones ?? []).join(" / ") || "no phone"}
-                {c.address ? ` · ${c.address}` : ""}
-              </div>
-            </div>
-            <div className="shrink-0 text-xs text-muted">
-              {(c.contracts as unknown as { count: number }[])?.[0]?.count ?? 0}{" "}
-              contract(s)
-            </div>
-          </Link>
-        ))}
+              <span className="shrink-0 text-muted">›</span>
+            </Link>
+          );
+        })}
         {customers?.length === 0 && (
           <p className="py-8 text-center text-sm text-muted">
             No customers found.

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
 import { TierBadge } from "@/components/tier-badge";
+import { PaidProgress } from "@/components/paid-progress";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +108,13 @@ export default async function ContractsPage({
                 <div className="text-[11px] text-muted">balance</div>
               </div>
             </div>
+            {c.payment_status === "open" && (
+              <PaidProgress
+                paid={Number(c.total_paid)}
+                total={Number(c.total_price)}
+                className="mt-2"
+              />
+            )}
           </Link>
         ))}
         {contracts?.length === 0 && (

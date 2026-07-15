@@ -5,6 +5,7 @@ import { peso, fmtDateShort } from "@/lib/format";
 import { computeTerms, TERM_OPTIONS, termLabel } from "@/lib/amortization";
 import { buildFollowupMessage, type ContractFinancials } from "@/lib/messages";
 import { TierBadge } from "@/components/tier-badge";
+import { PaidProgress } from "@/components/paid-progress";
 import { CopyButton } from "@/components/copy-button";
 import { NoteForm } from "./note-form";
 import { StatusForm } from "./status-form";
@@ -224,6 +225,11 @@ export default async function ContractPage({
           <h2 className="mb-3 text-sm font-bold text-navy">
             Account
           </h2>
+          <PaidProgress
+            paid={Number(c.total_paid)}
+            total={Number(c.total_price)}
+            className="mb-3"
+          />
           <dl className="space-y-1.5 text-sm">
             {moneyRows.map(([k, v, alert]) => (
               <div key={k} className="flex justify-between gap-3">
