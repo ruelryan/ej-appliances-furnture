@@ -327,7 +327,11 @@ export default async function ContractPage({
                     <td className="py-1.5 pr-3">
                       {p ? fmtDateShort(p.payment_date) : ""}
                     </td>
-                    <td className="py-1.5 pr-3">{p ? (p.receipt_no ?? "—") : ""}</td>
+                    <td className="py-1.5 pr-3">
+                      {p
+                        ? `${p.receipt_type ? `${p.receipt_type} ` : ""}${p.receipt_no ?? "—"}`
+                        : ""}
+                    </td>
                     <td className="py-1.5 pr-3 text-right font-medium">
                       {p ? peso(p.amount) : ""}
                     </td>

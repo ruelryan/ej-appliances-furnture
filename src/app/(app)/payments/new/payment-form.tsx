@@ -177,9 +177,8 @@ export function PaymentForm({
               name="receipt_type"
               className={input}
             >
-              <option>Collection Receipt</option>
-              <option>Official Receipt</option>
-              <option>Acknowledgment Receipt</option>
+              <option>Appliances</option>
+              <option>Furniture</option>
             </select>
           </div>
           <div>

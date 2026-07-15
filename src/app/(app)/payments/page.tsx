@@ -80,7 +80,9 @@ export default async function PaymentsPage({
                   <div className="text-xs text-muted">
                     <span className="font-mono">{p.payment_no}</span> ·{" "}
                     {fmtDateShort(p.payment_date)}
-                    {p.receipt_no ? ` · OR# ${p.receipt_no}` : ""}
+                    {p.receipt_no
+                      ? ` · ${p.receipt_type ? `${p.receipt_type} ` : ""}OR# ${p.receipt_no}`
+                      : ""}
                     {contract && (
                       <>
                         {" · "}

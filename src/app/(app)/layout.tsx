@@ -22,14 +22,14 @@ export default async function AppLayout({
           E &amp; J
         </Link>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-muted">
+          <Link href="/account" className="text-xs text-muted hover:text-ink hover:underline">
             {profile.full_name}
             {isOwner && (
               <span className="ml-1 rounded-full bg-warning-bg px-2 py-0.5 text-[10px] font-semibold text-warning">
                 OWNER
               </span>
             )}
-          </span>
+          </Link>
           <form action={logout}>
             <button
               type="submit"
