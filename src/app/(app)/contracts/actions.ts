@@ -1,0 +1,127 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
+export async function addNote(contractId: string, formData: FormData) {
+  const body = String(formData.get("body") ?? "").trim();
+  if (!body) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase.from("contract_notes").insert({
+    contract_id: contractId,
+    body,
+    created_by: user?.id,
+  });
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/contracts/${contractId}`);
+}
+
+export async function updateStatus(contractId: string, formData: FormData) {
+  const collection = String(formData.get("collection_status") ?? "");
+  const delivery = String(formData.get("delivery_status") ?? "");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_contract_status", {
+    p_contract_id: contractId,
+    p_collection_status: collection || null,
+    p_delivery_status: delivery || null,
+  });
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/contracts/${contractId}`);
+  revalidatePath("/collections");
+}
+
+export interface CreateContractInput {
+  customerId?: string;
+  newCustomer?: {
+    lastName: string;
+    firstName: string;
+    phones: string[];
+    address: string;
+    messengerUrl: string;
+  };
+  contractDate: string;
+  itemDescription: string;
+  itemType: string;
+  quantity: number;
+  cashPrice: number;
+  termMonths: number;
+  salesAgent: string;
+  note: string;
+}
+
+export async function createContract(input: CreateContractInput) {
+  const supabase = await createClient();
+
+  let customerId = input.customerId;
+
+  if (!customerId) {
+    const nc = input.newCustomer;
+    if (!nc?.lastName || !nc?.firstName) {
+      return { error: "Customer name is required (Last name, First name)." };
+    }
+    const { data: cust, error: custErr } = await supabase
+      .from("customers")
+      .insert({
+        last_name: nc.lastName,
+        first_name: nc.firstName,
+        phones: nc.phones,
+        address: nc.address || null,
+        messenger_url: nc.messengerUrl || null,
+      })
+      .select("id")
+      .single();
+    if (custErr) return { error: custErr.message };
+    customerId = cust.id;
+  }
+
+  const { data, error } = await supabase.rpc("create_contract", {
+    p_customer_id: customerId,
+    p_contract_date: input.contractDate,
+    p_item_description: input.itemDescription,
+    p_item_type: input.itemType || null,
+    p_quantity: input.quantity,
+    p_cash_price: input.cashPrice,
+    p_term_months: input.termMonths,
+    p_sales_agent: input.salesAgent || null,
+    p_note: input.note || null,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/contracts");
+  redirect(`/contracts/${data.id}`);
+}
+
+export async function updateContract(
+  contractId: string,
+  fields: {
+    contract_date: string;
+    item_description: string;
+    item_type: string | null;
+    quantity: number;
+    sales_agent: string | null;
+    delivery_status: string;
+    payment_status: string;
+    collection_status: string | null;
+  }
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("contracts")
+    .update(fields)
+    .eq("id", contractId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/contracts/${contractId}`);
+  redirect(`/contracts/${contractId}`);
+}
