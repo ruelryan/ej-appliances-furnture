@@ -2,21 +2,57 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
-import { termLabel } from "@/lib/amortization";
+import { computeTerms, TERM_OPTIONS, termLabel } from "@/lib/amortization";
 import { buildFollowupMessage, type ContractFinancials } from "@/lib/messages";
 import { TierBadge } from "@/components/tier-badge";
 import { CopyButton } from "@/components/copy-button";
 import { NoteForm } from "./note-form";
 import { StatusForm } from "./status-form";
+import { ContractNavBar } from "./nav-bar";
 
 export const dynamic = "force-dynamic";
 
+interface NavRow {
+  id: string;
+  display_name: string;
+  contract_no: string;
+  last_payment_date: string | null;
+  overdue_amount: number;
+}
+
+function sortNavRows(rows: NavRow[], sort: string): NavRow[] {
+  const byName = (a: NavRow, b: NavRow) =>
+    a.display_name.localeCompare(b.display_name) ||
+    a.contract_no.localeCompare(b.contract_no);
+
+  if (sort === "lastpaid") {
+    // never-paid first, then oldest last-payment first
+    return [...rows].sort(
+      (a, b) =>
+        (a.last_payment_date ?? "").localeCompare(b.last_payment_date ?? "") ||
+        byName(a, b)
+    );
+  }
+  if (sort === "overdue") {
+    return [...rows].sort(
+      (a, b) => b.overdue_amount - a.overdue_amount || byName(a, b)
+    );
+  }
+  return [...rows].sort(byName);
+}
+
 export default async function ContractPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ nav?: string }>;
 }) {
   const { id } = await params;
+  const { nav } = await searchParams;
+  const sort = ["name", "lastpaid", "overdue"].includes(nav ?? "")
+    ? (nav as string)
+    : "name";
   const supabase = await createClient();
   const profile = await getProfile();
   const isOwner = profile?.role === "owner";
@@ -29,20 +65,45 @@ export default async function ContractPage({
 
   if (!c) notFound();
 
-  const [{ data: payments }, { data: notes }] = await Promise.all([
-    supabase
-      .from("payments")
-      .select("*")
-      .eq("contract_id", id)
-      .order("payment_date", { ascending: true }),
-    supabase
-      .from("contract_notes")
-      .select("*")
-      .eq("contract_id", id)
-      .order("created_at", { ascending: true }),
-  ]);
+  const [{ data: payments }, { data: notes }, { data: navRows }] =
+    await Promise.all([
+      supabase
+        .from("payments")
+        .select("*")
+        .eq("contract_id", id)
+        .order("payment_date", { ascending: true }),
+      supabase
+        .from("contract_notes")
+        .select("*")
+        .eq("contract_id", id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("v_contract_financials")
+        .select("id, display_name, contract_no, last_payment_date, overdue_amount")
+        .eq("payment_status", "open")
+        .limit(1000),
+    ]);
 
   const message = buildFollowupMessage(c as ContractFinancials);
+
+  // prev/next through open contracts in the chosen order
+  const ordered = sortNavRows((navRows ?? []) as NavRow[], sort);
+  const navIndex = ordered.findIndex((r) => r.id === c.id);
+  const prevId = navIndex > 0 ? ordered[navIndex - 1].id : null;
+  const nextId =
+    navIndex !== -1 && navIndex < ordered.length - 1
+      ? ordered[navIndex + 1].id
+      : navIndex === -1 && ordered.length > 0
+        ? ordered[0].id // current contract is closed — ▶ jumps into the open list
+        : null;
+
+  // amortization schedule: downpayment first, then the monthlies
+  const schedule: number[] = [
+    Number(c.downpayment),
+    ...Array.from({ length: c.term_months }, () => Number(c.monthly_amortization)),
+  ];
+  const activePayments = (payments ?? []).filter((p) => !p.voided_at);
+  const scheduleRows = Math.max(activePayments.length, schedule.length);
 
   const infoRows: Array<[string, React.ReactNode]> = [
     ["Contract no.", <span key="cn" className="font-mono">{c.contract_no}</span>],
@@ -69,6 +130,14 @@ export default async function ContractPage({
 
   return (
     <div className="space-y-5">
+      <ContractNavBar
+        prevId={prevId}
+        nextId={nextId}
+        sort={sort}
+        position={navIndex === -1 ? null : navIndex + 1}
+        total={ordered.length}
+      />
+
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -174,6 +243,64 @@ export default async function ContractPage({
         </section>
       </div>
 
+      {/* Term comparison — the contract's term highlighted, others what-if */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="mb-1 text-sm font-bold text-slate-700 dark:text-slate-300">
+          Terms
+        </h2>
+        <p className="mb-3 text-xs text-slate-400">
+          Grayed rows show what this contract would look like on the other
+          terms — useful when renegotiating.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm tabular-nums">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-slate-700">
+                <th className="py-1.5 pr-3">Term</th>
+                <th className="py-1.5 pr-3 text-right">Price</th>
+                <th className="py-1.5 pr-3 text-right">Monthly</th>
+                <th className="py-1.5 pr-3 text-right">Balance</th>
+                <th className="py-1.5 text-right">Balance to Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {TERM_OPTIONS.map((t) => {
+                const terms = computeTerms(Number(c.cash_price), t);
+                const cappedMonths = Math.min(c.months_elapsed, t);
+                const balance = terms.totalPrice - Number(c.total_paid);
+                const balanceToDate =
+                  terms.downpayment +
+                  terms.monthlyAmortization * cappedMonths -
+                  Number(c.total_paid);
+                const active = t === c.term_months;
+                return (
+                  <tr
+                    key={t}
+                    className={`border-b border-slate-100 dark:border-slate-800 ${
+                      active
+                        ? "font-bold text-emerald-700 dark:text-emerald-400"
+                        : "text-slate-400 dark:text-slate-500"
+                    }`}
+                  >
+                    <td className="py-1.5 pr-3">{termLabel(t)}</td>
+                    <td className="py-1.5 pr-3 text-right">{peso(terms.totalPrice)}</td>
+                    <td className="py-1.5 pr-3 text-right">
+                      {peso(terms.monthlyAmortization)}
+                    </td>
+                    <td className="py-1.5 pr-3 text-right">{peso(balance)}</td>
+                    <td className="py-1.5 text-right">
+                      {balanceToDate < 0
+                        ? `(${peso(Math.abs(balanceToDate)).slice(1)})`
+                        : peso(balanceToDate)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       {/* Status update (staff-allowed) */}
       <StatusForm
         contractId={c.id}
@@ -186,36 +313,41 @@ export default async function ContractPage({
         <h2 className="mb-3 text-sm font-bold text-slate-700 dark:text-slate-300">
           Payments ({(payments ?? []).filter((p) => !p.voided_at).length})
         </h2>
-        {(payments ?? []).length === 0 ? (
-          <p className="text-sm text-slate-500">No payments recorded yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-slate-700">
-                  <th className="py-1.5 pr-3">Date</th>
-                  <th className="py-1.5 pr-3">ID</th>
-                  <th className="py-1.5 pr-3">OR#</th>
-                  <th className="py-1.5 pr-3 text-right">Amount</th>
-                  <th className="py-1.5"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {(payments ?? []).map((p) => (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm tabular-nums">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-slate-700">
+                <th className="py-1.5 pr-3">Date</th>
+                <th className="py-1.5 pr-3">OR#</th>
+                <th className="py-1.5 pr-3 text-right">Amount Paid</th>
+                <th className="py-1.5 pr-3">Payment ID</th>
+                <th className="py-1.5 pr-3 text-right">Scheduled</th>
+                <th className="py-1.5"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: scheduleRows }, (_, i) => {
+                const p = activePayments[i];
+                return (
                   <tr
-                    key={p.id}
-                    className={`border-b border-slate-100 dark:border-slate-800 ${
-                      p.voided_at ? "opacity-50 line-through" : ""
-                    }`}
+                    key={p?.id ?? `sched-${i}`}
+                    className="border-b border-slate-100 dark:border-slate-800"
                   >
-                    <td className="py-1.5 pr-3">{fmtDateShort(p.payment_date)}</td>
-                    <td className="py-1.5 pr-3 font-mono text-xs">{p.payment_no}</td>
-                    <td className="py-1.5 pr-3">{p.receipt_no ?? "—"}</td>
+                    <td className="py-1.5 pr-3">
+                      {p ? fmtDateShort(p.payment_date) : ""}
+                    </td>
+                    <td className="py-1.5 pr-3">{p ? (p.receipt_no ?? "—") : ""}</td>
                     <td className="py-1.5 pr-3 text-right font-medium">
-                      {peso(p.amount)}
+                      {p ? peso(p.amount) : ""}
+                    </td>
+                    <td className="py-1.5 pr-3 font-mono text-xs">
+                      {p ? p.payment_no : ""}
+                    </td>
+                    <td className="py-1.5 pr-3 text-right text-slate-400">
+                      {schedule[i] !== undefined ? peso(schedule[i]) : ""}
                     </td>
                     <td className="py-1.5 text-right">
-                      {!p.voided_at && (
+                      {p && (
                         <Link
                           href={`/print/receipt/${p.id}`}
                           className="text-xs text-sky-700 hover:underline dark:text-sky-300"
@@ -225,9 +357,29 @@ export default async function ContractPage({
                       )}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-slate-400">
+            Scheduled column: downpayment first, then the monthly amortization —
+            compare line by line against what was actually paid.
+          </p>
+        </div>
+        {(payments ?? []).some((p) => p.voided_at) && (
+          <div className="mt-3 border-t border-slate-200 pt-2 dark:border-slate-700">
+            <div className="mb-1 text-xs font-semibold text-slate-500">Voided</div>
+            {(payments ?? [])
+              .filter((p) => p.voided_at)
+              .map((p) => (
+                <div
+                  key={p.id}
+                  className="text-xs text-slate-400 line-through"
+                >
+                  {fmtDateShort(p.payment_date)} · {p.payment_no} · {peso(p.amount)}
+                  {p.void_reason ? ` — ${p.void_reason}` : ""}
+                </div>
+              ))}
           </div>
         )}
       </section>
