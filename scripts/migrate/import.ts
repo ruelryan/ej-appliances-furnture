@@ -93,14 +93,15 @@ function parseDate(raw: string, context: string): string | null {
     const mi = months.indexOf(m[1].slice(0, 3).toLowerCase());
     if (mi !== -1) return `${m[3]}-${String(mi + 1).padStart(2, "0")}-${m[2].padStart(2, "0")}`;
   }
-  // "7/1/2026" — Google Sheets US locale: month/day/year
-  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  // "7/1/2026" or "6/3/25" — Google Sheets US locale: month/day/year
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
   if (m) {
-    const [, mm, dd, yyyy] = m;
+    const [, mm, dd, yy] = m;
     if (Number(mm) > 12) {
       warn(`${context}: date "${s}" has month > 12 — check day/month order`);
       return null;
     }
+    const yyyy = yy.length === 4 ? yy : Number(yy) < 50 ? `20${yy}` : `19${yy}`;
     return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
   }
   // already ISO
@@ -332,9 +333,9 @@ if (collectionRows.length) {
   const kMap = mapColumns(
     collectionRows,
     {
-      contractNo: ["Contract No", "Contract ID", "Contract Number", "Contract"],
+      contractNo: ["Customer Card no.", "Customer Card Number", "Contract No", "Contract ID", "Contract Number", "Contract"],
       name: ["Customer Name", "Name", "Customer"],
-      messenger: ["Messenger", "Messenger Collection GC", "Messenger Link", "GC"],
+      messenger: ["Messenger Collection GC", "Messenger", "Messenger Link", "GC"],
       gmap: ["Google Map GPS", "GPS", "Map", "Gmap"],
       status: ["Status", "Collection Status"],
     },
@@ -597,16 +598,17 @@ async function main() {
   }
 
   console.log("Inserting notes…");
-  const noteRows: Array<{ contract_id: string; body: string; created_at?: string }> = [];
+  const noteRows: Array<{ contract_id: string; body: string; created_at: string }> = [];
   for (const c of loadable) {
     const cid = contractNoToId.get(c.contractNo);
     if (!cid) continue;
     for (const n of splitNotes(c.notes)) {
-      noteRows.push({
-        contract_id: cid,
-        body: n.body,
-        ...(n.at ? { created_at: new Date(n.at.replace(" ", "T") + ":00+08:00").toISOString() } : {}),
-      });
+      // batch inserts null out missing keys (no column default), so always
+      // set created_at — untimestamped notes fall back to the contract date
+      const at = n.at
+        ? new Date(n.at.replace(" ", "T") + ":00+08:00")
+        : new Date(c.date + "T00:00:00+08:00");
+      noteRows.push({ contract_id: cid, body: n.body, created_at: at.toISOString() });
     }
   }
   for (let i = 0; i < noteRows.length; i += 200) {
@@ -618,9 +620,11 @@ async function main() {
   const counterRows: Array<{ scope: string; last_value: number }> = [];
   const byYear = new Map<string, number>();
   for (const no of contractNoToId.keys()) {
-    const year = no.slice(0, 4);
-    const seq = Number(no.slice(4)) || 0;
-    byYear.set(year, Math.max(byYear.get(year) ?? 0, seq));
+    // Only YYYY### style IDs seed counters; legacy plain-number IDs (1, 2, …)
+    // from the early Sheet era don't participate in new-ID generation.
+    const m = no.match(/^(20\d{2})(\d{3,})$/);
+    if (!m) continue;
+    byYear.set(m[1], Math.max(byYear.get(m[1]) ?? 0, Number(m[2])));
   }
   for (const [year, max] of byYear) counterRows.push({ scope: `contract:${year}`, last_value: max });
   const maxPay = Math.max(
@@ -637,8 +641,17 @@ async function main() {
   console.log("\nReconciling…");
   const { count: dbContracts } = await db.from("contracts").select("*", { count: "exact", head: true });
   const { count: dbPayments } = await db.from("payments").select("*", { count: "exact", head: true });
-  const { data: payAll } = await db.from("payments").select("amount");
-  const dbPaymentSum = (payAll ?? []).reduce((s, r) => s + Number(r.amount), 0);
+  // PostgREST caps responses at 1000 rows — paginate to sum every payment
+  let dbPaymentSum = 0;
+  for (let from = 0; ; from += 1000) {
+    const { data: page, error } = await db
+      .from("payments")
+      .select("amount")
+      .range(from, from + 999);
+    if (error) throw new Error("reconcile paging: " + error.message);
+    for (const r of page ?? []) dbPaymentSum += Number(r.amount);
+    if (!page || page.length < 1000) break;
+  }
 
   const checks = [
     ["Contracts in DB", dbContracts, loadable.length],
