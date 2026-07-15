@@ -113,7 +113,7 @@ export function PaymentForm({
               onChange={(e) => setTerm(e.target.value)}
               placeholder="Search name or contract no.…"
               autoFocus
-              className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
             />
             {(hits.length > 0 || searching) && (
               <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-card border border-surface bg-white shadow-lg">
@@ -153,7 +153,7 @@ export function PaymentForm({
               min="0.01"
               required
               inputMode="decimal"
-              className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
             />
           </div>
           <div>
@@ -165,7 +165,7 @@ export function PaymentForm({
               type="date"
               required
               defaultValue={phTodayISO()}
-              className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
             />
           </div>
           <div>
@@ -174,7 +174,7 @@ export function PaymentForm({
             </label>
             <select
               name="receipt_type"
-              className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
             >
               <option>Collection Receipt</option>
               <option>Official Receipt</option>
@@ -188,7 +188,7 @@ export function PaymentForm({
             <input
               name="receipt_no"
               required
-              className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
             />
           </div>
         </div>
@@ -198,7 +198,7 @@ export function PaymentForm({
           </label>
           <input
             name="reference_no"
-            className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
           />
         </div>
       </div>
@@ -212,7 +212,7 @@ export function PaymentForm({
       <button
         type="submit"
         disabled={pending || !contract}
-        className="w-full rounded-card bg-brand py-3 text-sm font-bold text-white hover:bg-brand-dark disabled:opacity-50"
+        className="w-full rounded-card bg-brand py-3 text-base font-bold text-white shadow-[0_2px_8px_rgba(244,77,85,0.3)] hover:bg-brand-dark disabled:opacity-50 disabled:shadow-none"
       >
         {pending ? "Recording…" : "Record Payment"}
       </button>

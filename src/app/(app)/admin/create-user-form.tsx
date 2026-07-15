@@ -7,7 +7,7 @@ export function CreateUserForm() {
   const [state, formAction, pending] = useActionState(createUser, null);
 
   const input =
-    "w-full rounded-card border border-surface px-3 py-2 text-sm";
+    "w-full rounded-card border border-surface px-3 py-2.5 text-base";
 
   return (
     <form action={formAction} className="space-y-3 border-t border-surface pt-4">

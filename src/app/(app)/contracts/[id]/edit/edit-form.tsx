@@ -38,7 +38,7 @@ export function EditForm({ contract }: { contract: Contract }) {
   }
 
   const input =
-    "w-full rounded-card border border-surface px-3 py-2 text-sm";
+    "w-full rounded-card border border-surface px-3 py-2.5 text-base";
   const label =
     "mb-1 block text-sm font-medium text-navy";
 
@@ -128,7 +128,7 @@ export function EditForm({ contract }: { contract: Contract }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-card bg-brand py-3 text-sm font-bold text-white hover:bg-brand-dark disabled:opacity-50"
+        className="w-full rounded-card bg-brand py-3 text-base font-bold text-white shadow-[0_2px_8px_rgba(244,77,85,0.3)] hover:bg-brand-dark disabled:opacity-50 disabled:shadow-none"
       >
         {pending ? "Saving…" : "Save Changes"}
       </button>

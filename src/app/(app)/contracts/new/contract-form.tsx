@@ -117,29 +117,29 @@ export function ContractForm() {
               name="last_name"
               placeholder="Last name"
               required
-              className="rounded-card border border-surface px-3 py-2 text-sm"
+              className="rounded-card border border-surface px-3 py-2.5 text-base"
             />
             <input
               name="first_name"
               placeholder="First name"
               required
-              className="rounded-card border border-surface px-3 py-2 text-sm"
+              className="rounded-card border border-surface px-3 py-2.5 text-base"
             />
             <input
               name="phone"
               placeholder="Phone (09…) — use / for two"
-              className="col-span-2 rounded-card border border-surface px-3 py-2 text-sm"
+              className="col-span-2 rounded-card border border-surface px-3 py-2.5 text-base"
             />
             <input
               name="address"
               placeholder="Full address"
               required
-              className="col-span-2 rounded-card border border-surface px-3 py-2 text-sm"
+              className="col-span-2 rounded-card border border-surface px-3 py-2.5 text-base"
             />
             <input
               name="messenger_url"
               placeholder="Facebook/Messenger link (optional)"
-              className="col-span-2 rounded-card border border-surface px-3 py-2 text-sm"
+              className="col-span-2 rounded-card border border-surface px-3 py-2.5 text-base"
             />
           </div>
         ) : customer ? (
@@ -170,7 +170,7 @@ export function ContractForm() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="Search existing customer…"
-              className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
             />
             {hits.length > 0 && (
               <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-card border border-surface bg-white shadow-lg">
@@ -203,7 +203,7 @@ export function ContractForm() {
             name="item_description"
             placeholder="e.g. Sharp Refrigerator 6 cu ft"
             required
-            className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
           />
         </div>
         <div>
@@ -212,7 +212,7 @@ export function ContractForm() {
           </label>
           <select
             name="item_type"
-            className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
           >
             {ITEM_TYPES.map((t) => (
               <option key={t}>{t}</option>
@@ -230,7 +230,7 @@ export function ContractForm() {
             step="1"
             defaultValue="1"
             required
-            className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
           />
         </div>
         <div>
@@ -246,7 +246,7 @@ export function ContractForm() {
             inputMode="decimal"
             value={cashPrice}
             onChange={(e) => setCashPrice(e.target.value)}
-            className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
           />
         </div>
         <div>
@@ -256,7 +256,7 @@ export function ContractForm() {
           <select
             value={termMonths}
             onChange={(e) => setTermMonths(Number(e.target.value))}
-            className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
           >
             {TERM_OPTIONS.map((t) => (
               <option key={t} value={t}>
@@ -274,7 +274,7 @@ export function ContractForm() {
             type="date"
             required
             defaultValue={phTodayISO()}
-            className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
           />
         </div>
         <div>
@@ -284,7 +284,7 @@ export function ContractForm() {
           <input
             name="sales_agent"
             required
-            className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
           />
         </div>
         <div className="col-span-2">
@@ -293,7 +293,7 @@ export function ContractForm() {
           </label>
           <input
             name="note"
-            className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
           />
         </div>
       </div>
@@ -338,7 +338,7 @@ export function ContractForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-card bg-teal py-3 text-sm font-bold text-white hover:bg-teal-dark disabled:opacity-50"
+        className="w-full rounded-card bg-brand py-3 text-base font-bold text-white shadow-[0_2px_8px_rgba(244,77,85,0.3)] hover:bg-brand-dark disabled:opacity-50 disabled:shadow-none"
       >
         {pending ? "Creating…" : "Create Contract"}
       </button>

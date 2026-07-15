@@ -35,7 +35,7 @@ export default async function CustomersPage({
           name="q"
           defaultValue={q}
           placeholder="Search by name…"
-          className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+          className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
         />
         <button
           type="submit"

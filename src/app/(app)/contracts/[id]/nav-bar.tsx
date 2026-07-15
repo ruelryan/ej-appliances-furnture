@@ -48,7 +48,7 @@ export function ContractNavBar({
         onChange={(e) =>
           router.replace(`?nav=${e.target.value}`, { scroll: false })
         }
-        className="rounded-card border border-surface px-2 py-2 text-sm"
+        className="rounded-card border border-surface px-2 py-2.5 text-base"
         aria-label="Browse order"
       >
         {NAV_SORTS.map((s) => (

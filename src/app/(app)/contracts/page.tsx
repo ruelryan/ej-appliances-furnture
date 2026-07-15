@@ -55,12 +55,12 @@ export default async function ContractsPage({
           name="q"
           defaultValue={q}
           placeholder="Search name, contract no., or item…"
-          className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+          className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
         />
         <select
           name="status"
           defaultValue={status}
-          className="rounded-card border border-surface px-2 py-2 text-sm"
+          className="rounded-card border border-surface px-2 py-2.5 text-base"
         >
           <option value="open">Open</option>
           <option value="closed">Closed</option>

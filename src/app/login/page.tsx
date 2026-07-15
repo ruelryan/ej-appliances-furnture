@@ -32,7 +32,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               required
-              className="w-full rounded-card border border-surface px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
+              className="w-full rounded-card border border-surface px-3 py-2.5 text-base outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
             />
           </div>
           <div>
@@ -48,7 +48,7 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
-              className="w-full rounded-card border border-surface px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
+              className="w-full rounded-card border border-surface px-3 py-2.5 text-base outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
             />
           </div>
 

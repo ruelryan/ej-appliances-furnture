@@ -94,7 +94,7 @@ export function VoidPaymentButton({
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. duplicate entry, wrong amount"
               autoFocus
-              className="mb-3 w-full rounded-card border border-surface px-3 py-2 text-sm"
+              className="mb-3 w-full rounded-card border border-surface px-3 py-2.5 text-base"
             />
 
             {error && (

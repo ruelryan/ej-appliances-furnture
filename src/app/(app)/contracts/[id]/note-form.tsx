@@ -22,7 +22,7 @@ export function NoteForm({ contractId }: { contractId: string }) {
         name="body"
         placeholder="Add a note…"
         required
-        className="w-full rounded-card border border-surface px-3 py-2 text-sm"
+        className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
       />
       <button
         type="submit"

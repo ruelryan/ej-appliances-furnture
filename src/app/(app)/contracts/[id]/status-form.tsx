@@ -34,7 +34,7 @@ export function StatusForm({
         <select
           name="collection_status"
           defaultValue={collectionStatus ?? ""}
-          className="w-full rounded-card border border-surface px-2 py-2 text-sm"
+          className="w-full rounded-card border border-surface px-2 py-2.5 text-base"
         >
           <option value="">— none —</option>
           {COLLECTION_STATUSES.map((s) => (
@@ -51,7 +51,7 @@ export function StatusForm({
         <select
           name="delivery_status"
           defaultValue={deliveryStatus}
-          className="w-full rounded-card border border-surface px-2 py-2 text-sm"
+          className="w-full rounded-card border border-surface px-2 py-2.5 text-base"
         >
           {DELIVERY_STATUSES.map((s) => (
             <option key={s} value={s}>
