@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildFollowupMessage, type ContractFinancials } from "@/lib/messages";
+import { buildDemandLetterBody, type ContractFinancials } from "@/lib/messages";
 import { fmtDate, phTodayISO } from "@/lib/format";
 import { Letterhead, SignatureBlocks } from "../../letterhead";
 import { PrintControls } from "../../print-controls";
@@ -23,16 +23,15 @@ export default async function DemandLetterPage({
 
   if (!c) notFound();
 
-  // The demand letter always uses the formal (tier-3) template, even if
-  // printed early — printing it is an explicit human decision.
-  const message = buildFollowupMessage({
-    ...(c as ContractFinancials),
-    followup_tier: "demand",
-  });
+  // Always the formal letter, even if printed before the account reaches
+  // the demand tier — printing it is an explicit human decision.
+  const message = buildDemandLetterBody(
+    c as ContractFinancials & { contract_no: string }
+  );
 
   return (
     <div className="text-[13px] leading-relaxed">
-      <PrintControls />
+      <PrintControls filename={`demand-letter-${c.contract_no}`} />
       <Letterhead />
       <div className="mb-1 text-right text-xs">Date: {fmtDate(phTodayISO())}</div>
       <div className="mb-4 text-xs">Address: {c.address ?? ""}</div>
