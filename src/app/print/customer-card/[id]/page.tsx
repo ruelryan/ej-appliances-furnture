@@ -47,7 +47,7 @@ export default async function CustomerCardPrintPage({
 
   return (
     <div className="text-sm">
-      <PrintControls />
+      <PrintControls filename={`customer-card-${c.contract_no}`} />
       <Letterhead />
       <h1 className="mb-4 text-center text-base font-semibold">CUSTOMER CARD</h1>
 

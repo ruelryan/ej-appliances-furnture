@@ -39,3 +39,34 @@ export function phTodayISO(): string {
     timeZone: "Asia/Manila",
   }).format(new Date());
 }
+
+// Postgres time ("08:01:00") → "8:01 AM".
+export function fmtTime(t: string | null | undefined): string {
+  if (!t) return "—";
+  const [h, m] = t.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return "—";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+
+export function fmtHours(n: number | string | null | undefined): string {
+  if (n === null || n === undefined || n === "") return "—";
+  const v = Number(n);
+  return isNaN(v) ? "—" : v.toFixed(2);
+}
+
+// "2026-07" → "July 2026"
+export function monthLabel(month: string): string {
+  const d = new Date(month + "-01T00:00:00");
+  if (isNaN(d.getTime())) return month;
+  return d.toLocaleDateString("en-PH", { month: "long", year: "numeric" });
+}
+
+// ("2026-06-16", "2026-06-30") → "June 16–30, 2026"
+export function periodLabel(start: string, end: string): string {
+  const s = new Date(start + "T00:00:00");
+  const e = new Date(end + "T00:00:00");
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return `${start} – ${end}`;
+  const month = s.toLocaleDateString("en-PH", { month: "long" });
+  return `${month} ${s.getDate()}–${e.getDate()}, ${s.getFullYear()}`;
+}

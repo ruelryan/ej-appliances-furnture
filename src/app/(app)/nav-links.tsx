@@ -8,6 +8,9 @@ const ICONS: Record<string, React.ReactNode> = {
   home: (
     <path d="M3 10.5 12 3l9 7.5M5.5 9.5V21h13V9.5" />
   ),
+  dtr: (
+    <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7v5l3.5 2" />
+  ),
   contracts: (
     <path d="M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5" />
   ),
@@ -47,6 +50,7 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
 
 const LINKS = [
   { href: "/", label: "Home", icon: "home", ownerOnly: false },
+  { href: "/dtr", label: "DTR", icon: "dtr", ownerOnly: false },
   { href: "/contracts", label: "Contracts", icon: "contracts", ownerOnly: false },
   { href: "/payments", label: "Payments", icon: "payments", ownerOnly: false },
   { href: "/collections", label: "Collect", icon: "collect", ownerOnly: false },
@@ -91,12 +95,12 @@ export function NavLinks({
     );
   }
 
-  // Mobile tabs: cap at 5 for thumb reach; owner-only pages remain reachable
-  // from the dashboard.
-  const tabLinks = links.filter((l) => !l.ownerOnly).slice(0, 5);
+  // Mobile tabs: cap at 6 (DTR clock-in must be one tap on a phone);
+  // owner-only pages remain reachable from the dashboard.
+  const tabLinks = links.filter((l) => !l.ownerOnly).slice(0, 6);
 
   return (
-    <div className="grid grid-cols-5">
+    <div className="grid grid-cols-6">
       {tabLinks.map((l) => (
         <Link
           key={l.href}

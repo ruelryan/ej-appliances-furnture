@@ -41,7 +41,7 @@ export default async function ReceiptPage({
 
   return (
     <div className="text-sm">
-      <PrintControls />
+      <PrintControls filename={`receipt-${p.payment_no}`} />
       <Letterhead />
       <h1 className="mb-4 text-center text-base font-semibold">
         PAYMENT ACKNOWLEDGMENT
