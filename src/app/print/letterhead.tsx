@@ -1,8 +1,12 @@
 import { COMPANY } from "@/lib/messages";
+import { LogoMark } from "@/components/logo";
 
 export function Letterhead() {
   return (
     <div className="mb-4 border-b-2 border-ink pb-2 text-center">
+      <span className="mx-auto mb-1 block w-fit text-ink">
+        <LogoMark className="h-9 w-9" />
+      </span>
       <div className="text-xl font-semibold text-ink">{COMPANY.name}</div>
       <div className="text-xs text-ink">{COMPANY.address}</div>
     </div>

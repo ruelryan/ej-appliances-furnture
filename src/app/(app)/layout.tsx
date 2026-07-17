@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
+import { LogoMark } from "@/components/logo";
 import { NavLinks } from "./nav-links";
 
 export default async function AppLayout({
@@ -18,8 +19,13 @@ export default async function AppLayout({
     <div className="min-h-dvh bg-surface">
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-white px-4 py-3">
-        <Link href="/" className="font-display text-lg font-semibold text-ink">
-          E &amp; J
+        <Link href="/" className="flex items-center gap-2">
+          <span className="text-brand">
+            <LogoMark className="h-6 w-6" />
+          </span>
+          <span className="font-display text-lg font-semibold text-ink">
+            E &amp; J
+          </span>
         </Link>
         <div className="flex items-center gap-3">
           <Link href="/account" className="text-xs text-muted hover:text-ink hover:underline">

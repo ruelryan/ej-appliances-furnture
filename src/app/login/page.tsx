@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { login } from "./actions";
+import { LogoMark } from "@/components/logo";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, null);
@@ -10,6 +11,9 @@ export default function LoginPage() {
     <main className="flex min-h-dvh items-center justify-center bg-surface p-4">
       <div className="w-full max-w-sm rounded-card border border-line bg-white p-8 shadow-sm">
         <div className="mb-8 text-center">
+          <span className="mx-auto mb-3 block w-fit text-brand">
+            <LogoMark className="h-12 w-12" />
+          </span>
           <div className="font-display text-2xl font-semibold text-ink">
             E &amp; J
           </div>
