@@ -101,18 +101,23 @@ export default async function ContractPage({
   // Agent picker options (owner/admin only) + suppliers for the delivery panel.
   let agents: { id: string; full_name: string }[] = [];
   let suppliers: { id: string; name: string }[] = [];
-  if (canManage) {
-    const [{ data: ag }, { data: sup }] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, full_name")
-        .eq("role", "sales_agent")
-        .eq("active", true)
-        .order("full_name"),
+  let products: { id: string; name: string }[] = [];
+  if (canManage || isDelivery) {
+    const [{ data: ag }, { data: sup }, { data: prod }] = await Promise.all([
+      canManage
+        ? supabase
+            .from("profiles")
+            .select("id, full_name")
+            .eq("role", "sales_agent")
+            .eq("active", true)
+            .order("full_name")
+        : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
       supabase.from("suppliers").select("id, name").eq("active", true).order("name"),
+      supabase.from("products").select("id, name").eq("active", true).order("name"),
     ]);
     agents = ag ?? [];
     suppliers = sup ?? [];
+    products = prod ?? [];
   }
 
   const message = buildFollowupMessage(c as ContractFinancials);
@@ -335,6 +340,7 @@ export default async function ContractPage({
       <DeliveryPanel
         delivery={delivery ?? null}
         suppliers={suppliers}
+        products={products}
         canManage={canManage}
         isDelivery={isDelivery}
         contractId={c.id}

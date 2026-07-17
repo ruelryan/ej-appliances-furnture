@@ -29,12 +29,14 @@ type DeliveryDisplay = DeliveryRow & {
 export function DeliveryPanel({
   delivery,
   suppliers,
+  products,
   canManage,
   isDelivery,
   contractId,
 }: {
   delivery: DeliveryDisplay | null;
   suppliers: { id: string; name: string }[];
+  products: { id: string; name: string }[];
   canManage: boolean;
   isDelivery: boolean;
   contractId: string;
@@ -98,6 +100,7 @@ export function DeliveryPanel({
           <DeliveryControls
             delivery={delivery}
             suppliers={suppliers}
+            products={products}
             canManage={canManage}
             isDelivery={isDelivery}
             contractId={contractId}

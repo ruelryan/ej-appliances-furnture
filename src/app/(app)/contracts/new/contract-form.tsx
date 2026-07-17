@@ -21,6 +21,12 @@ interface Agent {
   full_name: string;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  category: string | null;
+}
+
 interface Prefill {
   leadId: string;
   firstName: string;
@@ -36,9 +42,11 @@ interface Prefill {
 
 export function ContractForm({
   agents,
+  products,
   prefill,
 }: {
   agents: Agent[];
+  products: Product[];
   prefill?: Prefill;
 }) {
   const [customer, setCustomer] = useState<CustomerHit | null>(null);
@@ -46,6 +54,7 @@ export function ContractForm({
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<CustomerHit[]>([]);
   const [cashPrice, setCashPrice] = useState(prefill?.cashPrice ?? "");
+  const [productId, setProductId] = useState("");
   const [termMonths, setTermMonths] = useState(4);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -105,6 +114,7 @@ export function ContractForm({
       termMonths,
       salesAgent: agentName,
       agentId: agentId || undefined,
+      productId: productId || undefined,
       leadId: prefill?.leadId,
       note: String(fd.get("note") ?? "").trim(),
     };
@@ -229,6 +239,36 @@ export function ContractForm({
 
       {/* Item */}
       <div className="grid grid-cols-2 gap-3 rounded-card border border-line bg-white p-4">
+        {products.length > 0 && (
+          <div className="col-span-2">
+            <label className={label}>
+              Product <span className="text-muted">(optional — links stock)</span>
+            </label>
+            <select
+              value={productId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setProductId(id);
+                const p = products.find((x) => x.id === id);
+                if (p) {
+                  const descEl = document.querySelector<HTMLInputElement>('input[name="item_description"]');
+                  if (descEl) descEl.value = p.name;
+                  const typeEl = document.querySelector<HTMLSelectElement>('select[name="item_type"]');
+                  if (typeEl && p.category) typeEl.value = p.category;
+                }
+              }}
+              className={input}
+            >
+              <option value="">— Not from catalog —</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.category ? ` (${p.category})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="col-span-2">
           <label className={label}>
             Item description

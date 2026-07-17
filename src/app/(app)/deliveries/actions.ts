@@ -89,3 +89,59 @@ export async function addSupplier(input: {
   revalidatePath("/deliveries");
   return {};
 }
+
+// ── Inventory (Stage 3b) ──────────────────────────────────────
+export async function createProduct(input: {
+  name: string;
+  category: string;
+  defaultCost: number | null;
+}) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("create_product", {
+    p_name: input.name,
+    p_category: input.category || null,
+    p_default_cost: input.defaultCost,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/deliveries");
+  return {};
+}
+
+export async function restockProduct(productId: string, qty: number, note: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("restock_product", {
+    p_id: productId,
+    p_qty: qty,
+    p_note: note || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/deliveries");
+  return {};
+}
+
+export async function adjustStock(productId: string, delta: number, note: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("adjust_stock", {
+    p_id: productId,
+    p_delta: delta,
+    p_note: note || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/deliveries");
+  return {};
+}
+
+export async function setDeliveryProduct(
+  deliveryId: string,
+  productId: string | null,
+  contractId?: string
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_delivery_product", {
+    p_delivery_id: deliveryId,
+    p_product_id: productId,
+  });
+  if (error) return { error: error.message };
+  revalidate(contractId);
+  return {};
+}

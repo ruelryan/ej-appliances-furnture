@@ -56,6 +56,7 @@ export interface CreateContractInput {
   termMonths: number;
   salesAgent: string;
   agentId?: string;
+  productId?: string;
   leadId?: string;
   note: string;
 }
@@ -96,6 +97,7 @@ export async function createContract(input: CreateContractInput) {
     p_sales_agent: input.salesAgent || null,
     p_note: input.note || null,
     p_agent_id: input.agentId || null,
+    p_product_id: input.productId || null,
   });
 
   if (error) return { error: error.message };

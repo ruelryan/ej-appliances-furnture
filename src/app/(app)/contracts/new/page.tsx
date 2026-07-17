@@ -19,12 +19,19 @@ export default async function NewContractPage({
   const { leadId } = await searchParams;
   const supabase = await createClient();
 
-  const { data: agents } = await supabase
-    .from("profiles")
-    .select("id, full_name")
-    .eq("role", "sales_agent")
-    .eq("active", true)
-    .order("full_name");
+  const [{ data: agents }, { data: products }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("role", "sales_agent")
+      .eq("active", true)
+      .order("full_name"),
+    supabase
+      .from("products")
+      .select("id, name, category")
+      .eq("active", true)
+      .order("name"),
+  ]);
 
   let prefill: React.ComponentProps<typeof ContractForm>["prefill"];
   if (leadId) {
@@ -61,7 +68,7 @@ export default async function NewContractPage({
           Converting lead — review the pre-filled details before saving.
         </p>
       )}
-      <ContractForm agents={agents ?? []} prefill={prefill} />
+      <ContractForm agents={agents ?? []} products={products ?? []} prefill={prefill} />
     </div>
   );
 }

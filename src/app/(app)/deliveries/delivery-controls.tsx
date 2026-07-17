@@ -6,6 +6,7 @@ import {
   recordSupplierOrder,
   recordSupplierInvoice,
   markDelivered,
+  setDeliveryProduct,
 } from "./actions";
 import { phTodayISO } from "@/lib/format";
 import { input, label } from "@/components/ui";
@@ -19,9 +20,11 @@ export type DeliveryRow = {
   paid_at: string | null;
   invoice_received_at: string | null;
   invoice_ref: string | null;
+  product_id?: string | null;
 };
 
 type Supplier = { id: string; name: string };
+type Product = { id: string; name: string };
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   useEffect(() => {
@@ -42,12 +45,14 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 export function DeliveryControls({
   delivery,
   suppliers,
+  products,
   canManage,
   isDelivery,
   contractId,
 }: {
   delivery: DeliveryRow;
   suppliers: Supplier[];
+  products?: Product[];
   canManage: boolean;
   isDelivery: boolean;
   contractId?: string;
@@ -131,6 +136,24 @@ export function DeliveryControls({
         >
           {delivery.invoice_received_at ? "Invoice ✓" : "Record invoice"}
         </button>
+      )}
+
+      {/* Link a catalog product (so stock decrements on delivery) */}
+      {products && products.length > 0 && canAct && !done && (
+        <select
+          value={delivery.product_id ?? ""}
+          disabled={pending}
+          onChange={(e) => run(() => setDeliveryProduct(delivery.id, e.target.value || null, contractId))}
+          className="rounded-card border border-line bg-white px-2 py-1.5 text-xs font-semibold text-ink disabled:opacity-40"
+          title="Link a catalog product"
+        >
+          <option value="">No product</option>
+          {products.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
       )}
 
       {/* Delivered */}
