@@ -26,11 +26,28 @@ export async function createClient() {
   );
 }
 
+export type Role =
+  | "owner"
+  | "admin"
+  | "collector"
+  | "sales_agent"
+  | "delivery"
+  | "staff"; // legacy; migrated to 'admin' in 0011, kept for safety
+
 export interface Profile {
   id: string;
   full_name: string;
-  role: "owner" | "staff";
+  role: Role;
   active: boolean;
+}
+
+// Capability helpers — mirror the SQL guards so UI gating matches RLS.
+// owner + admin (and legacy staff) may post payments / create contracts.
+export function canPostPayments(role: Role): boolean {
+  return role === "owner" || role === "admin" || role === "staff";
+}
+export function isOwnerRole(role: Role): boolean {
+  return role === "owner";
 }
 
 // Returns the signed-in user's profile, or null if not authenticated/active.

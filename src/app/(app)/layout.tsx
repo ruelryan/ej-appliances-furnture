@@ -50,7 +50,7 @@ export default async function AppLayout({
       <div className="mx-auto flex w-full max-w-6xl">
         {/* Desktop sidebar */}
         <aside className="sticky top-[53px] hidden h-[calc(100dvh-53px)] w-48 shrink-0 border-r border-line p-3 md:block">
-          <NavLinks isOwner={isOwner} variant="sidebar" />
+          <NavLinks role={profile.role} variant="sidebar" />
         </aside>
 
         {/* Main content — bottom padding clears the mobile tab bar */}
@@ -59,7 +59,7 @@ export default async function AppLayout({
 
       {/* Mobile bottom tabs */}
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
-        <NavLinks isOwner={isOwner} variant="tabs" />
+        <NavLinks role={profile.role} variant="tabs" />
       </nav>
     </div>
   );

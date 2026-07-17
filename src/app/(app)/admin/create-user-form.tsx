@@ -23,8 +23,11 @@ export function CreateUserForm() {
           required
           className={input}
         />
-        <select name="role" defaultValue="staff" className={input}>
-          <option value="staff">Staff</option>
+        <select name="role" defaultValue="collector" className={input}>
+          <option value="collector">Collector</option>
+          <option value="admin">Admin assistant</option>
+          <option value="sales_agent">Sales agent</option>
+          <option value="delivery">Delivery</option>
           <option value="owner">Owner</option>
         </select>
       </div>

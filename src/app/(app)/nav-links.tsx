@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { Role } from "@/lib/supabase/server";
 
 // Inline stroke icons (24×24 viewBox, currentColor) — no icon library.
 const ICONS: Record<string, React.ReactNode> = {
@@ -48,26 +49,40 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
   );
 }
 
-const LINKS = [
-  { href: "/", label: "Home", icon: "home", ownerOnly: false },
-  { href: "/dtr", label: "DTR", icon: "dtr", ownerOnly: false },
-  { href: "/contracts", label: "Contracts", icon: "contracts", ownerOnly: false },
-  { href: "/payments", label: "Payments", icon: "payments", ownerOnly: false },
-  { href: "/collections", label: "Collect", icon: "collect", ownerOnly: false },
-  { href: "/customers", label: "Customers", icon: "customers", ownerOnly: false },
-  { href: "/analytics", label: "Analytics", icon: "analytics", ownerOnly: true },
-  { href: "/admin", label: "Admin", icon: "admin", ownerOnly: true },
+// `roles` omitted = visible to every authenticated role.
+// RLS scopes the *content* of shared pages (a collector's Contracts list
+// shows only assigned contracts); this list only controls nav visibility.
+type NavLink = {
+  href: string;
+  label: string;
+  icon: string;
+  roles?: Role[];
+};
+
+const LINKS: NavLink[] = [
+  { href: "/", label: "Home", icon: "home" },
+  { href: "/dtr", label: "DTR", icon: "dtr", roles: ["owner", "admin", "collector", "delivery", "staff"] },
+  { href: "/contracts", label: "Contracts", icon: "contracts", roles: ["owner", "admin", "collector", "sales_agent", "delivery", "staff"] },
+  { href: "/payments", label: "Payments", icon: "payments", roles: ["owner", "admin", "staff"] },
+  { href: "/collections", label: "Collect", icon: "collect", roles: ["owner", "admin", "collector", "staff"] },
+  { href: "/customers", label: "Customers", icon: "customers", roles: ["owner", "admin", "staff"] },
+  { href: "/analytics", label: "Analytics", icon: "analytics", roles: ["owner"] },
+  { href: "/admin", label: "Admin", icon: "admin", roles: ["owner"] },
 ];
 
+function visibleTo(role: Role) {
+  return (l: NavLink) => !l.roles || l.roles.includes(role);
+}
+
 export function NavLinks({
-  isOwner,
+  role,
   variant,
 }: {
-  isOwner: boolean;
+  role: Role;
   variant: "sidebar" | "tabs";
 }) {
   const pathname = usePathname();
-  const links = LINKS.filter((l) => isOwner || !l.ownerOnly);
+  const links = LINKS.filter(visibleTo(role));
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -96,8 +111,9 @@ export function NavLinks({
   }
 
   // Mobile tabs: cap at 6 (DTR clock-in must be one tap on a phone);
-  // owner-only pages remain reachable from the dashboard.
-  const tabLinks = links.filter((l) => !l.ownerOnly).slice(0, 6);
+  // pages beyond the cap remain reachable from the dashboard. `links` is
+  // already role-filtered above.
+  const tabLinks = links.slice(0, 6);
 
   return (
     <div className="grid grid-cols-6">

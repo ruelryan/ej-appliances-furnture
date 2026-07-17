@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { CreateUserForm } from "./create-user-form";
 import { ToggleActiveButton } from "./toggle-active-button";
+import { RoleSelect, ROLE_LABELS } from "./role-select";
 import { SectionCard } from "@/components/section-card";
 import { btnSecondary, theadRow } from "@/components/ui";
 
@@ -44,7 +45,7 @@ export default async function AdminPage() {
           {(users ?? []).map((u) => (
             <div
               key={u.id}
-              className="flex items-center justify-between rounded-card bg-surface px-3 py-2"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-surface px-3 py-2"
             >
               <div>
                 <span className="text-sm font-medium text-ink">
@@ -57,7 +58,7 @@ export default async function AdminPage() {
                       : "border border-line bg-white text-muted"
                   }`}
                 >
-                  {u.role.toUpperCase()}
+                  {(ROLE_LABELS[u.role] ?? u.role).toUpperCase()}
                 </span>
                 {!u.active && (
                   <span className="ml-2 rounded-full bg-danger-bg px-2 py-0.5 text-[10px] font-semibold text-danger">
@@ -66,7 +67,10 @@ export default async function AdminPage() {
                 )}
               </div>
               {u.id !== profile.id && (
-                <ToggleActiveButton userId={u.id} active={u.active} />
+                <div className="flex items-center gap-2">
+                  <RoleSelect userId={u.id} role={u.role} />
+                  <ToggleActiveButton userId={u.id} active={u.active} />
+                </div>
               )}
             </div>
           ))}
