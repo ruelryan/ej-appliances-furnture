@@ -30,6 +30,12 @@ const ICONS: Record<string, React.ReactNode> = {
   admin: (
     <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8 4-1.8-.5a6.3 6.3 0 0 0-.6-1.5l.9-1.6-1.9-1.9-1.6.9a6.3 6.3 0 0 0-1.5-.6L13 5h-2l-.5 1.8a6.3 6.3 0 0 0-1.5.6l-1.6-.9-1.9 1.9.9 1.6a6.3 6.3 0 0 0-.6 1.5L4 12l1.8.5c.1.5.3 1 .6 1.5l-.9 1.6 1.9 1.9 1.6-.9c.5.3 1 .5 1.5.6L11 19h2l.5-1.8c.5-.1 1-.3 1.5-.6l1.6.9 1.9-1.9-.9-1.6c.3-.5.5-1 .6-1.5L20 12Z" />
   ),
+  commissions: (
+    <path d="M19 5 5 19M8 6.5A1.5 1.5 0 1 1 5 6.5a1.5 1.5 0 0 1 3 0ZM19 17.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+  ),
+  leads: (
+    <path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM3 20c0-3 2.5-5 6-5s6 2 6 5M18 8v6M21 11h-6" />
+  ),
 };
 
 function NavIcon({ name, className }: { name: string; className?: string }) {
@@ -66,6 +72,8 @@ const LINKS: NavLink[] = [
   { href: "/payments", label: "Payments", icon: "payments", roles: ["owner", "admin", "staff"] },
   { href: "/collections", label: "Collect", icon: "collect", roles: ["owner", "admin", "collector", "staff"] },
   { href: "/customers", label: "Customers", icon: "customers", roles: ["owner", "admin", "staff"] },
+  { href: "/commissions", label: "Commissions", icon: "commissions", roles: ["owner", "admin", "staff", "sales_agent"] },
+  { href: "/leads", label: "Leads", icon: "leads", roles: ["owner", "admin", "staff", "sales_agent"] },
   { href: "/analytics", label: "Analytics", icon: "analytics", roles: ["owner"] },
   { href: "/admin", label: "Admin", icon: "admin", roles: ["owner"] },
 ];

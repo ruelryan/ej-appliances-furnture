@@ -16,12 +16,36 @@ interface CustomerHit {
   messenger_url: string | null;
 }
 
-export function ContractForm() {
+interface Agent {
+  id: string;
+  full_name: string;
+}
+
+interface Prefill {
+  leadId: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  address: string;
+  messengerUrl: string;
+  itemDescription: string;
+  itemType: string;
+  cashPrice: string;
+  agentId: string;
+}
+
+export function ContractForm({
+  agents,
+  prefill,
+}: {
+  agents: Agent[];
+  prefill?: Prefill;
+}) {
   const [customer, setCustomer] = useState<CustomerHit | null>(null);
-  const [newCustomerMode, setNewCustomerMode] = useState(false);
+  const [newCustomerMode, setNewCustomerMode] = useState(!!prefill);
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<CustomerHit[]>([]);
-  const [cashPrice, setCashPrice] = useState("");
+  const [cashPrice, setCashPrice] = useState(prefill?.cashPrice ?? "");
   const [termMonths, setTermMonths] = useState(4);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -56,6 +80,9 @@ export function ContractForm() {
     if (!Number.isInteger(qty) || qty < 1)
       return setError("Quantity must be a whole number of at least 1.");
 
+    const agentId = String(fd.get("agent_id") ?? "");
+    const agentName = agents.find((a) => a.id === agentId)?.full_name ?? "";
+
     const input = {
       customerId: customer?.id,
       newCustomer: newCustomerMode
@@ -76,14 +103,15 @@ export function ContractForm() {
       quantity: qty,
       cashPrice: price,
       termMonths,
-      salesAgent: String(fd.get("sales_agent") ?? "").trim(),
+      salesAgent: agentName,
+      agentId: agentId || undefined,
+      leadId: prefill?.leadId,
       note: String(fd.get("note") ?? "").trim(),
     };
 
     if (!input.customerId && !newCustomerMode)
       return setError("Select a customer or add a new one.");
     if (!input.itemDescription) return setError("Item description is required.");
-    if (!input.salesAgent) return setError("Sales agent is required.");
 
     startTransition(async () => {
       const res = await createContract(input);
@@ -117,29 +145,34 @@ export function ContractForm() {
             <input
               name="last_name"
               placeholder="Last name"
+              defaultValue={prefill?.lastName ?? ""}
               required
               className={input}
             />
             <input
               name="first_name"
               placeholder="First name"
+              defaultValue={prefill?.firstName ?? ""}
               required
               className={input}
             />
             <input
               name="phone"
               placeholder="Phone (09…) — use / for two"
+              defaultValue={prefill?.phone ?? ""}
               className={`col-span-2 ${input}`}
             />
             <input
               name="address"
               placeholder="Full address"
+              defaultValue={prefill?.address ?? ""}
               required
               className={`col-span-2 ${input}`}
             />
             <input
               name="messenger_url"
               placeholder="Facebook/Messenger link (optional)"
+              defaultValue={prefill?.messengerUrl ?? ""}
               className={`col-span-2 ${input}`}
             />
           </div>
@@ -203,6 +236,7 @@ export function ContractForm() {
           <input
             name="item_description"
             placeholder="e.g. Sharp Refrigerator 6 cu ft"
+            defaultValue={prefill?.itemDescription ?? ""}
             required
             className={input}
           />
@@ -213,6 +247,7 @@ export function ContractForm() {
           </label>
           <select
             name="item_type"
+            defaultValue={prefill?.itemType || undefined}
             className={input}
           >
             {ITEM_TYPES.map((t) => (
@@ -282,11 +317,18 @@ export function ContractForm() {
           <label className={label}>
             Sales agent
           </label>
-          <input
-            name="sales_agent"
-            required
+          <select
+            name="agent_id"
+            defaultValue={prefill?.agentId ?? ""}
             className={input}
-          />
+          >
+            <option value="">— None / walk-in —</option>
+            {agents.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.full_name}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="col-span-2">
           <label className={label}>

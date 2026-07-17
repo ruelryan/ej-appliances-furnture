@@ -12,6 +12,7 @@ import { btnPrimary, btnSecondary, theadRow } from "@/components/ui";
 import { NoteForm } from "./note-form";
 import { StatusForm } from "./status-form";
 import { ContractNavBar } from "./nav-bar";
+import { AgentCommissionPanel, type CommissionRow } from "./agent-commission-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,10 @@ export default async function ContractPage({
   const supabase = await createClient();
   const profile = await getProfile();
   const isOwner = profile?.role === "owner";
+  const canManage =
+    profile?.role === "owner" ||
+    profile?.role === "admin" ||
+    profile?.role === "staff";
 
   const { data: c } = await supabase
     .from("v_contract_financials")
@@ -68,7 +73,7 @@ export default async function ContractPage({
 
   if (!c) notFound();
 
-  const [{ data: payments }, { data: notes }, { data: navRows }] =
+  const [{ data: payments }, { data: notes }, { data: navRows }, { data: commission }] =
     await Promise.all([
       supabase
         .from("payments")
@@ -85,7 +90,20 @@ export default async function ContractPage({
         .select("id, display_name, contract_no, last_payment_date, overdue_amount")
         .eq("payment_status", "open")
         .limit(1000),
+      supabase.from("v_commissions").select("*").eq("contract_id", id).maybeSingle(),
     ]);
+
+  // Agent picker options (owner/admin only).
+  let agents: { id: string; full_name: string }[] = [];
+  if (canManage) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("role", "sales_agent")
+      .eq("active", true)
+      .order("full_name");
+    agents = data ?? [];
+  }
 
   const message = buildFollowupMessage(c as ContractFinancials);
 
@@ -113,7 +131,6 @@ export default async function ContractPage({
     ["Date", fmtDateShort(c.contract_date)],
     ["Item", `${c.item_description}${c.quantity > 1 ? ` ×${c.quantity}` : ""}`],
     ["Item type", c.item_type ?? "—"],
-    ["Sales agent", c.sales_agent ?? "—"],
     ["Contact", (c.phones ?? []).join(" / ") || "—"],
     ["Address", c.address ?? "—"],
   ];
@@ -238,6 +255,17 @@ export default async function ContractPage({
           </dl>
         </SectionCard>
       </div>
+
+      {/* Agent & commission */}
+      <AgentCommissionPanel
+        contractId={c.id}
+        commission={(commission as CommissionRow) ?? null}
+        agents={agents}
+        agentId={(commission as CommissionRow)?.agent_id ?? null}
+        canManage={canManage}
+        isOwner={isOwner}
+        fallbackAgentName={c.sales_agent ?? null}
+      />
 
       {/* Term comparison — the contract's term highlighted, others what-if */}
       <SectionCard

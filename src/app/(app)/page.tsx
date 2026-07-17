@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { peso } from "@/lib/format";
 import { StatTile } from "@/components/stat-tile";
 
 export default async function DashboardPage() {
   const profile = await getProfile();
+  // Sales agents get a focused landing (they can't use the office actions).
+  if (profile?.role === "sales_agent") redirect("/commissions");
   const supabase = await createClient();
 
   const { data: stats } = await supabase
