@@ -18,7 +18,8 @@ export default async function PrintPayslipPage({
 
   const { data: slip } = await supabase
     .from("payslips")
-    .select("*, profiles(full_name)")
+    // payslips has several FKs to profiles — name the employee one
+    .select("*, profiles!profile_id(full_name)")
     .eq("id", id)
     .maybeSingle();
   if (!slip) notFound();

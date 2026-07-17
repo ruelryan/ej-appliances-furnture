@@ -98,7 +98,8 @@ export default async function DtrPage({
       isOwner
         ? supabase
             .from("time_correction_requests")
-            .select("*, profiles(full_name)")
+            // two FKs to profiles (profile_id, resolved_by) — name the requester
+            .select("*, profiles!profile_id(full_name)")
             .eq("status", "pending")
             .order("created_at")
         : supabase
