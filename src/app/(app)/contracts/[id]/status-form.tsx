@@ -2,16 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { updateStatus } from "../actions";
-import { COLLECTION_STATUSES, DELIVERY_STATUSES } from "@/lib/messages";
+import { COLLECTION_STATUSES } from "@/lib/messages";
 
 export function StatusForm({
   contractId,
   collectionStatus,
-  deliveryStatus,
 }: {
   contractId: string;
   collectionStatus: string | null;
-  deliveryStatus: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
@@ -38,22 +36,6 @@ export function StatusForm({
         >
           <option value="">— none —</option>
           {COLLECTION_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="min-w-40 flex-1">
-        <label className="mb-1 block text-xs font-medium text-muted">
-          Delivery status
-        </label>
-        <select
-          name="delivery_status"
-          defaultValue={deliveryStatus}
-          className="w-full rounded-card border border-line px-2 py-2.5 text-base"
-        >
-          {DELIVERY_STATUSES.map((s) => (
             <option key={s} value={s}>
               {s}
             </option>

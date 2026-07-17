@@ -137,7 +137,6 @@ export async function updateContract(
     item_description: string;
     item_type: string | null;
     quantity: number;
-    delivery_status: string;
     payment_status: string;
     collection_status: string | null;
   }

@@ -6,8 +6,9 @@ import { StatTile } from "@/components/stat-tile";
 
 export default async function DashboardPage() {
   const profile = await getProfile();
-  // Sales agents get a focused landing (they can't use the office actions).
+  // Sales agents and delivery staff get a focused landing.
   if (profile?.role === "sales_agent") redirect("/commissions");
+  if (profile?.role === "delivery") redirect("/deliveries");
   const supabase = await createClient();
 
   const { data: stats } = await supabase

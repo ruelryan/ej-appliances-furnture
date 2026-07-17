@@ -13,6 +13,7 @@ import { NoteForm } from "./note-form";
 import { StatusForm } from "./status-form";
 import { ContractNavBar } from "./nav-bar";
 import { AgentCommissionPanel, type CommissionRow } from "./agent-commission-panel";
+import { DeliveryPanel } from "./delivery-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,7 @@ export default async function ContractPage({
   const supabase = await createClient();
   const profile = await getProfile();
   const isOwner = profile?.role === "owner";
+  const isDelivery = profile?.role === "delivery";
   const canManage =
     profile?.role === "owner" ||
     profile?.role === "admin" ||
@@ -73,7 +75,7 @@ export default async function ContractPage({
 
   if (!c) notFound();
 
-  const [{ data: payments }, { data: notes }, { data: navRows }, { data: commission }] =
+  const [{ data: payments }, { data: notes }, { data: navRows }, { data: commission }, deliveryRes] =
     await Promise.all([
       supabase
         .from("payments")
@@ -91,18 +93,26 @@ export default async function ContractPage({
         .eq("payment_status", "open")
         .limit(1000),
       supabase.from("v_commissions").select("*").eq("contract_id", id).maybeSingle(),
+      supabase.from("v_deliveries").select("*").eq("contract_id", id).maybeSingle(),
     ]);
 
-  // Agent picker options (owner/admin only).
+  const { data: delivery } = deliveryRes;
+
+  // Agent picker options (owner/admin only) + suppliers for the delivery panel.
   let agents: { id: string; full_name: string }[] = [];
+  let suppliers: { id: string; name: string }[] = [];
   if (canManage) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .eq("role", "sales_agent")
-      .eq("active", true)
-      .order("full_name");
-    agents = data ?? [];
+    const [{ data: ag }, { data: sup }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("role", "sales_agent")
+        .eq("active", true)
+        .order("full_name"),
+      supabase.from("suppliers").select("id, name").eq("active", true).order("name"),
+    ]);
+    agents = ag ?? [];
+    suppliers = sup ?? [];
   }
 
   const message = buildFollowupMessage(c as ContractFinancials);
@@ -321,12 +331,17 @@ export default async function ContractPage({
         </div>
       </SectionCard>
 
-      {/* Status update (staff-allowed) */}
-      <StatusForm
+      {/* Delivery */}
+      <DeliveryPanel
+        delivery={delivery ?? null}
+        suppliers={suppliers}
+        canManage={canManage}
+        isDelivery={isDelivery}
         contractId={c.id}
-        collectionStatus={c.collection_status}
-        deliveryStatus={c.delivery_status}
       />
+
+      {/* Status update (staff-allowed) */}
+      <StatusForm contractId={c.id} collectionStatus={c.collection_status} />
 
       {/* Payment history */}
       <SectionCard

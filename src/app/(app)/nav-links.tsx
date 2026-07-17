@@ -36,6 +36,9 @@ const ICONS: Record<string, React.ReactNode> = {
   leads: (
     <path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM3 20c0-3 2.5-5 6-5s6 2 6 5M18 8v6M21 11h-6" />
   ),
+  deliveries: (
+    <path d="M3 6.5h11v9H3zM14 9.5h4l3 3v3h-7zM7.5 18.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3ZM17.5 18.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z" />
+  ),
 };
 
 function NavIcon({ name, className }: { name: string; className?: string }) {
@@ -71,6 +74,7 @@ const LINKS: NavLink[] = [
   { href: "/contracts", label: "Contracts", icon: "contracts", roles: ["owner", "admin", "collector", "sales_agent", "delivery", "staff"] },
   { href: "/payments", label: "Payments", icon: "payments", roles: ["owner", "admin", "staff"] },
   { href: "/collections", label: "Collect", icon: "collect", roles: ["owner", "admin", "collector", "staff"] },
+  { href: "/deliveries", label: "Deliveries", icon: "deliveries", roles: ["owner", "admin", "delivery", "staff"] },
   { href: "/customers", label: "Customers", icon: "customers", roles: ["owner", "admin", "staff"] },
   { href: "/commissions", label: "Commissions", icon: "commissions", roles: ["owner", "admin", "staff", "sales_agent"] },
   { href: "/leads", label: "Leads", icon: "leads", roles: ["owner", "admin", "staff", "sales_agent"] },
