@@ -21,6 +21,7 @@ export function NewProductForm() {
         category: String(fd.get("category") ?? ""),
         price: priceRaw ? Number(priceRaw) : null,
         defaultCost: costRaw ? Number(costRaw) : null,
+        description: String(fd.get("description") ?? "").trim(),
       });
       if (res.error) setError(res.error);
       else (document.getElementById("new-product-form") as HTMLFormElement)?.reset();
@@ -39,6 +40,7 @@ export function NewProductForm() {
         </select>
         <input name="price" type="number" step="0.01" min="0" placeholder="Selling price (₱)" className={input} />
         <input name="default_cost" type="number" step="0.01" min="0" placeholder="Supplier cost (optional)" className={`col-span-2 ${input}`} />
+        <textarea name="description" rows={2} placeholder="Description / specs (optional)" className={`col-span-2 ${input}`} />
       </div>
       {error && <p className="rounded-card bg-danger-bg px-3 py-2 text-sm text-danger">{error}</p>}
       <button type="submit" disabled={pending} className={btnPrimary}>

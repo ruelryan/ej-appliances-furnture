@@ -12,6 +12,7 @@ export async function createProduct(input: {
   category: string;
   price: number | null;
   defaultCost: number | null;
+  description?: string;
 }) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("create_product", {
@@ -19,6 +20,7 @@ export async function createProduct(input: {
     p_category: input.category || null,
     p_default_cost: input.defaultCost,
     p_price: input.price,
+    p_description: input.description || null,
   });
   if (error) return { error: error.message };
   revalidate();
@@ -33,6 +35,7 @@ export async function updateProduct(
     price: number | null;
     defaultCost: number | null;
     active: boolean;
+    description: string;
   }
 ) {
   const supabase = await createClient();
@@ -43,6 +46,7 @@ export async function updateProduct(
     p_price: input.price,
     p_default_cost: input.defaultCost,
     p_active: input.active,
+    p_description: input.description || null,
   });
   if (error) return { error: error.message };
   revalidate();

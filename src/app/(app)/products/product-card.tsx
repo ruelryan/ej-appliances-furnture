@@ -23,6 +23,7 @@ export type Product = {
   default_cost: number | string | null;
   on_hand: number;
   active: boolean;
+  description: string | null;
   product_photos?: Photo[];
 };
 
@@ -38,6 +39,7 @@ export function ProductCard({ product }: { product: Product }) {
   const [price, setPrice] = useState(product.price != null ? String(product.price) : "");
   const [cost, setCost] = useState(product.default_cost != null ? String(product.default_cost) : "");
   const [active, setActive] = useState(product.active);
+  const [description, setDescription] = useState(product.description ?? "");
 
   const photos = product.product_photos ?? [];
 
@@ -93,6 +95,9 @@ export function ProductCard({ product }: { product: Product }) {
             {product.price != null ? ` · price ${peso(product.price)}` : ""}
             {product.default_cost != null ? ` · cost ${peso(product.default_cost)}` : ""}
           </div>
+          {product.description && (
+            <div className="mt-1 line-clamp-2 text-xs text-muted">{product.description}</div>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span
@@ -174,6 +179,8 @@ export function ProductCard({ product }: { product: Product }) {
                 <input type="number" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} className={input} />
               </div>
             </div>
+            <label className={label}>Description / specs</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={`${input} mb-3`} />
             <label className="mb-3 flex items-center gap-2 text-sm text-ink">
               <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
               Active (available for new sales)
@@ -195,6 +202,7 @@ export function ProductCard({ product }: { product: Product }) {
                         price: price.trim() ? Number(price) : null,
                         defaultCost: cost.trim() ? Number(cost) : null,
                         active,
+                        description: description.trim(),
                       }),
                     () => setEditing(false)
                   )

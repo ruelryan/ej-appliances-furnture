@@ -14,8 +14,9 @@ technical trade-offs plainly and confirm before destructive actions.
   1,509 contracts, 1,126 customers, 5,894 payments (₱24.2M, reconciled to
   the centavo) migrated from the Sheet.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
-  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0018 applied to
-  prod**.
+  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0019 applied to
+  prod**. Product catalog seeded from the Sheet Pricelist tab: **146 products
+  with photos** (`scripts/import-pricelist.ts`, pulls Drive images).
 - GitHub: `ruelryan/ej-appliances-furnture` (branch `main`; an older Vite
   prototype is parked on `old-vite-app`). Active work is on branch
   **`redesign/fintech-light`**, which deploys straight from local via the
@@ -87,10 +88,10 @@ npx tsx scripts/migrate/import.ts --dir <csvs> [--load]  # Sheet re-import
   monthly=0` so the frozen views need NO change; no-agent sale → `sales_agent
   = 'Office Sales'`); **team tasks** (0017 — `tasks`/`task_comments`, assign to
   a person or a role, comment thread, nav badge); **product catalog** (0018 —
-  `products.price` (selling price, pre-fills the new-sale form) + uploaded
-  `product_photos` in the **public Supabase Storage bucket `product-photos`**,
-  managed on `/products`). Deploys go straight from local via `vercel --prod`
-  (linked project "eandj").
+  `products.price` (selling price, pre-fills the new-sale form) +
+  `products.description` (0019) + uploaded `product_photos` in the **public
+  Supabase Storage bucket `product-photos`**, managed on `/products`). Deploys
+  go straight from local via `vercel --prod` (linked project "eandj").
 - **Payroll** (0009): semi-monthly payslips (1–15, 16–end) SNAPSHOT all
   amounts at create/refresh/finalize (like contracts) — income = period sum
   of `v_dtr_days.day_pay` + jsonb extra lines; gov contributions (EE/ER on
