@@ -42,6 +42,9 @@ const ICONS: Record<string, React.ReactNode> = {
   tasks: (
     <path d="M9 4h6v2H9zM7 6h10v14H7zM9.5 12.5 11 14l3.5-4" />
   ),
+  products: (
+    <path d="M3.5 7 12 3l8.5 4-8.5 4zM3.5 7v10l8.5 4M20.5 7v10l-8.5 4M12 11v10" />
+  ),
 };
 
 function NavIcon({ name, className }: { name: string; className?: string }) {
@@ -79,6 +82,7 @@ const LINKS: NavLink[] = [
   { href: "/payments", label: "Payments", icon: "payments", roles: ["owner", "admin", "staff"] },
   { href: "/collections", label: "Collect", icon: "collect", roles: ["owner", "admin", "collector", "staff"] },
   { href: "/deliveries", label: "Deliveries", icon: "deliveries", roles: ["owner", "admin", "delivery", "staff"] },
+  { href: "/products", label: "Products", icon: "products", roles: ["owner", "admin", "staff"] },
   { href: "/customers", label: "Customers", icon: "customers", roles: ["owner", "admin", "staff"] },
   { href: "/commissions", label: "Commissions", icon: "commissions", roles: ["owner", "admin", "staff", "sales_agent"] },
   { href: "/leads", label: "Leads", icon: "leads", roles: ["owner", "admin", "staff", "sales_agent"] },

@@ -6,7 +6,6 @@ import { SectionCard } from "@/components/section-card";
 import { StatTile } from "@/components/stat-tile";
 import { DeliveryControls } from "./delivery-controls";
 import { AddSupplierForm } from "./add-supplier-form";
-import { ProductsSection } from "./products-section";
 import { DELIVERY_STATUS_LABEL } from "../contracts/[id]/delivery-panel";
 
 export const dynamic = "force-dynamic";
@@ -43,14 +42,11 @@ export default async function DeliveriesPage({
   const { tab = "active" } = await searchParams;
 
   const supabase = await createClient();
-  const [{ data: rows }, { data: suppliers }, { data: products }] = await Promise.all([
+  const [{ data: rows }, { data: suppliers }] = await Promise.all([
     supabase.from("v_deliveries").select("*").order("contract_date", { ascending: false }).limit(500),
     canManage
       ? supabase.from("suppliers").select("*").order("name")
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-    canManage
-      ? supabase.from("products").select("*").order("name")
-      : Promise.resolve({ data: [] as [] }),
   ]);
 
   const all = rows ?? [];
@@ -157,8 +153,16 @@ export default async function DeliveriesPage({
       </SectionCard>
 
       {canManage && (
-        <SectionCard title="Products & stock" sub="Catalog with on-hand counts. Stock drops when an in-stock item is delivered.">
-          <ProductsSection products={products ?? []} />
+        <SectionCard
+          title="Products & stock"
+          action={
+            <Link href="/products" className="rounded-card border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface">
+              Manage products →
+            </Link>
+          }
+          sub="The product catalog, photos, and stock counts live on the Products page."
+        >
+          <p className="text-sm text-muted">Stock drops automatically when an in-stock item is delivered.</p>
         </SectionCard>
       )}
 

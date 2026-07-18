@@ -25,6 +25,7 @@ interface Product {
   id: string;
   name: string;
   category: string | null;
+  price: number | string | null;
 }
 
 interface Prefill {
@@ -276,6 +277,7 @@ export function ContractForm({
                   if (descEl) descEl.value = p.name;
                   const typeEl = document.querySelector<HTMLSelectElement>('select[name="item_type"]');
                   if (typeEl && p.category) typeEl.value = p.category;
+                  if (p.price != null) setCashPrice(String(p.price));
                 }
               }}
               className={input}

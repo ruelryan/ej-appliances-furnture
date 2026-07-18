@@ -28,7 +28,7 @@ export default async function NewContractPage({
       .order("full_name"),
     supabase
       .from("products")
-      .select("id, name, category")
+      .select("id, name, category, price")
       .eq("active", true)
       .order("name"),
   ]);
