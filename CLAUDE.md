@@ -61,6 +61,7 @@ npx tsx scripts/migrate/import.ts --dir <csvs> [--load]  # Sheet re-import
 ## Design system
 
 Follow the project skills in `.claude/skills/`:
+- `business-management` — credit risk, collections strategy, pricing rules, operational policies, and local PH context. Load this skill before suggesting any business decision.
 - `popular-web-designs` — the token vocabulary (coral #f44d55 primary, navy
   ink, teal secondary, `rounded-card` 14px, Poppins 600 headings via
   `font-display font-semibold` — NEVER `font-bold` on headings, 700 isn't
