@@ -18,7 +18,7 @@ export default async function ContractsPage({
   let query = supabase
     .from("v_contract_financials")
     .select(
-      "id, contract_no, display_name, item_description, contract_date, total_price, total_paid, remaining_balance, overdue_amount, followup_tier, payment_status, sales_agent"
+      "id, contract_no, display_name, item_description, contract_date, total_price, total_paid, remaining_balance, overdue_amount, followup_tier, payment_status, sales_agent, term_months"
     )
     .order("contract_date", { ascending: false })
     .limit(100);
@@ -84,8 +84,15 @@ export default async function ContractsPage({
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="font-display font-semibold text-ink">
-                  {c.display_name}
+                <div className="flex items-center gap-2">
+                  <span className="font-display font-semibold text-ink">
+                    {c.display_name}
+                  </span>
+                  {Number(c.term_months) === 0 && (
+                    <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
+                      CASH
+                    </span>
+                  )}
                 </div>
                 <div className="truncate text-sm text-muted">
                   {c.item_description}

@@ -55,6 +55,7 @@ export function ContractForm({
   const [hits, setHits] = useState<CustomerHit[]>([]);
   const [cashPrice, setCashPrice] = useState(prefill?.cashPrice ?? "");
   const [productId, setProductId] = useState("");
+  const [saleType, setSaleType] = useState<"installment" | "cash">("installment");
   const [termMonths, setTermMonths] = useState(4);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -73,13 +74,13 @@ export function ContractForm({
 
   const preview = useMemo(() => {
     const price = Number(cashPrice);
-    if (!(price > 0)) return null;
+    if (!(price > 0) || saleType === "cash") return null;
     try {
       return computeTerms(price, termMonths);
     } catch {
       return null;
     }
-  }, [cashPrice, termMonths]);
+  }, [cashPrice, termMonths, saleType]);
 
   function submit(fd: FormData) {
     setError("");
@@ -112,6 +113,7 @@ export function ContractForm({
       quantity: qty,
       cashPrice: price,
       termMonths,
+      saleType,
       salesAgent: agentName,
       agentId: agentId || undefined,
       productId: productId || undefined,
@@ -239,6 +241,25 @@ export function ContractForm({
 
       {/* Item */}
       <div className="grid grid-cols-2 gap-3 rounded-card border border-line bg-white p-4">
+        <div className="col-span-2">
+          <label className={label}>Sale type</label>
+          <div className="grid grid-cols-2 gap-2">
+            {(["installment", "cash"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setSaleType(t)}
+                className={`rounded-card border px-3 py-2 text-sm font-semibold capitalize ${
+                  saleType === t
+                    ? "border-brand bg-brand/10 text-brand"
+                    : "border-line bg-white text-ink hover:bg-surface"
+                }`}
+              >
+                {t === "cash" ? "Cash sale" : "Installment"}
+              </button>
+            ))}
+          </div>
+        </div>
         {products.length > 0 && (
           <div className="col-span-2">
             <label className={label}>
@@ -311,7 +332,7 @@ export function ContractForm({
         </div>
         <div>
           <label className={label}>
-            Cash price (₱)
+            {saleType === "cash" ? "Cash amount (₱)" : "Cash price (₱)"}
           </label>
           <input
             name="cash_price"
@@ -325,22 +346,24 @@ export function ContractForm({
             className={input}
           />
         </div>
-        <div>
-          <label className={label}>
-            Term
-          </label>
-          <select
-            value={termMonths}
-            onChange={(e) => setTermMonths(Number(e.target.value))}
-            className={input}
-          >
-            {TERM_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {termLabel(t)}
-              </option>
-            ))}
-          </select>
-        </div>
+        {saleType === "installment" && (
+          <div>
+            <label className={label}>
+              Term
+            </label>
+            <select
+              value={termMonths}
+              onChange={(e) => setTermMonths(Number(e.target.value))}
+              className={input}
+            >
+              {TERM_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {termLabel(t)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <label className={label}>
             Contract date
@@ -362,7 +385,7 @@ export function ContractForm({
             defaultValue={prefill?.agentId ?? ""}
             className={input}
           >
-            <option value="">— None / walk-in —</option>
+            <option value="">Office Sales (no agent)</option>
             {agents.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.full_name}
@@ -409,6 +432,13 @@ export function ContractForm({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {saleType === "cash" && Number(cashPrice) > 0 && (
+        <div className="rounded-card border border-line bg-surface p-4 text-sm">
+          <span className="text-muted">Amount due (paid in full — no schedule): </span>
+          <span className="font-semibold text-ink">{peso(Number(cashPrice))}</span>
         </div>
       )}
 

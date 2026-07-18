@@ -54,6 +54,7 @@ export interface CreateContractInput {
   quantity: number;
   cashPrice: number;
   termMonths: number;
+  saleType?: "installment" | "cash";
   salesAgent: string;
   agentId?: string;
   productId?: string;
@@ -93,11 +94,12 @@ export async function createContract(input: CreateContractInput) {
     p_item_type: input.itemType || null,
     p_quantity: input.quantity,
     p_cash_price: input.cashPrice,
-    p_term_months: input.termMonths,
+    p_term_months: input.saleType === "cash" ? 0 : input.termMonths,
     p_sales_agent: input.salesAgent || null,
     p_note: input.note || null,
     p_agent_id: input.agentId || null,
     p_product_id: input.productId || null,
+    p_sale_type: input.saleType ?? "installment",
   });
 
   if (error) return { error: error.message };

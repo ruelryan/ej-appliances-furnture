@@ -121,6 +121,8 @@ export default async function ContractPage({
   }
 
   const message = buildFollowupMessage(c as ContractFinancials);
+  // term_months = 0 uniquely marks a cash sale (enforced by the 0016 CHECK).
+  const isCash = Number(c.term_months) === 0;
 
   // prev/next through open contracts in the chosen order
   const ordered = sortNavRows((navRows ?? []) as NavRow[], sort);
@@ -150,18 +152,24 @@ export default async function ContractPage({
     ["Address", c.address ?? "—"],
   ];
 
-  const moneyRows: Array<[string, string, boolean?]> = [
-    ["Cash price", peso(c.cash_price)],
-    ["Term", `${termLabel(c.term_months)}`],
-    ["Total price", peso(c.total_price)],
-    ["Downpayment (25%)", peso(c.downpayment)],
-    ["Monthly", peso(c.monthly_amortization)],
-    ["Months elapsed", String(c.months_elapsed)],
-    ["Total paid", peso(c.total_paid)],
-    ["Expected by now", peso(c.expected_to_date)],
-    ["Past due", peso(c.overdue_amount), Number(c.overdue_amount) > 0],
-    ["Remaining balance", peso(c.remaining_balance)],
-  ];
+  const moneyRows: Array<[string, string, boolean?]> = isCash
+    ? [
+        ["Cash amount", peso(c.total_price)],
+        ["Total paid", peso(c.total_paid)],
+        ["Balance", peso(c.remaining_balance), Number(c.remaining_balance) > 0],
+      ]
+    : [
+        ["Cash price", peso(c.cash_price)],
+        ["Term", `${termLabel(c.term_months)}`],
+        ["Total price", peso(c.total_price)],
+        ["Downpayment (25%)", peso(c.downpayment)],
+        ["Monthly", peso(c.monthly_amortization)],
+        ["Months elapsed", String(c.months_elapsed)],
+        ["Total paid", peso(c.total_paid)],
+        ["Expected by now", peso(c.expected_to_date)],
+        ["Past due", peso(c.overdue_amount), Number(c.overdue_amount) > 0],
+        ["Remaining balance", peso(c.remaining_balance)],
+      ];
 
   return (
     <div className="space-y-5">
@@ -185,6 +193,11 @@ export default async function ContractPage({
           </h1>
           <div className="mt-1 flex items-center gap-2">
             <TierBadge tier={c.followup_tier} />
+            {isCash && (
+              <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
+                CASH SALE
+              </span>
+            )}
             <span className="text-xs text-muted">
               {c.payment_status === "open" ? "Open" : "Closed"} ·{" "}
               {c.delivery_status}
@@ -283,6 +296,7 @@ export default async function ContractPage({
       />
 
       {/* Term comparison — the contract's term highlighted, others what-if */}
+      {!isCash && (
       <SectionCard
         title="Terms"
         sub="Grayed rows show what this contract would look like on the other terms — useful when renegotiating."
@@ -335,6 +349,7 @@ export default async function ContractPage({
           </table>
         </div>
       </SectionCard>
+      )}
 
       {/* Delivery */}
       <DeliveryPanel
@@ -478,9 +493,11 @@ export default async function ContractPage({
 
       {/* Print links */}
       <div className="flex flex-wrap gap-2">
-        <Link href={`/print/contract/${c.id}`} className={btnSecondary}>
-          Print contract
-        </Link>
+        {!isCash && (
+          <Link href={`/print/contract/${c.id}`} className={btnSecondary}>
+            Print contract
+          </Link>
+        )}
         <Link href={`/print/customer-card/${c.id}`} className={btnSecondary}>
           Print customer card
         </Link>
