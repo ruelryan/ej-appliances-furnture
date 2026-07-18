@@ -39,6 +39,9 @@ const ICONS: Record<string, React.ReactNode> = {
   deliveries: (
     <path d="M3 6.5h11v9H3zM14 9.5h4l3 3v3h-7zM7.5 18.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3ZM17.5 18.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z" />
   ),
+  tasks: (
+    <path d="M9 4h6v2H9zM7 6h10v14H7zM9.5 12.5 11 14l3.5-4" />
+  ),
 };
 
 function NavIcon({ name, className }: { name: string; className?: string }) {
@@ -70,6 +73,7 @@ type NavLink = {
 
 const LINKS: NavLink[] = [
   { href: "/", label: "Home", icon: "home" },
+  { href: "/tasks", label: "Tasks", icon: "tasks" },
   { href: "/dtr", label: "DTR", icon: "dtr", roles: ["owner", "admin", "collector", "delivery", "staff"] },
   { href: "/contracts", label: "Contracts", icon: "contracts", roles: ["owner", "admin", "collector", "sales_agent", "delivery", "staff"] },
   { href: "/payments", label: "Payments", icon: "payments", roles: ["owner", "admin", "staff"] },
@@ -88,13 +92,16 @@ function visibleTo(role: Role) {
 
 export function NavLinks({
   role,
+  taskCount = 0,
   variant,
 }: {
   role: Role;
+  taskCount?: number;
   variant: "sidebar" | "tabs";
 }) {
   const pathname = usePathname();
   const links = LINKS.filter(visibleTo(role));
+  const badgeFor = (href: string) => (href === "/tasks" ? taskCount : 0);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -116,6 +123,11 @@ export function NavLinks({
           >
             <NavIcon name={l.icon} className="h-[18px] w-[18px]" />
             {l.label}
+            {badgeFor(l.href) > 0 && (
+              <span className="ml-auto rounded-full bg-danger px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                {badgeFor(l.href)}
+              </span>
+            )}
           </Link>
         ))}
       </div>
@@ -133,11 +145,16 @@ export function NavLinks({
         <Link
           key={l.href}
           href={l.href}
-          className={`flex flex-col items-center gap-1 py-2 text-[10px] ${
+          className={`relative flex flex-col items-center gap-1 py-2 text-[10px] ${
             isActive(l.href) ? "font-semibold text-brand" : "text-muted"
           }`}
         >
           <NavIcon name={l.icon} className="h-[22px] w-[22px]" />
+          {badgeFor(l.href) > 0 && (
+            <span className="absolute right-1/2 top-1 -mr-3 rounded-full bg-danger px-1.5 text-[9px] font-semibold text-white">
+              {badgeFor(l.href)}
+            </span>
+          )}
           {l.label}
         </Link>
       ))}
