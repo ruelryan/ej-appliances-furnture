@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 @AGENTS.md
 
 # E & J Appliances Furniture — Business App
@@ -144,7 +148,9 @@ npx tsx scripts/migrate/import.ts --dir <csvs> [--load]  # Sheet re-import
   `stock_movements` ledger stays complete). `mark_delivered` decrements
   on_hand only when the delivery is fulfilled from office stock
   (`in_stock` + linked product); drop-shipped supplier orders never touch
-  stock. Product picker on the new-contract form. Managed under `/deliveries`.
+  stock. Product picker on the new-contract form. Stock counts are managed on
+  `/products` alongside the catalog (0018 moved them there; `/deliveries` only
+  links across).
 - **Cash sales** (0016): a cash/outright sale is a `contracts` row with
   `sale_type='cash'`, `term_months=0`, downpayment = total = `cash_price`,
   monthly = 0 — that shape makes the frozen views
