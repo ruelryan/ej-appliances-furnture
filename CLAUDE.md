@@ -19,7 +19,7 @@ technical trade-offs plainly and confirm before destructive actions.
   5,901 payments (₱24,256,852.39, reconciled to the centavo)**. The Sheet is no
   longer the source of truth; anything recorded there now is a divergence.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
-  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0025 applied to
+  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0026 applied to
   prod**. Catalog: **134 products**, all with photos and perceptual hashes
   (seeded by `scripts/import-pricelist.ts`; 12 duplicates merged out).
 - GitHub: `ruelryan/ej-appliances-furnture`. Active work is on
@@ -32,13 +32,13 @@ technical trade-offs plainly and confirm before destructive actions.
 - Beyond the original brief, now also shipped: two Messenger links per
   customer (0020), promise-to-pay + field receipt numbers (0021), term
   repricing (0022), structured addresses + collector GPS (0023), product
-  typeahead + duplicate review (0024).
+  typeahead + duplicate review (0024), meal allowance + 13th-month pay (0026).
 - **Open, and needing a human not a commit**: Roger's employment contract is
   drafted but unsigned (scratchpad HTML) with blanks and no Schedule A
-  targets; his rate must be entered as **₱56.25/hour**, not 450 —
-  `employee_rates.hourly_rate` is hourly; his SSS/PhilHealth/Pag-IBIG amounts
-  are unset; **13th-month pay is not modelled anywhere** and his contract
-  promises it. See "Legal watch-outs" below.
+  targets; his SSS/PhilHealth/Pag-IBIG amounts are still zero, so his 16–end
+  slip deducts nothing; and his ₱100/day meal allowance is not yet entered in
+  /dtr/settings. His hourly rate IS set correctly at ₱56.25 (= ₱450 for an
+  8-hour day). See "Legal watch-outs" below.
 
 ## Commands
 
@@ -224,6 +224,18 @@ directly where the app would have to use an RPC (an RPC guarded by
   closest suspects. **Nothing is ever auto-merged.** `merge_products` repoints
   contracts/deliveries/stock_movements/photos, folds in stock, deletes the
   duplicate and logs a task — irreversible.
+- **Meal allowance + 13th-month pay** (0026): `employee_rates.
+  meal_allowance_per_day` is a supplement paid per day ACTUALLY worked
+  (`days_worked` counts real punches, so an unworked holiday earns none) and
+  is deliberately its own column so it stays out of the 13th-month base.
+  **`payslips.basic_pay` is NOT `dtr_pay`** — 13th month is 1/12 of *basic*
+  salary and the law excludes allowances, premiums and holiday pay, while
+  `dtr_pay` bakes the holiday multipliers in. Basic is
+  `sum(hours_worked * hourly_rate)`; the synthetic unworked-holiday rows carry
+  `hours_worked = 0`, so that one expression drops both premium and holiday pay
+  with no special-casing. On a test period 40% of `dtr_pay` would have been
+  wrongly included. `v_thirteenth_month` + `thirteenth_month_payments` drive
+  the owner-only `/payroll/13th-month` report.
 - **Analytics** (owner-only route `/analytics`): dashboards (monthly sales,
   collections-vs-expected, by-agent, aging, cashflow) built on the financial
   views; Recharts in `charts.tsx`. Consult the dataviz skill before changing.
