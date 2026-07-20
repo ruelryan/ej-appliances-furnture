@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient, getProfile, canPostPayments } from "@/lib/supabase/server";
 import { buildDemandLetterBody, type ContractFinancials } from "@/lib/messages";
 import { fmtDate, phTodayISO } from "@/lib/format";
+import { formatAddress } from "@/lib/maps";
 import { Letterhead, SignatureBlocks } from "../../letterhead";
 import { PrintControls } from "../../print-controls";
 
@@ -43,7 +44,7 @@ export default async function DemandLetterPage({
       <PrintControls filename={`demand-letter-${c.contract_no}`} />
       <Letterhead />
       <div className="mb-1 text-right text-xs">Date: {fmtDate(phTodayISO())}</div>
-      <div className="mb-4 text-xs">Address: {c.address ?? ""}</div>
+      <div className="mb-4 text-xs">Address: {formatAddress(c)}</div>
       <div className="whitespace-pre-wrap">{message}</div>
       <SignatureBlocks />
     </div>

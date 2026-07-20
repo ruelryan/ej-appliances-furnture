@@ -59,19 +59,28 @@ export function ReviewItem({
   const primary = [...product.product_photos].sort((a, b) => a.sort_order - b.sort_order)[0];
   const newHash = primary?.dhash ?? null;
 
-  // Two independent signals. Name similarity comes from pg_trgm server-side;
-  // image distance is computed here because comparing two 64-bit strings is
-  // trivial and keeps the SQL simple. ~5 bits or fewer means near-identical.
+  // CALIBRATED AGAINST THE REAL CATALOGUE — do not restore the textbook
+  // thresholds. Across all 8,911 photo pairs the closest was 2 bits and the 5th
+  // percentile was 19. Every one of the closest pairs is a DIFFERENT product:
+  // 2 bits between two Acer laptops, 4 between an HP and an Acer, 4 between a
+  // 1.5 HP and a 0.75 HP aircon. These are white-background studio shots with
+  // near-identical silhouettes, so dHash barely separates same-category items.
+  //
+  // The usual "<=5 means duplicate" would therefore flag ten unrelated pairs.
+  // What a low distance DOES catch reliably is the same image file uploaded
+  // twice — the realistic duplicate here, since a re-added item usually reuses
+  // the supplier's photo. So the photo signal is trusted only at <=2, and name
+  // similarity leads the ranking.
+  const PHOTO_SAME_FILE = 2;
+
   const scored = candidates
     .map((c) => {
       const dist = newHash && c.dhash ? hammingDistance(newHash, c.dhash) : null;
       return { ...c, dist };
     })
     .sort((a, b) => {
-      // A close photo match outranks a close name — two products photographed
-      // the same are almost certainly the same thing, whatever they are called.
-      const ai = a.dist !== null && a.dist <= 10 ? 0 : 1;
-      const bi = b.dist !== null && b.dist <= 10 ? 0 : 1;
+      const ai = a.dist !== null && a.dist <= PHOTO_SAME_FILE ? 0 : 1;
+      const bi = b.dist !== null && b.dist <= PHOTO_SAME_FILE ? 0 : 1;
       if (ai !== bi) return ai - bi;
       if (ai === 0) return (a.dist ?? 64) - (b.dist ?? 64);
       return b.name_score - a.name_score;
@@ -95,11 +104,23 @@ export function ReviewItem({
   }
 
   function verdict(dist: number | null, nameScore: number): { text: string; tone: string } {
-    if (dist !== null && dist <= 5) return { text: "Photos nearly identical", tone: "text-danger" };
-    if (dist !== null && dist <= 10) return { text: "Photos look similar", tone: "text-warning" };
+    if (dist !== null && dist <= PHOTO_SAME_FILE)
+      return { text: "Same photo — almost certainly the same item", tone: "text-danger" };
     if (nameScore >= 0.6) return { text: "Very similar name", tone: "text-warning" };
     if (nameScore >= 0.35) return { text: "Somewhat similar name", tone: "text-muted" };
     return { text: "Probably unrelated", tone: "text-muted" };
+  }
+
+  /**
+   * Deliberately does not present a middling photo distance as evidence.
+   * Catalogue shots of the same category sit 3-10 bits apart whether or not
+   * they are the same product, so calling that "similar" would mislead.
+   */
+  function photoNote(dist: number | null): string {
+    if (dist === null) return "no photo to compare";
+    if (dist <= PHOTO_SAME_FILE) return `same image (${dist}/64 bits apart)`;
+    if (dist <= 10) return "different image, similar shape";
+    return "different image";
   }
 
   return (
@@ -160,8 +181,7 @@ export function ReviewItem({
                     <p className={`mt-1 text-xs font-medium ${v.tone}`}>
                       {v.text}
                       <span className="ml-1 font-normal text-muted">
-                        (name {Math.round(c.name_score * 100)}%
-                        {c.dist !== null ? `, photo ${c.dist}/64 bits apart` : ", no photo to compare"})
+                        (name {Math.round(c.name_score * 100)}% · {photoNote(c.dist)})
                       </span>
                     </p>
                   </div>

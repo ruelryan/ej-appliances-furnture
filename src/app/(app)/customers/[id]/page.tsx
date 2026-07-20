@@ -4,7 +4,10 @@ import { createClient, getProfile, canPostPayments } from "@/lib/supabase/server
 import { peso, fmtDateShort } from "@/lib/format";
 import { TierBadge } from "@/components/tier-badge";
 import { BackLink } from "@/components/back-link";
+import { formatAddress } from "@/lib/maps";
+import { getLocationTree } from "@/lib/locations";
 import { EditLinksForm } from "./edit-links-form";
+import { EditAddressForm } from "./edit-address-form";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +19,8 @@ export default async function CustomerPage({
   const { id } = await params;
   const supabase = await createClient();
   const profile = await getProfile();
-  const mayEditLinks = profile ? canPostPayments(profile.role) : false;
+  const mayEdit = profile ? canPostPayments(profile.role) : false;
+  const locationTree = mayEdit ? await getLocationTree() : {};
 
   const { data: customer } = await supabase
     .from("customers")
@@ -42,7 +46,12 @@ export default async function CustomerPage({
         </h1>
         <div className="mt-1 space-y-0.5 text-sm text-muted">
           <div>{(customer.phones ?? []).join(" / ") || "No phone on file"}</div>
-          {customer.address && <div>{customer.address}</div>}
+          {/* Prefer the structured address; customers.address is kept as the
+              address-as-given and is only the fallback. */}
+          <div>{formatAddress(customer) || "No address on file"}</div>
+          {customer.landmark && (
+            <div className="text-xs">Landmark: {customer.landmark}</div>
+          )}
           <div className="flex flex-wrap gap-4 pt-1">
             {customer.messenger_url && (
               <a
@@ -73,13 +82,26 @@ export default async function CustomerPage({
             )}
           </div>
         </div>
-        {mayEditLinks && (
+        {mayEdit && (
           <div className="mt-3">
-            <EditLinksForm
-              customerId={customer.id}
-              messengerUrl={customer.messenger_url}
-              collectionGcUrl={customer.collection_gc_url}
-            />
+            <div className="flex flex-wrap gap-2">
+              <EditAddressForm
+                customerId={customer.id}
+                tree={locationTree}
+                current={{
+                  province: customer.province,
+                  municipality: customer.municipality,
+                  barangay: customer.barangay,
+                  street_purok: customer.street_purok,
+                  landmark: customer.landmark,
+                }}
+              />
+              <EditLinksForm
+                customerId={customer.id}
+                messengerUrl={customer.messenger_url}
+                collectionGcUrl={customer.collection_gc_url}
+              />
+            </div>
           </div>
         )}
       </div>

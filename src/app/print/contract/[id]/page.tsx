@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { peso, fmtDate } from "@/lib/format";
+import { formatAddress } from "@/lib/maps";
 import { termLabel } from "@/lib/amortization";
 import { COMPANY } from "@/lib/messages";
 import { Letterhead, SignatureBlocks } from "../../letterhead";
@@ -64,7 +65,7 @@ export default async function ContractPrintPage({
             [
               ["Customer", c.display_name],
               ["Contact number", (c.phones ?? []).join(" / ") || "—"],
-              ["Address", c.address ?? "—"],
+              ["Address", formatAddress(c) || "—"],
               ["Item", `${c.item_description}${c.quantity > 1 ? ` ×${c.quantity}` : ""}`],
               ["Item type", c.item_type ?? "—"],
               ["Sales agent", c.sales_agent ?? "—"],
