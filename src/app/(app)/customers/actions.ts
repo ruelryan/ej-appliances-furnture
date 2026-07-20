@@ -23,3 +23,62 @@ export async function setCustomerLinks(
   revalidatePath("/collections");
   return {};
 }
+
+// Structured address. Owner/admin only — the RPC validates the triple against
+// ph_locations so a typo cannot invent a barangay and split an area in two.
+export async function setCustomerAddress(
+  customerId: string,
+  input: {
+    province: string;
+    municipality: string;
+    barangay: string;
+    streetPurok: string;
+    landmark: string;
+  }
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_customer_address", {
+    p_customer_id: customerId,
+    p_province: input.province,
+    p_municipality: input.municipality,
+    p_barangay: input.barangay,
+    p_street_purok: input.streetPurok,
+    p_landmark: input.landmark,
+  });
+  if (error) return { error: error.message };
+  revalidatePath(`/customers/${customerId}`);
+  revalidatePath("/collections");
+  return {};
+}
+
+// GPS + landmark are open to the COLLECTOR as well as owner/admin — the person
+// standing at the door is the only one who can record either. The RPC restricts
+// a collector to customers on their own worklist.
+export async function tagCustomerGps(
+  customerId: string,
+  coords: { lat: number; lng: number; accuracy: number | null }
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("tag_customer_gps", {
+    p_customer_id: customerId,
+    p_lat: coords.lat,
+    p_lng: coords.lng,
+    p_accuracy_m: coords.accuracy,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/collections");
+  revalidatePath(`/customers/${customerId}`);
+  return {};
+}
+
+export async function setCustomerLandmark(customerId: string, landmark: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_customer_landmark", {
+    p_customer_id: customerId,
+    p_landmark: landmark,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/collections");
+  revalidatePath(`/customers/${customerId}`);
+  return {};
+}

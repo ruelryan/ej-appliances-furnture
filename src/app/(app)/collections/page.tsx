@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDateShort, phTodayISO } from "@/lib/format";
 import { buildFollowupMessage, type ContractFinancials } from "@/lib/messages";
+import { directionsUrl, hasExactPin } from "@/lib/maps";
 import { TierBadge } from "@/components/tier-badge";
 import { CopyButton } from "@/components/copy-button";
 import { SectionCard } from "@/components/section-card";
@@ -11,6 +12,7 @@ import { LogCollectionDialog } from "./log-collection-dialog";
 import { PostEntryDialog } from "./post-entry-dialog";
 import { CancelEntryButton } from "./cancel-entry-button";
 import { AssignDialog } from "./assign-dialog";
+import { TagGpsButton } from "./tag-gps-button";
 import {
   RequestAdvanceButton,
   IssueAdvanceButton,
@@ -41,6 +43,95 @@ export default async function CollectionsPage() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// One account on the collector's worklist. Extracted so the board can render
+// the same card under the promises-due heading and under each area group.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function WorklistCard({
+  c,
+  promisedDue,
+  today,
+}: {
+  c: any;
+  promisedDue: string | undefined;
+  today: string;
+}) {
+  const msg = buildFollowupMessage(c as ContractFinancials);
+  const dirUrl = directionsUrl(c);
+  const exact = hasExactPin(c);
+
+  return (
+    <div className={`rounded-card border p-3 ${promisedDue ? "border-brand bg-brand/5" : "border-line"}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <Link
+            href={`/contracts/${c.id}`}
+            className="font-display font-semibold text-ink hover:underline"
+          >
+            {c.display_name}
+          </Link>
+          <div className="truncate text-xs text-muted">
+            #{c.contract_no} · {c.item_description}
+          </div>
+          <div className="mt-1 text-xs text-muted">
+            Last payment:{" "}
+            {c.last_payment_date ? fmtDateShort(c.last_payment_date) : "never"}
+            {c.collection_priority ? ` · priority ${c.collection_priority}` : ""}
+          </div>
+          {(c.street_purok || c.landmark) && (
+            <div className="mt-1 text-xs text-muted">
+              {[c.street_purok, c.landmark && `near ${c.landmark}`]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
+          )}
+          {promisedDue && (
+            <div className="mt-1.5 inline-block rounded-card bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">
+              Promised {fmtDateShort(promisedDue)}
+              {promisedDue < today ? " — overdue promise" : ""}
+            </div>
+          )}
+        </div>
+        <div className="shrink-0 text-right">
+          <TierBadge tier={c.followup_tier} />
+          <div className="mt-1 text-sm font-semibold text-danger">
+            {peso(c.overdue_amount)}
+          </div>
+          <div className="text-[11px] text-muted">past due</div>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <LogCollectionDialog contractId={c.id} customerName={c.display_name} />
+        <CopyButton text={msg} label="Copy message" />
+        {/* Collectors get the group chat only — collection talk belongs where
+            the owner and admin can see it. The customer's personal Messenger
+            stays on the contract/customer pages. */}
+        {c.collection_gc_url && (
+          <a
+            href={c.collection_gc_url}
+            target="_blank"
+            className="rounded-card border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface"
+          >
+            Group chat
+          </a>
+        )}
+        {dirUrl && (
+          <a
+            href={dirUrl}
+            target="_blank"
+            className="rounded-card border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface"
+            // An address search is a rough guess; a tagged pin is exact.
+            title={exact ? "Exact tagged location" : "Approximate — from the address"}
+          >
+            Directions{exact ? "" : " ~"}
+          </a>
+        )}
+        <TagGpsButton customerId={c.customer_id} hasPin={exact} />
+      </div>
+    </div>
+  );
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 // Collector: assigned worklist + log + own advances
 // ─────────────────────────────────────────────────────────────
 async function CollectorBoard() {
@@ -81,6 +172,26 @@ async function CollectorBoard() {
     return ap - bp;
   });
 
+  // Promises due today jump the queue — the customer said they would pay, so
+  // that visit is the one most likely to collect. Everything else is grouped by
+  // area so a day's route is one municipality at a time rather than criss-cross
+  // across the province.
+  const duePromises = sortedWorklist.filter((c) => dueByContract.has(c.id));
+  const rest = sortedWorklist.filter((c) => !dueByContract.has(c.id));
+
+  const areas = new Map<string, typeof rest>();
+  for (const c of rest) {
+    const key = c.municipality
+      ? `${c.municipality}${c.barangay ? ` · ${c.barangay}` : ""}`
+      : "No address on file";
+    if (!areas.has(key)) areas.set(key, []);
+    areas.get(key)!.push(c);
+  }
+  // Biggest clusters first — the most collectable trip.
+  const areaGroups = [...areas.entries()].sort(
+    (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0])
+  );
+
   const todayEntries = entries ?? [];
   const cashToday = todayEntries
     .filter((e) => e.method === "cash" && e.status !== "cancelled")
@@ -120,83 +231,39 @@ async function CollectorBoard() {
           </Link>
         }
       >
-        <div className="space-y-3">
-          {sortedWorklist.map((c) => {
-            const msg = buildFollowupMessage(c as ContractFinancials);
-            const promisedDue = dueByContract.get(c.id);
-            return (
-              <div
-                key={c.id}
-                className={`rounded-card border p-3 ${
-                  promisedDue ? "border-brand bg-brand/5" : "border-line"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/contracts/${c.id}`}
-                      className="font-display font-semibold text-ink hover:underline"
-                    >
-                      {c.display_name}
-                    </Link>
-                    <div className="truncate text-xs text-muted">
-                      #{c.contract_no} · {c.item_description}
-                    </div>
-                    <div className="mt-1 text-xs text-muted">
-                      Last payment:{" "}
-                      {c.last_payment_date
-                        ? fmtDateShort(c.last_payment_date)
-                        : "never"}
-                      {c.collection_priority
-                        ? ` · priority ${c.collection_priority}`
-                        : ""}
-                    </div>
-                    {promisedDue && (
-                      <div className="mt-1.5 inline-block rounded-card bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">
-                        Promised {fmtDateShort(promisedDue)}
-                        {promisedDue < today ? " — overdue promise" : ""}
-                      </div>
-                    )}
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <TierBadge tier={c.followup_tier} />
-                    <div className="mt-1 text-sm font-semibold text-danger">
-                      {peso(c.overdue_amount)}
-                    </div>
-                    <div className="text-[11px] text-muted">past due</div>
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <LogCollectionDialog
-                    contractId={c.id}
-                    customerName={c.display_name}
+        <div className="space-y-4">
+          {duePromises.length > 0 && (
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-brand">
+                Promised today or overdue ({duePromises.length})
+              </p>
+              <div className="space-y-3">
+                {duePromises.map((c) => (
+                  <WorklistCard
+                    key={c.id}
+                    c={c}
+                    promisedDue={dueByContract.get(c.id)}
+                    today={today}
                   />
-                  <CopyButton text={msg} label="Copy message" />
-                  {/* Collectors get the group chat only — collection talk belongs
-                      where the owner and admin can see it. The customer's personal
-                      Messenger stays on the contract/customer pages. */}
-                  {c.collection_gc_url && (
-                    <a
-                      href={c.collection_gc_url}
-                      target="_blank"
-                      className="rounded-card border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface"
-                    >
-                      Group chat
-                    </a>
-                  )}
-                  {c.gps_url && (
-                    <a
-                      href={c.gps_url}
-                      target="_blank"
-                      className="rounded-card border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface"
-                    >
-                      Map
-                    </a>
-                  )}
-                </div>
+                ))}
               </div>
-            );
-          })}
+            </div>
+          )}
+
+          {areaGroups.map(([area, rows]) => (
+            <div key={area}>
+              <p className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted">
+                <span>{area}</span>
+                <span className="font-normal normal-case">{rows.length} account{rows.length === 1 ? "" : "s"}</span>
+              </p>
+              <div className="space-y-3">
+                {rows.map((c) => (
+                  <WorklistCard key={c.id} c={c} promisedDue={undefined} today={today} />
+                ))}
+              </div>
+            </div>
+          ))}
+
           {(worklist ?? []).length === 0 && (
             <p className="py-6 text-center text-sm text-muted">
               No accounts assigned to you yet.
