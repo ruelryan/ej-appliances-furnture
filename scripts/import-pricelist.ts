@@ -173,7 +173,15 @@ async function main() {
     const goodFile = !!ph?.name && /[A-Za-z]{3,}/.test(ph.name) && !/^\d{6,}/.test(ph.name.trim());
     const specName = it.spec ? it.spec.split(/\n/)[0].split(/\.\s/)[0].trim().slice(0, 80) : "";
     const specOk = (specName.match(/[A-Za-z]{3,}/g) || []).length >= 2;
-    const name = (it.sheetName || (goodFile ? ph!.name : specOk ? specName : it.model)).slice(0, 200);
+    const base = it.sheetName || (goodFile ? ph!.name : specOk ? specName : it.model);
+    // Append the model so the picker is unambiguous. The Sheet reuses one
+    // description across different units ("Sharp TV 32 in Smart" exists at
+    // ₱15,900 and ₱19,450), and picking the wrong row puts the wrong price on
+    // a contract. Skip when the description already names the model.
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const name = (
+      it.model && !norm(base).includes(norm(it.model)) ? `${base} ${it.model}` : base
+    ).slice(0, 200);
     const description = ["Model: " + it.model, it.spec].filter(Boolean).join("\n");
     const sku = "PRD" + String((await pg.query(`select public.next_counter('product') as v`)).rows[0].v).padStart(4, "0");
     const prod = (await pg.query(
