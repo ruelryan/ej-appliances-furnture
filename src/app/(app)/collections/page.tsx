@@ -47,7 +47,7 @@ async function CollectorBoard() {
   const supabase = await createClient();
   const today = phTodayISO();
 
-  const [{ data: worklist }, { data: entries }, { data: advances }] =
+  const [{ data: worklist }, { data: entries }, { data: advances }, { data: promises }] =
     await Promise.all([
       supabase
         .from("v_contract_collections")
@@ -67,7 +67,19 @@ async function CollectorBoard() {
         .select("*, cash_advance_expenses(amount)")
         .in("status", ["requested", "open"])
         .order("requested_at", { ascending: false }),
+      supabase.from("v_open_promises").select("*"),
     ]);
+
+  // A promise whose date has arrived outranks everything else — the customer
+  // said they would pay today, so that is the visit most likely to collect.
+  const dueByContract = new Map(
+    (promises ?? []).map((p) => [p.contract_id as string, p.promised_date as string])
+  );
+  const sortedWorklist = [...(worklist ?? [])].sort((a, b) => {
+    const ap = dueByContract.has(a.id) ? 0 : 1;
+    const bp = dueByContract.has(b.id) ? 0 : 1;
+    return ap - bp;
+  });
 
   const todayEntries = entries ?? [];
   const cashToday = todayEntries
@@ -98,15 +110,26 @@ async function CollectorBoard() {
 
       <SectionCard
         title="Worklist"
-        sub="Your assigned accounts, highest priority first. Log each visit."
+        sub="Promises due first, then highest priority. Log every visit."
+        action={
+          <Link
+            href="/collections/sop"
+            className="rounded-card border border-line bg-white px-2.5 py-1 text-xs font-semibold text-ink hover:bg-surface"
+          >
+            How to collect
+          </Link>
+        }
       >
         <div className="space-y-3">
-          {(worklist ?? []).map((c) => {
+          {sortedWorklist.map((c) => {
             const msg = buildFollowupMessage(c as ContractFinancials);
+            const promisedDue = dueByContract.get(c.id);
             return (
               <div
                 key={c.id}
-                className="rounded-card border border-line p-3"
+                className={`rounded-card border p-3 ${
+                  promisedDue ? "border-brand bg-brand/5" : "border-line"
+                }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -128,6 +151,12 @@ async function CollectorBoard() {
                         ? ` · priority ${c.collection_priority}`
                         : ""}
                     </div>
+                    {promisedDue && (
+                      <div className="mt-1.5 inline-block rounded-card bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">
+                        Promised {fmtDateShort(promisedDue)}
+                        {promisedDue < today ? " — overdue promise" : ""}
+                      </div>
+                    )}
                   </div>
                   <div className="shrink-0 text-right">
                     <TierBadge tier={c.followup_tier} />

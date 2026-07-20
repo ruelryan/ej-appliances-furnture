@@ -34,6 +34,8 @@ export async function logCollection(input: {
   reference: string;
   disposition: string;
   note: string;
+  promisedDate?: string | null;
+  orNo?: string;
 }) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("log_collection", {
@@ -43,6 +45,8 @@ export async function logCollection(input: {
     p_reference: input.reference || null,
     p_disposition: input.disposition,
     p_note: input.note || null,
+    p_promised_date: input.promisedDate || null,
+    p_or_no: input.orNo || null,
   });
   if (error) return { error: error.message };
   revalidate();

@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { notFound, redirect } from "next/navigation";
+import { createClient, getProfile, canPostPayments } from "@/lib/supabase/server";
 import { buildDemandLetterBody, type ContractFinancials } from "@/lib/messages";
 import { fmtDate, phTodayISO } from "@/lib/format";
 import { Letterhead, SignatureBlocks } from "../../letterhead";
@@ -13,6 +13,15 @@ export default async function DemandLetterPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  // This is a formal legal document on company letterhead, and serving one is
+  // an owner decision — the SOP treats it as the point of no return. Without
+  // this gate any authenticated user, a collector included, could print and
+  // serve demands at will. RLS scopes which CONTRACTS you can see; it does not
+  // scope which DOCUMENTS you may generate.
+  const profile = await getProfile();
+  if (!profile || !canPostPayments(profile.role)) redirect("/");
+
   const supabase = await createClient();
 
   const { data: c } = await supabase

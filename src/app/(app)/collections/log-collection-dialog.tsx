@@ -11,6 +11,23 @@ const DISPOSITIONS = [
   { key: "refused", label: "Refused" },
 ] as const;
 
+// Note hints per outcome, so the free-text field gets consistent content the
+// admin can actually read back. The SOP asks for these formats.
+const NOTE_HINTS: Record<string, string> = {
+  collected: "Anything worth remembering (optional)",
+  promised: "Reason, if given — the date is captured above",
+  not_available: "e.g. NOBODY HOME 10:15am. Back Saturday per neighbour.",
+  refused: "e.g. DISPUTED PAYMENT — claims paid ₱2,000 to ... on ...",
+};
+
+// A promise defaults a week out — long enough to be realistic, short enough
+// that the account resurfaces while the visit is still fresh.
+function defaultPromiseDate(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().slice(0, 10);
+}
+
 // Collector logs a collection or a visit outcome. Only a "Collected" entry
 // carries an amount/method; the owner or admin posts it into a real payment.
 export function LogCollectionDialog({
@@ -25,6 +42,8 @@ export function LogCollectionDialog({
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("cash");
   const [reference, setReference] = useState("");
+  const [orNo, setOrNo] = useState("");
+  const [promisedDate, setPromisedDate] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -41,11 +60,14 @@ export function LogCollectionDialog({
     setAmount("");
     setMethod("cash");
     setReference("");
+    setOrNo("");
+    setPromisedDate(defaultPromiseDate());
     setNote("");
     setError("");
   }
 
   const collected = disposition === "collected";
+  const promised = disposition === "promised";
 
   function submit() {
     setError("");
@@ -57,6 +79,8 @@ export function LogCollectionDialog({
         reference: collected && method === "online" ? reference.trim() : "",
         disposition,
         note: note.trim(),
+        promisedDate: promised ? promisedDate : null,
+        orNo: collected && method === "cash" ? orNo.trim() : "",
       });
       if (res.error) setError(res.error);
       else {
@@ -66,11 +90,15 @@ export function LogCollectionDialog({
     });
   }
 
+  // Mirrors the SQL guards in log_collection: cash needs the booklet number,
+  // online needs the payer's reference, a promise needs a date.
   const disabled =
     pending ||
     (collected &&
       (!(Number(amount) > 0) ||
-        (method === "online" && !reference.trim())));
+        (method === "online" && !reference.trim()) ||
+        (method === "cash" && !orNo.trim()))) ||
+    (promised && !promisedDate);
 
   return (
     <>
@@ -161,6 +189,37 @@ export function LogCollectionDialog({
                     />
                   </>
                 )}
+
+                {method === "cash" && (
+                  <>
+                    <label className={label}>Receipt no. (required)</label>
+                    <input
+                      value={orNo}
+                      onChange={(e) => setOrNo(e.target.value)}
+                      placeholder="Number from your receipt booklet"
+                      className={`${input} mb-1`}
+                    />
+                    <p className="mb-3 text-xs text-muted">
+                      No receipt, no money. Write it before the cash goes in your bag.
+                    </p>
+                  </>
+                )}
+              </>
+            )}
+
+            {promised && (
+              <>
+                <label className={label}>Promised date (required)</label>
+                <input
+                  type="date"
+                  value={promisedDate}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setPromisedDate(e.target.value)}
+                  className={`${input} mb-1`}
+                />
+                <p className="mb-3 text-xs text-muted">
+                  This account returns to the top of your worklist on that day.
+                </p>
               </>
             )}
 
@@ -168,7 +227,7 @@ export function LogCollectionDialog({
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. will pay Friday"
+              placeholder={NOTE_HINTS[disposition] ?? ""}
               className={`${input} mb-3`}
             />
 

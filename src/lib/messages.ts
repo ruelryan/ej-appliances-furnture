@@ -15,7 +15,10 @@ export const COMPANY = {
 
 // Days the customer is given to settle or make an arrangement after a
 // formal demand. Referenced by both the Messenger demand and the letter.
-export const DEMAND_DEADLINE_DAYS = 7;
+// Philippine practice for demand letters is 10-30 days; 15 is comfortably
+// inside that range and far harder to attack as oppressive than the 7 days
+// this used to give.
+export const DEMAND_DEADLINE_DAYS = 15;
 
 const NUMBER_WORDS: Record<number, string> = {
   3: "three", 5: "five", 7: "seven", 10: "ten",
@@ -47,6 +50,7 @@ export interface ContractFinancials {
   display_name: string;
   item_description: string;
   cash_price: number;
+  total_price: number;
   term_months: number;
   months_elapsed: number;
   total_paid: number;
@@ -71,7 +75,7 @@ export function buildFollowupMessage(c: ContractFinancials): string {
       `Outstanding balance: ${peso(c.remaining_balance)}\n\n` +
       `Our records show that no payment has been received on your account for more than three (3) months. Under the terms of your contract, we are now entitled to demand full payment of your outstanding balance.\n\n` +
       `Please settle ${peso(c.remaining_balance)}, or contact us within ${DEADLINE_PHRASE} days of this notice to make a payment arrangement.\n\n` +
-      `If we do not hear from you within that period, we will have no choice but to proceed with repossession of the item and, if necessary, legal action, with all related costs charged to your account.\n\n` +
+      `If we do not hear from you within that period, we will decide on one of the remedies available to us under your contract and the law — either pursuing the unpaid balance, or cancelling the sale and recovering the item.\n\n` +
       `We would much rather settle this with you directly — please message us.\n\n` +
       GCASH_BLOCK +
       `\n\n— ${COMPANY.name}`
@@ -120,14 +124,25 @@ export function buildDemandLetterBody(
     `FORMAL DEMAND FOR PAYMENT\n\n` +
     `Dear ${c.display_name},\n\n` +
     `Re: Installment Contract No. ${c.contract_no} — ${c.item_description}\n\n` +
-    `Our records show that your last payment was received on ${fmtDate(c.last_payment_date)}, and that no payment has been made for ${months} consecutive months. As of this date, your outstanding balance is ${peso(c.remaining_balance)} (total paid to date: ${peso(c.total_paid)}).\n\n` +
-    `Your contract provides:\n\n` +
+    `We write regarding your installment account with ${COMPANY.name}, which is now in arrears.\n\n` +
+    `STATEMENT OF ACCOUNT\n\n` +
+    `Total contract price:      ${peso(c.total_price)}\n` +
+    `Total paid to date:        ${peso(c.total_paid)}\n` +
+    `Last payment received:     ${fmtDate(c.last_payment_date)}\n` +
+    `Outstanding balance:       ${peso(c.remaining_balance)}\n\n` +
+    `No payment has been received on this account for ${months} consecutive months.\n\n` +
+    `Your signed contract provides:\n\n` +
     `"${CONTRACT_CLAUSE}"\n\n` +
-    `Accordingly, we hereby demand full payment of ${peso(c.remaining_balance)} within ${days} days from receipt of this letter.\n\n` +
-    `Should you fail to settle or make an acceptable payment arrangement within that period, we will:\n\n` +
-    `1. Repossess the ${c.item_description} without further notice, with all costs of repossession, including transportation, storage, and handling, charged to your account; and\n\n` +
-    `2. Pursue all available legal remedies — including recovery of the outstanding balance, damages, and all legal fees and costs — should you obstruct the repossession or otherwise fail to meet your obligations under the contract.\n\n` +
-    `We urge you to settle this matter immediately. Payment may be made in person or through our official GCash account (Name: ${COMPANY.gcashName}, Number: ${COMPANY.gcashNumber}). If you wish to discuss a payment arrangement, please contact us within the same ${days} day period.`
+    `Accordingly, we hereby formally demand payment of ${peso(c.remaining_balance)} within ${days} days from your receipt of this letter.\n\n` +
+    `Payment may be made in person at our office, or through our official GCash account (Name: ${COMPANY.gcashName}, Number: ${COMPANY.gcashNumber}). Please keep the receipt or reference number for every payment.\n\n` +
+    `If you are unable to settle the full amount, we strongly encourage you to contact us within the same ${days} day period to discuss a payment arrangement. We would far rather agree a schedule you can keep than take this any further.\n\n` +
+    `Should you neither settle nor make an arrangement within that period, ${COMPANY.name} will elect one of the remedies available to it under the contract and under law — either to pursue payment of the unpaid balance, or to cancel the sale and recover the item. These remedies are alternatives: if we elect to recover the item, we will not thereafter pursue you for the unpaid balance.\n\n` +
+    `Please note that our acceptance of any partial payment shall not be taken as a waiver of the remainder of the balance, nor of any of our rights under the contract.\n\n` +
+    `We trust this matter can be settled without further action.\n\n` +
+    `Very truly yours,\n\n\n` +
+    `${COMPANY.name}\n` +
+    `By: ______________________________\n` +
+    `     Proprietor`
   );
 }
 
