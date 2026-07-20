@@ -375,7 +375,8 @@ interface Customer {
   first: string;
   phones: string[];
   address: string;
-  messenger: string;
+  messenger: string;    // personal FB/Messenger — contracts.csv "FB link"
+  collectionGc: string; // collection group chat — collection.csv "Messenger Collection GC"
   gps: string;
 }
 
@@ -391,7 +392,7 @@ for (const c of contracts) {
   const key = normName(c.name);
   let cust = customersByKey.get(key);
   if (!cust) {
-    cust = { key, last: parts.last, first: parts.first, phones: [], address: "", messenger: "", gps: "" };
+    cust = { key, last: parts.last, first: parts.first, phones: [], address: "", messenger: "", collectionGc: "", gps: "" };
     customersByKey.set(key, cust);
   }
   // enrich with the latest non-empty values (later contracts win)
@@ -410,7 +411,10 @@ for (const k of collections) {
     continue;
   }
   const cust = customersByKey.get(key)!;
-  if (k.messenger && !cust.messenger) cust.messenger = k.messenger;
+  // "Messenger Collection GC" is the group chat, NOT the customer's own profile.
+  // It used to fall back into cust.messenger, which silently dropped one of the
+  // two links on every import; they are separate columns now.
+  if (k.messenger) cust.collectionGc = k.messenger;
   if (k.gmap && !cust.gps) cust.gps = k.gmap;
 }
 
@@ -465,6 +469,12 @@ const report = [
   `- Sum of contract cash prices: ₱${totalCashPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`,
   `- Orphan payments (contract not found): ${orphanPayments.length}`,
   `- Collection rows matched: ${collections.length}`,
+  ``,
+  `## Messenger links (these are two DIFFERENT links — see 0020 migration)`,
+  `- Customers with a personal FB/Messenger link ("FB link"): ${custList.filter((c) => c.messenger).length}`,
+  `- Customers with a collection group chat ("Messenger Collection GC"): ${custList.filter((c) => c.collectionGc).length}`,
+  `- Customers with both: ${custList.filter((c) => c.messenger && c.collectionGc).length}`,
+  `- Customers with neither: ${custList.filter((c) => !c.messenger && !c.collectionGc).length}`,
   ``,
   `## Possible duplicate customers (REVIEW BY HAND — not auto-merged)`,
   ...(nearDuplicates.length ? nearDuplicates.map((d) => `- ${d}`) : ["- none found"]),
@@ -523,6 +533,7 @@ async function main() {
           phones: c.phones,
           address: c.address || null,
           messenger_url: c.messenger || null,
+          collection_gc_url: c.collectionGc || null,
           gps_url: c.gps || null,
         }))
       )

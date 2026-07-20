@@ -229,7 +229,7 @@ export default async function ContractPage({
             ))}
             {c.messenger_url && (
               <div className="flex justify-between gap-3">
-                <dt className="text-muted">Messenger</dt>
+                <dt className="text-muted">Personal Messenger</dt>
                 <dd>
                   <a
                     href={c.messenger_url}
@@ -237,6 +237,20 @@ export default async function ContractPage({
                     className="font-medium text-brand hover:underline"
                   >
                     Open chat
+                  </a>
+                </dd>
+              </div>
+            )}
+            {c.collection_gc_url && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted">Collection group chat</dt>
+                <dd>
+                  <a
+                    href={c.collection_gc_url}
+                    target="_blank"
+                    className="font-medium text-brand hover:underline"
+                  >
+                    Open group
                   </a>
                 </dd>
               </div>

@@ -66,6 +66,7 @@ const DATASETS: Record<
       ["phones", "Phones"],
       ["address", "Address"],
       ["messenger_url", "Messenger"],
+      ["collection_gc_url", "Collection GC"],
       ["gps_url", "GPS/Map"],
     ],
   },

@@ -143,13 +143,16 @@ async function CollectorBoard() {
                     customerName={c.display_name}
                   />
                   <CopyButton text={msg} label="Copy message" />
-                  {c.messenger_url && (
+                  {/* Collectors get the group chat only — collection talk belongs
+                      where the owner and admin can see it. The customer's personal
+                      Messenger stays on the contract/customer pages. */}
+                  {c.collection_gc_url && (
                     <a
-                      href={c.messenger_url}
+                      href={c.collection_gc_url}
                       target="_blank"
                       className="rounded-card border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface"
                     >
-                      Messenger
+                      Group chat
                     </a>
                   )}
                   {c.gps_url && (

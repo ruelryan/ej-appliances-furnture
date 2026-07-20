@@ -182,9 +182,11 @@ export function ContractForm({
               required
               className={`col-span-2 ${input}`}
             />
+            {/* Personal profile only. The collection group chat is created by
+                the admin after the contract exists — added on the customer page. */}
             <input
               name="messenger_url"
-              placeholder="Facebook/Messenger link (optional)"
+              placeholder="Customer's personal Facebook/Messenger link (optional)"
               defaultValue={prefill?.messengerUrl ?? ""}
               className={`col-span-2 ${input}`}
             />
