@@ -63,21 +63,60 @@ async function main() {
   if (!file || args.indexOf("--file") < 0) { console.error("Usage: --file <csv> [--load]"); process.exit(1); }
 
   const rows = parseCSV(fs.readFileSync(file, "utf8"));
-  // data starts after the two header rows; col indexes are fixed for this sheet
-  const items = rows.slice(2).map((r) => {
-    const model = (r[2] || "").trim();
-    const pic = r[5] || "";
+
+  // Columns are resolved BY HEADER NAME, not by fixed position. The original
+  // version hard-coded C=Model/D=Price/…, which silently depended on the CSV
+  // export carrying a leading blank column — one layout change and every field
+  // shifts. Note the Sheet misspells "Item Decription"; both spellings match.
+  const headerRow = rows.findIndex(
+    (r) => r.some((c) => /^model$/i.test(String(c).trim())) &&
+           r.some((c) => /^price$/i.test(String(c).trim()))
+  );
+  if (headerRow < 0) {
+    console.error('Could not find the Pricelist header row (needs "Model" and "Price").');
+    process.exit(1);
+  }
+  const hdr = rows[headerRow].map((h) => String(h).trim().toLowerCase());
+  const col = (...names: string[]) => {
+    for (const n of names) {
+      const i = hdr.indexOf(n.toLowerCase());
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  const cName = col("Item Decription", "Item Description", "Description");
+  const cModel = col("Model");
+  const cPrice = col("Price");
+  const cStock = col("On-hand", "On hand", "Onhand");
+  const cPic = col("Picture", "Photo", "Image");
+  const cSpec = col("Specification", "Specs", "Spec");
+  console.log(
+    `Columns → name:${cName} model:${cModel} price:${cPrice} stock:${cStock} pic:${cPic} spec:${cSpec}`
+  );
+  if (cName < 0) console.warn('  ! No "Item Decription" column — names will fall back to the photo filename.');
+
+  const at = (r: string[], i: number) => (i >= 0 ? (r[i] || "").trim() : "");
+  const items = rows.slice(headerRow + 1).map((r) => {
+    const pic = at(r, cPic);
     const driveId = (pic.match(/\/d\/([A-Za-z0-9_-]+)/) || pic.match(/[?&]id=([A-Za-z0-9_-]+)/) || [])[1] || null;
-    return { model, price: num(r[3]), stock: Math.max(0, Math.round(num(r[4]) ?? 0)), driveId, spec: (r[6] || "").trim() };
-  }).filter((x) => x.model);
+    return {
+      sheetName: at(r, cName),
+      model: at(r, cModel),
+      price: cPrice >= 0 ? num(r[cPrice]) : null,
+      stock: Math.max(0, Math.round((cStock >= 0 ? num(r[cStock]) : 0) ?? 0)),
+      driveId,
+      spec: at(r, cSpec),
+    };
+  }).filter((x) => x.model || x.sheetName);
 
   console.log(`${items.length} products found. ${items.filter((x) => x.driveId).length} have a photo link.\n`);
 
   if (!load) {
-    console.log("DRY RUN — resolving names from the first 8 photos:");
+    console.log("DRY RUN — first 8 rows as they would import:");
     for (const it of items.slice(0, 8)) {
       const ph = it.driveId ? await fetchDrivePhoto(it.driveId) : null;
-      console.log(`  • ${ph?.name || it.model}  —  ₱${it.price ?? "?"} · stock ${it.stock}${ph ? " · photo ✓" : it.driveId ? " · photo ✗" : ""}`);
+      const name = it.sheetName || ph?.name || it.model;
+      console.log(`  • ${name}  —  ₱${it.price ?? "?"} · stock ${it.stock}${ph ? " · photo ✓" : it.driveId ? " · photo ✗" : ""}`);
     }
     console.log("\nRe-run with --load to import for real.");
     return;
@@ -102,12 +141,16 @@ async function main() {
   let n = 0, photos = 0, photoFail = 0;
   for (const it of items) {
     const ph = it.driveId ? await fetchDrivePhoto(it.driveId) : null;
-    // Name priority: a real brand+model photo filename → a descriptive first
-    // line of the spec → the model. Reject Facebook-style numeric filenames.
+    // Name comes from the Sheet's "Item Decription" column — that is the
+    // human-readable product name, and it is what lands on a customer's
+    // contract and receipt. The photo filename / spec line are only fallbacks
+    // for rows where that column is blank; they yield model codes like
+    // "Haier HTW70-P1217 (7.0kg)" instead of "Haier Washing Machine 7.0 kg
+    // Twin Tub", which is what the first import produced for all 146 rows.
     const goodFile = !!ph?.name && /[A-Za-z]{3,}/.test(ph.name) && !/^\d{6,}/.test(ph.name.trim());
     const specName = it.spec ? it.spec.split(/\n/)[0].split(/\.\s/)[0].trim().slice(0, 80) : "";
     const specOk = (specName.match(/[A-Za-z]{3,}/g) || []).length >= 2;
-    const name = (goodFile ? ph!.name : specOk ? specName : it.model).slice(0, 200);
+    const name = (it.sheetName || (goodFile ? ph!.name : specOk ? specName : it.model)).slice(0, 200);
     const description = ["Model: " + it.model, it.spec].filter(Boolean).join("\n");
     const sku = "PRD" + String((await pg.query(`select public.next_counter('product') as v`)).rows[0].v).padStart(4, "0");
     const prod = (await pg.query(
