@@ -68,6 +68,16 @@ export default async function PrintPayslipPage({
               {peso(slip.dtr_pay)}
             </td>
           </tr>
+          {Number(slip.meal_allowance) > 0 && (
+            <tr className="border-b border-line">
+              <td className="py-1.5 pr-4">
+                Meal allowance — {slip.days_worked} day(s) worked
+              </td>
+              <td className="py-1.5 text-right tabular-nums">
+                {peso(slip.meal_allowance)}
+              </td>
+            </tr>
+          )}
           {extraIncome.map((l, i) => (
             <tr key={i} className="border-b border-line">
               <td className="py-1.5 pr-4">{l.label}</td>
@@ -131,6 +141,8 @@ export default async function PrintPayslipPage({
 
       <p className="mt-2 text-[10px] text-muted">
         DTR pay includes holiday premiums and unworked regular-holiday pay.
+        Meal allowance is paid per day actually worked and, like the holiday
+        premium, is not part of basic salary for 13th-month purposes.
         ER amounts are the employer&apos;s contribution shares, shown for
         record purposes only.
       </p>

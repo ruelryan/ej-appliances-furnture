@@ -39,9 +39,19 @@ export default async function PayrollPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <BackLink />
-        <h1 className="text-xl font-semibold text-ink">Payroll</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <BackLink />
+          <h1 className="text-xl font-semibold text-ink">Payroll</h1>
+        </div>
+        {isOwner && (
+          <Link
+            href="/payroll/13th-month"
+            className="rounded-card border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
+          >
+            13th month
+          </Link>
+        )}
       </div>
 
       {isOwner && (

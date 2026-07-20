@@ -117,6 +117,22 @@ export async function setHourlyRate(profileId: string, rate: number) {
   return {};
 }
 
+// Meal allowance is a supplement — paid on top of the wage per day actually
+// worked, and deliberately NOT part of basic salary, so it stays out of the
+// 13th-month base. Separate RPC rather than a 7th argument to setContributions,
+// whose six positional params are already awkward to extend.
+export async function setMealAllowance(profileId: string, amount: number) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_meal_allowance", {
+    p_profile_id: profileId,
+    p_amount: amount,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/dtr/settings");
+  revalidatePath("/payroll");
+  return {};
+}
+
 export async function setContributions(
   profileId: string,
   amounts: {

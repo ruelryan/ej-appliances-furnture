@@ -81,6 +81,19 @@ export default async function PayslipPage({
             </span>
             <span className="tabular-nums text-ink">{peso(slip.dtr_pay)}</span>
           </div>
+          {Number(slip.meal_allowance) > 0 && (
+            <div className="flex items-center justify-between py-2">
+              <span className="text-ink">
+                Meal allowance
+                <span className="block text-xs text-muted">
+                  {slip.days_worked} day(s) worked · not part of basic salary
+                </span>
+              </span>
+              <span className="tabular-nums text-ink">
+                {peso(slip.meal_allowance)}
+              </span>
+            </div>
+          )}
           {slip.extra_income.map((l, i) => (
             <div key={i} className="flex items-center justify-between py-2">
               <span className="text-ink">{l.label}</span>
