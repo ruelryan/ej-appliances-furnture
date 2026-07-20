@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getLocationTree } from "@/lib/locations";
 import { ContractForm } from "./contract-form";
 import { BackLink } from "@/components/back-link";
 
@@ -18,6 +19,8 @@ export default async function NewContractPage({
 }) {
   const { leadId } = await searchParams;
   const supabase = await createClient();
+
+  const locationTree = await getLocationTree();
 
   const [{ data: agents }, { data: products }] = await Promise.all([
     supabase
@@ -68,7 +71,12 @@ export default async function NewContractPage({
           Converting lead — review the pre-filled details before saving.
         </p>
       )}
-      <ContractForm agents={agents ?? []} products={products ?? []} prefill={prefill} />
+      <ContractForm
+        agents={agents ?? []}
+        products={products ?? []}
+        prefill={prefill}
+        locationTree={locationTree}
+      />
     </div>
   );
 }

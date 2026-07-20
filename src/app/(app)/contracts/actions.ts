@@ -88,7 +88,11 @@ export interface CreateContractInput {
     lastName: string;
     firstName: string;
     phones: string[];
-    address: string;
+    province: string;
+    municipality: string;
+    barangay: string;
+    streetPurok: string;
+    landmark: string;
     messengerUrl: string;
   };
   contractDate: string;
@@ -115,13 +119,26 @@ export async function createContract(input: CreateContractInput) {
     if (!nc?.lastName || !nc?.firstName) {
       return { error: "Customer name is required (Last name, First name)." };
     }
+    // `address` is still written, composed from the structured parts, so every
+    // existing reader — print pages, CSV export, the demand letter — keeps
+    // working unchanged while the structured columns become the source of truth.
+    const composed = [nc.streetPurok, nc.barangay, nc.municipality, nc.province]
+      .map((p) => (p ?? "").trim())
+      .filter(Boolean)
+      .join(", ");
+
     const { data: cust, error: custErr } = await supabase
       .from("customers")
       .insert({
         last_name: nc.lastName,
         first_name: nc.firstName,
         phones: nc.phones,
-        address: nc.address || null,
+        address: composed || null,
+        province: nc.province || null,
+        municipality: nc.municipality || null,
+        barangay: nc.barangay || null,
+        street_purok: nc.streetPurok || null,
+        landmark: nc.landmark || null,
         messenger_url: nc.messengerUrl || null,
       })
       .select("id")

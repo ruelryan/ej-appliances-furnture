@@ -7,6 +7,7 @@ import { computeTerms, TERM_OPTIONS, termLabel } from "@/lib/amortization";
 import { peso, phTodayISO } from "@/lib/format";
 import { ITEM_TYPES } from "@/lib/messages";
 import { btnPrimaryHero, input, label } from "@/components/ui";
+import { AddressFields, type LocationTree } from "@/components/address-fields";
 
 interface CustomerHit {
   id: string;
@@ -45,10 +46,12 @@ export function ContractForm({
   agents,
   products,
   prefill,
+  locationTree,
 }: {
   agents: Agent[];
   products: Product[];
   prefill?: Prefill;
+  locationTree: LocationTree;
 }) {
   const [customer, setCustomer] = useState<CustomerHit | null>(null);
   const [newCustomerMode, setNewCustomerMode] = useState(!!prefill);
@@ -104,7 +107,11 @@ export function ContractForm({
               .split("/")
               .map((s) => s.trim())
               .filter(Boolean),
-            address: String(fd.get("address") ?? "").trim(),
+            province: String(fd.get("province") ?? "").trim(),
+            municipality: String(fd.get("municipality") ?? "").trim(),
+            barangay: String(fd.get("barangay") ?? "").trim(),
+            streetPurok: String(fd.get("street_purok") ?? "").trim(),
+            landmark: String(fd.get("landmark") ?? "").trim(),
             messengerUrl: String(fd.get("messenger_url") ?? "").trim(),
           }
         : undefined,
@@ -175,13 +182,15 @@ export function ContractForm({
               defaultValue={prefill?.phone ?? ""}
               className={`col-span-2 ${input}`}
             />
-            <input
-              name="address"
-              placeholder="Full address"
-              defaultValue={prefill?.address ?? ""}
-              required
-              className={`col-span-2 ${input}`}
-            />
+            {/* Structured from here on. The old single free-text field is what
+                left 1,127 addresses needing a parser to make sense of them. */}
+            {prefill?.address && (
+              <p className="col-span-2 rounded-card bg-surface px-3 py-2 text-xs text-muted">
+                Address from the lead: <strong className="text-ink">{prefill.address}</strong>
+                {" — "}pick the matching barangay below.
+              </p>
+            )}
+            <AddressFields tree={locationTree} />
             {/* Personal profile only. The collection group chat is created by
                 the admin after the contract exists — added on the customer page. */}
             <input
