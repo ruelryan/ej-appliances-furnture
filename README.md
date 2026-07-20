@@ -48,10 +48,14 @@ Fill in the three values from step 1. **Never commit `.env.local`.**
 
 ### 3. Apply the database migrations
 
-In the Supabase dashboard → **SQL Editor**, paste and run, in order:
+Run every file in `supabase/migrations/` in numeric order — either paste
+them into the Supabase dashboard **SQL Editor**, or apply them all at once
+(add `SUPABASE_DB_PASSWORD` — the database password from step 1 — to
+`.env.local` first, in quotes if it has special characters):
 
-1. `supabase/migrations/0001_schema.sql`
-2. `supabase/migrations/0002_views.sql`
+```
+npx tsx scripts/apply-migrations.ts
+```
 
 Then verify the business math matches the app:
 
@@ -130,20 +134,10 @@ the **Admin** page.
 
 ### Keep-alive (important on the free tier)
 
-Supabase pauses free projects after ~7 days without traffic. Daily use
-prevents this, but as insurance create `.github/workflows/keepalive.yml`:
-
-```yaml
-name: keepalive
-on:
-  schedule:
-    - cron: "0 22 * * *"   # daily, 6am PH time
-jobs:
-  ping:
-    runs-on: ubuntu-latest
-    steps:
-      - run: curl -s https://YOUR-APP.vercel.app/api/health
-```
+Supabase pauses free projects after ~7 days without traffic. As insurance,
+`.github/workflows/keepalive.yml` pings `/api/health` daily (6am PH time);
+it runs automatically once the repo is on GitHub. If the app URL ever
+changes, update the URL in that file.
 
 ---
 

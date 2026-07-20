@@ -47,35 +47,35 @@ export default async function CustomerCardPrintPage({
 
   return (
     <div className="text-sm">
-      <PrintControls />
+      <PrintControls filename={`customer-card-${c.contract_no}`} />
       <Letterhead />
       <h1 className="mb-4 text-center text-base font-semibold">CUSTOMER CARD</h1>
 
       <div className="mb-4 grid grid-cols-2 gap-x-8 gap-y-1 text-xs">
         {[...left, ...right].map(([k, v]) => (
-          <div key={k} className="flex justify-between border-b border-surface py-1">
+          <div key={k} className="flex justify-between border-b border-line py-1">
             <span className="text-muted">{k}</span>
             <span className="text-right font-medium">{v}</span>
           </div>
         ))}
       </div>
 
-      <div className="mb-4 grid grid-cols-4 gap-2 rounded border border-surface p-2 text-center text-xs">
+      <div className="mb-4 grid grid-cols-4 gap-2 rounded border border-line p-2 text-center text-xs">
         <div>
           <div className="text-muted">Total price</div>
-          <div className="font-bold">{peso(c.total_price)}</div>
+          <div className="font-semibold">{peso(c.total_price)}</div>
         </div>
         <div>
           <div className="text-muted">Monthly</div>
-          <div className="font-bold">{peso(c.monthly_amortization)}</div>
+          <div className="font-semibold">{peso(c.monthly_amortization)}</div>
         </div>
         <div>
           <div className="text-muted">Total paid</div>
-          <div className="font-bold">{peso(c.total_paid)}</div>
+          <div className="font-semibold">{peso(c.total_paid)}</div>
         </div>
         <div>
           <div className="text-muted">Balance</div>
-          <div className="font-bold">{peso(c.remaining_balance)}</div>
+          <div className="font-semibold">{peso(c.remaining_balance)}</div>
         </div>
       </div>
 
@@ -91,7 +91,7 @@ export default async function CustomerCardPrintPage({
         </thead>
         <tbody>
           {(payments ?? []).map((p) => (
-            <tr key={p.id} className="border-b border-surface">
+            <tr key={p.id} className="border-b border-line">
               <td className="py-1">{fmtDateShort(p.payment_date)}</td>
               <td className="py-1">{p.receipt_no ?? "—"}</td>
               <td className="py-1 font-mono">{p.payment_no}</td>

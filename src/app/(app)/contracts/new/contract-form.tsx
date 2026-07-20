@@ -6,6 +6,7 @@ import { searchCustomers } from "./customer-actions";
 import { computeTerms, TERM_OPTIONS, termLabel } from "@/lib/amortization";
 import { peso, phTodayISO } from "@/lib/format";
 import { ITEM_TYPES } from "@/lib/messages";
+import { btnPrimaryHero, input, label } from "@/components/ui";
 
 interface CustomerHit {
   id: string;
@@ -15,12 +16,47 @@ interface CustomerHit {
   messenger_url: string | null;
 }
 
-export function ContractForm() {
+interface Agent {
+  id: string;
+  full_name: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  category: string | null;
+  price: number | string | null;
+}
+
+interface Prefill {
+  leadId: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  address: string;
+  messengerUrl: string;
+  itemDescription: string;
+  itemType: string;
+  cashPrice: string;
+  agentId: string;
+}
+
+export function ContractForm({
+  agents,
+  products,
+  prefill,
+}: {
+  agents: Agent[];
+  products: Product[];
+  prefill?: Prefill;
+}) {
   const [customer, setCustomer] = useState<CustomerHit | null>(null);
-  const [newCustomerMode, setNewCustomerMode] = useState(false);
+  const [newCustomerMode, setNewCustomerMode] = useState(!!prefill);
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<CustomerHit[]>([]);
-  const [cashPrice, setCashPrice] = useState("");
+  const [cashPrice, setCashPrice] = useState(prefill?.cashPrice ?? "");
+  const [productId, setProductId] = useState("");
+  const [saleType, setSaleType] = useState<"installment" | "cash">("installment");
   const [termMonths, setTermMonths] = useState(4);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -39,13 +75,13 @@ export function ContractForm() {
 
   const preview = useMemo(() => {
     const price = Number(cashPrice);
-    if (!(price > 0)) return null;
+    if (!(price > 0) || saleType === "cash") return null;
     try {
       return computeTerms(price, termMonths);
     } catch {
       return null;
     }
-  }, [cashPrice, termMonths]);
+  }, [cashPrice, termMonths, saleType]);
 
   function submit(fd: FormData) {
     setError("");
@@ -54,6 +90,9 @@ export function ContractForm() {
     const qty = Number(fd.get("quantity"));
     if (!Number.isInteger(qty) || qty < 1)
       return setError("Quantity must be a whole number of at least 1.");
+
+    const agentId = String(fd.get("agent_id") ?? "");
+    const agentName = agents.find((a) => a.id === agentId)?.full_name ?? "";
 
     const input = {
       customerId: customer?.id,
@@ -75,14 +114,17 @@ export function ContractForm() {
       quantity: qty,
       cashPrice: price,
       termMonths,
-      salesAgent: String(fd.get("sales_agent") ?? "").trim(),
+      saleType,
+      salesAgent: agentName,
+      agentId: agentId || undefined,
+      productId: productId || undefined,
+      leadId: prefill?.leadId,
       note: String(fd.get("note") ?? "").trim(),
     };
 
     if (!input.customerId && !newCustomerMode)
       return setError("Select a customer or add a new one.");
     if (!input.itemDescription) return setError("Item description is required.");
-    if (!input.salesAgent) return setError("Sales agent is required.");
 
     startTransition(async () => {
       const res = await createContract(input);
@@ -93,9 +135,9 @@ export function ContractForm() {
   return (
     <form action={submit} className="space-y-4">
       {/* Customer */}
-      <div className="rounded-card border border-surface bg-white p-4">
+      <div className="rounded-card border border-line bg-white p-4">
         <div className="mb-2 flex items-center justify-between">
-          <label className="text-sm font-medium text-navy">
+          <label className="text-sm font-medium text-ink">
             Customer
           </label>
           <button
@@ -116,36 +158,41 @@ export function ContractForm() {
             <input
               name="last_name"
               placeholder="Last name"
+              defaultValue={prefill?.lastName ?? ""}
               required
-              className="rounded-card border border-surface px-3 py-2.5 text-base"
+              className={input}
             />
             <input
               name="first_name"
               placeholder="First name"
+              defaultValue={prefill?.firstName ?? ""}
               required
-              className="rounded-card border border-surface px-3 py-2.5 text-base"
+              className={input}
             />
             <input
               name="phone"
               placeholder="Phone (09…) — use / for two"
-              className="col-span-2 rounded-card border border-surface px-3 py-2.5 text-base"
+              defaultValue={prefill?.phone ?? ""}
+              className={`col-span-2 ${input}`}
             />
             <input
               name="address"
               placeholder="Full address"
+              defaultValue={prefill?.address ?? ""}
               required
-              className="col-span-2 rounded-card border border-surface px-3 py-2.5 text-base"
+              className={`col-span-2 ${input}`}
             />
             <input
               name="messenger_url"
               placeholder="Facebook/Messenger link (optional)"
-              className="col-span-2 rounded-card border border-surface px-3 py-2.5 text-base"
+              defaultValue={prefill?.messengerUrl ?? ""}
+              className={`col-span-2 ${input}`}
             />
           </div>
         ) : customer ? (
           <div className="flex items-start justify-between">
             <div>
-              <div className="font-semibold text-navy">
+              <div className="font-semibold text-ink">
                 {customer.display_name}
               </div>
               <div className="text-xs text-muted">
@@ -170,10 +217,10 @@ export function ContractForm() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="Search existing customer…"
-              className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+              className={input}
             />
             {hits.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-card border border-surface bg-white shadow-lg">
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-card border border-line bg-white shadow-lg">
                 {hits.map((h) => (
                   <button
                     key={h.id}
@@ -194,25 +241,77 @@ export function ContractForm() {
       </div>
 
       {/* Item */}
-      <div className="grid grid-cols-2 gap-3 rounded-card border border-surface bg-white p-4">
+      <div className="grid grid-cols-2 gap-3 rounded-card border border-line bg-white p-4">
         <div className="col-span-2">
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>Sale type</label>
+          <div className="grid grid-cols-2 gap-2">
+            {(["installment", "cash"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setSaleType(t)}
+                className={`rounded-card border px-3 py-2 text-sm font-semibold capitalize ${
+                  saleType === t
+                    ? "border-brand bg-brand/10 text-brand"
+                    : "border-line bg-white text-ink hover:bg-surface"
+                }`}
+              >
+                {t === "cash" ? "Cash sale" : "Installment"}
+              </button>
+            ))}
+          </div>
+        </div>
+        {products.length > 0 && (
+          <div className="col-span-2">
+            <label className={label}>
+              Product <span className="text-muted">(optional — links stock)</span>
+            </label>
+            <select
+              value={productId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setProductId(id);
+                const p = products.find((x) => x.id === id);
+                if (p) {
+                  const descEl = document.querySelector<HTMLInputElement>('input[name="item_description"]');
+                  if (descEl) descEl.value = p.name;
+                  const typeEl = document.querySelector<HTMLSelectElement>('select[name="item_type"]');
+                  if (typeEl && p.category) typeEl.value = p.category;
+                  if (p.price != null) setCashPrice(String(p.price));
+                }
+              }}
+              className={input}
+            >
+              <option value="">— Not from catalog —</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.category ? ` (${p.category})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div className="col-span-2">
+          <label className={label}>
             Item description
           </label>
           <input
             name="item_description"
             placeholder="e.g. Sharp Refrigerator 6 cu ft"
+            defaultValue={prefill?.itemDescription ?? ""}
             required
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Item type
           </label>
           <select
             name="item_type"
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            defaultValue={prefill?.itemType || undefined}
+            className={input}
           >
             {ITEM_TYPES.map((t) => (
               <option key={t}>{t}</option>
@@ -220,7 +319,7 @@ export function ContractForm() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Quantity
           </label>
           <input
@@ -230,12 +329,12 @@ export function ContractForm() {
             step="1"
             defaultValue="1"
             required
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
-            Cash price (₱)
+          <label className={label}>
+            {saleType === "cash" ? "Cash amount (₱)" : "Cash price (₱)"}
           </label>
           <input
             name="cash_price"
@@ -246,27 +345,29 @@ export function ContractForm() {
             inputMode="decimal"
             value={cashPrice}
             onChange={(e) => setCashPrice(e.target.value)}
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
+        {saleType === "installment" && (
+          <div>
+            <label className={label}>
+              Term
+            </label>
+            <select
+              value={termMonths}
+              onChange={(e) => setTermMonths(Number(e.target.value))}
+              className={input}
+            >
+              {TERM_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {termLabel(t)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
-            Term
-          </label>
-          <select
-            value={termMonths}
-            onChange={(e) => setTermMonths(Number(e.target.value))}
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
-          >
-            {TERM_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {termLabel(t)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Contract date
           </label>
           <input
@@ -274,58 +375,72 @@ export function ContractForm() {
             type="date"
             required
             defaultValue={phTodayISO()}
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Sales agent
           </label>
-          <input
-            name="sales_agent"
-            required
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
-          />
+          <select
+            name="agent_id"
+            defaultValue={prefill?.agentId ?? ""}
+            className={input}
+          >
+            <option value="">Office Sales (no agent)</option>
+            {agents.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.full_name}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="col-span-2">
-          <label className="mb-1 block text-sm font-medium text-navy">
+          <label className={label}>
             Notes <span className="text-muted">(optional)</span>
           </label>
           <input
             name="note"
-            className="w-full rounded-card border border-surface px-3 py-2.5 text-base"
+            className={input}
           />
         </div>
       </div>
 
       {/* Live amortization preview */}
       {preview && (
-        <div className="rounded-card border border-surface bg-surface p-4 text-sm">
-          <div className="mb-2 font-bold text-navy">
+        <div className="rounded-card border border-line bg-surface p-4 text-sm">
+          <div className="mb-2 font-semibold text-ink">
             {termLabel(termMonths)}
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
-              <div className="text-xs text-brand">Total price</div>
-              <div className="font-bold text-navy">
+              <div className="text-xs text-muted">Total price</div>
+              <div className="font-semibold text-ink">
                 {peso(preview.totalPrice)}
               </div>
             </div>
             <div>
-              <div className="text-xs text-brand">
+              <div className="text-xs text-muted">
                 Downpayment (25%)
               </div>
-              <div className="font-bold text-navy">
+              <div className="font-semibold text-ink">
                 {peso(preview.downpayment)}
               </div>
             </div>
             <div>
-              <div className="text-xs text-brand">Monthly</div>
-              <div className="font-bold text-navy">
+              <div className="text-xs text-muted">Monthly</div>
+              <div className="font-semibold text-ink">
                 {peso(preview.monthlyAmortization)}
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {saleType === "cash" && Number(cashPrice) > 0 && (
+        <div className="rounded-card border border-line bg-surface p-4 text-sm">
+          <span className="text-muted">Amount due (paid in full — no schedule): </span>
+          <span className="font-semibold text-ink">{peso(Number(cashPrice))}</span>
         </div>
       )}
 
@@ -338,7 +453,7 @@ export function ContractForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-card bg-brand py-3 text-base font-bold text-white shadow-[0_2px_8px_rgba(244,77,85,0.3)] hover:bg-brand-dark disabled:opacity-50 disabled:shadow-none"
+        className={btnPrimaryHero}
       >
         {pending ? "Creating…" : "Create Contract"}
       </button>

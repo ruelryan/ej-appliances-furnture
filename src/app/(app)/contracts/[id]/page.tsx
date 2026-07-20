@@ -7,9 +7,13 @@ import { buildFollowupMessage, type ContractFinancials } from "@/lib/messages";
 import { TierBadge } from "@/components/tier-badge";
 import { PaidProgress } from "@/components/paid-progress";
 import { CopyButton } from "@/components/copy-button";
+import { SectionCard } from "@/components/section-card";
+import { btnPrimary, btnSecondary, theadRow } from "@/components/ui";
 import { NoteForm } from "./note-form";
 import { StatusForm } from "./status-form";
 import { ContractNavBar } from "./nav-bar";
+import { AgentCommissionPanel, type CommissionRow } from "./agent-commission-panel";
+import { DeliveryPanel } from "./delivery-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +61,11 @@ export default async function ContractPage({
   const supabase = await createClient();
   const profile = await getProfile();
   const isOwner = profile?.role === "owner";
+  const isDelivery = profile?.role === "delivery";
+  const canManage =
+    profile?.role === "owner" ||
+    profile?.role === "admin" ||
+    profile?.role === "staff";
 
   const { data: c } = await supabase
     .from("v_contract_financials")
@@ -66,7 +75,7 @@ export default async function ContractPage({
 
   if (!c) notFound();
 
-  const [{ data: payments }, { data: notes }, { data: navRows }] =
+  const [{ data: payments }, { data: notes }, { data: navRows }, { data: commission }, deliveryRes] =
     await Promise.all([
       supabase
         .from("payments")
@@ -83,9 +92,37 @@ export default async function ContractPage({
         .select("id, display_name, contract_no, last_payment_date, overdue_amount")
         .eq("payment_status", "open")
         .limit(1000),
+      supabase.from("v_commissions").select("*").eq("contract_id", id).maybeSingle(),
+      supabase.from("v_deliveries").select("*").eq("contract_id", id).maybeSingle(),
     ]);
 
+  const { data: delivery } = deliveryRes;
+
+  // Agent picker options (owner/admin only) + suppliers for the delivery panel.
+  let agents: { id: string; full_name: string }[] = [];
+  let suppliers: { id: string; name: string }[] = [];
+  let products: { id: string; name: string }[] = [];
+  if (canManage || isDelivery) {
+    const [{ data: ag }, { data: sup }, { data: prod }] = await Promise.all([
+      canManage
+        ? supabase
+            .from("profiles")
+            .select("id, full_name")
+            .eq("role", "sales_agent")
+            .eq("active", true)
+            .order("full_name")
+        : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
+      supabase.from("suppliers").select("id, name").eq("active", true).order("name"),
+      supabase.from("products").select("id, name").eq("active", true).order("name"),
+    ]);
+    agents = ag ?? [];
+    suppliers = sup ?? [];
+    products = prod ?? [];
+  }
+
   const message = buildFollowupMessage(c as ContractFinancials);
+  // term_months = 0 uniquely marks a cash sale (enforced by the 0016 CHECK).
+  const isCash = Number(c.term_months) === 0;
 
   // prev/next through open contracts in the chosen order
   const ordered = sortNavRows((navRows ?? []) as NavRow[], sort);
@@ -111,23 +148,28 @@ export default async function ContractPage({
     ["Date", fmtDateShort(c.contract_date)],
     ["Item", `${c.item_description}${c.quantity > 1 ? ` ×${c.quantity}` : ""}`],
     ["Item type", c.item_type ?? "—"],
-    ["Sales agent", c.sales_agent ?? "—"],
     ["Contact", (c.phones ?? []).join(" / ") || "—"],
     ["Address", c.address ?? "—"],
   ];
 
-  const moneyRows: Array<[string, string, boolean?]> = [
-    ["Cash price", peso(c.cash_price)],
-    ["Term", `${termLabel(c.term_months)}`],
-    ["Total price", peso(c.total_price)],
-    ["Downpayment (25%)", peso(c.downpayment)],
-    ["Monthly", peso(c.monthly_amortization)],
-    ["Months elapsed", String(c.months_elapsed)],
-    ["Total paid", peso(c.total_paid)],
-    ["Expected by now", peso(c.expected_to_date)],
-    ["Past due", peso(c.overdue_amount), Number(c.overdue_amount) > 0],
-    ["Remaining balance", peso(c.remaining_balance)],
-  ];
+  const moneyRows: Array<[string, string, boolean?]> = isCash
+    ? [
+        ["Cash amount", peso(c.total_price)],
+        ["Total paid", peso(c.total_paid)],
+        ["Balance", peso(c.remaining_balance), Number(c.remaining_balance) > 0],
+      ]
+    : [
+        ["Cash price", peso(c.cash_price)],
+        ["Term", `${termLabel(c.term_months)}`],
+        ["Total price", peso(c.total_price)],
+        ["Downpayment (25%)", peso(c.downpayment)],
+        ["Monthly", peso(c.monthly_amortization)],
+        ["Months elapsed", String(c.months_elapsed)],
+        ["Total paid", peso(c.total_paid)],
+        ["Expected by now", peso(c.expected_to_date)],
+        ["Past due", peso(c.overdue_amount), Number(c.overdue_amount) > 0],
+        ["Remaining balance", peso(c.remaining_balance)],
+      ];
 
   return (
     <div className="space-y-5">
@@ -141,7 +183,7 @@ export default async function ContractPage({
 
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h1 className="text-xl font-semibold text-navy">
+          <h1 className="text-xl font-semibold text-ink">
             <Link
               href={`/customers/${c.customer_id}`}
               className="hover:underline"
@@ -151,6 +193,11 @@ export default async function ContractPage({
           </h1>
           <div className="mt-1 flex items-center gap-2">
             <TierBadge tier={c.followup_tier} />
+            {isCash && (
+              <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
+                CASH SALE
+              </span>
+            )}
             <span className="text-xs text-muted">
               {c.payment_status === "open" ? "Open" : "Closed"} ·{" "}
               {c.delivery_status}
@@ -159,17 +206,11 @@ export default async function ContractPage({
           </div>
         </div>
         <div className="flex gap-2">
-          <Link
-            href={`/payments/new?contract=${c.id}`}
-            className="rounded-card bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
-          >
-            💵 Payment
+          <Link href={`/payments/new?contract=${c.id}`} className={btnPrimary}>
+            Record payment
           </Link>
           {isOwner && (
-            <Link
-              href={`/contracts/${c.id}/edit`}
-              className="rounded-card border border-surface px-3 py-2 text-sm font-semibold text-navy hover:bg-surface"
-            >
+            <Link href={`/contracts/${c.id}/edit`} className={btnSecondary}>
               Edit
             </Link>
           )}
@@ -178,15 +219,12 @@ export default async function ContractPage({
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Contract info */}
-        <section className="rounded-card border border-surface bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-navy">
-            Contract
-          </h2>
+        <SectionCard title="Contract">
           <dl className="space-y-1.5 text-sm">
             {infoRows.map(([k, v]) => (
               <div key={k} className="flex justify-between gap-3">
                 <dt className="shrink-0 text-muted">{k}</dt>
-                <dd className="text-right text-navy">{v}</dd>
+                <dd className="text-right text-ink">{v}</dd>
               </div>
             ))}
             {c.messenger_url && (
@@ -198,7 +236,7 @@ export default async function ContractPage({
                     target="_blank"
                     className="font-medium text-brand hover:underline"
                   >
-                    💬 Open chat
+                    Open chat
                   </a>
                 </dd>
               </div>
@@ -212,19 +250,16 @@ export default async function ContractPage({
                     target="_blank"
                     className="font-medium text-brand hover:underline"
                   >
-                    📍 Open map
+                    Open map
                   </a>
                 </dd>
               </div>
             )}
           </dl>
-        </section>
+        </SectionCard>
 
         {/* Money */}
-        <section className="rounded-card border border-surface bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-navy">
-            Account
-          </h2>
+        <SectionCard title="Account">
           <PaidProgress
             paid={Number(c.total_paid)}
             total={Number(c.total_price)}
@@ -237,8 +272,8 @@ export default async function ContractPage({
                 <dd
                   className={`text-right font-medium ${
                     alert
-                      ? "font-bold text-danger"
-                      : "text-navy"
+                      ? "font-semibold text-danger"
+                      : "text-ink"
                   }`}
                 >
                   {v}
@@ -246,22 +281,30 @@ export default async function ContractPage({
               </div>
             ))}
           </dl>
-        </section>
+        </SectionCard>
       </div>
 
+      {/* Agent & commission */}
+      <AgentCommissionPanel
+        contractId={c.id}
+        commission={(commission as CommissionRow) ?? null}
+        agents={agents}
+        agentId={(commission as CommissionRow)?.agent_id ?? null}
+        canManage={canManage}
+        isOwner={isOwner}
+        fallbackAgentName={c.sales_agent ?? null}
+      />
+
       {/* Term comparison — the contract's term highlighted, others what-if */}
-      <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-1 text-sm font-semibold text-navy">
-          Terms
-        </h2>
-        <p className="mb-3 text-xs text-muted">
-          Grayed rows show what this contract would look like on the other
-          terms — useful when renegotiating.
-        </p>
+      {!isCash && (
+      <SectionCard
+        title="Terms"
+        sub="Grayed rows show what this contract would look like on the other terms — useful when renegotiating."
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm tabular-nums">
             <thead>
-              <tr className="border-b border-surface text-left text-xs text-muted">
+              <tr className={theadRow}>
                 <th className="py-1.5 pr-3">Term</th>
                 <th className="py-1.5 pr-3 text-right">Price</th>
                 <th className="py-1.5 pr-3 text-right">Monthly</th>
@@ -282,9 +325,9 @@ export default async function ContractPage({
                 return (
                   <tr
                     key={t}
-                    className={`border-b border-surface ${
+                    className={`border-b border-line ${
                       active
-                        ? "font-bold text-teal-dark"
+                        ? "bg-brand/5 font-semibold text-brand"
                         : "text-muted"
                     }`}
                   >
@@ -305,24 +348,30 @@ export default async function ContractPage({
             </tbody>
           </table>
         </div>
-      </section>
+      </SectionCard>
+      )}
 
-      {/* Status update (staff-allowed) */}
-      <StatusForm
+      {/* Delivery */}
+      <DeliveryPanel
+        delivery={delivery ?? null}
+        suppliers={suppliers}
+        products={products}
+        canManage={canManage}
+        isDelivery={isDelivery}
         contractId={c.id}
-        collectionStatus={c.collection_status}
-        deliveryStatus={c.delivery_status}
       />
 
+      {/* Status update (staff-allowed) */}
+      <StatusForm contractId={c.id} collectionStatus={c.collection_status} />
+
       {/* Payment history */}
-      <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-navy">
-          Payments ({(payments ?? []).filter((p) => !p.voided_at).length})
-        </h2>
+      <SectionCard
+        title={`Payments (${(payments ?? []).filter((p) => !p.voided_at).length})`}
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm tabular-nums">
             <thead>
-              <tr className="border-b border-surface text-left text-xs text-muted">
+              <tr className={theadRow}>
                 <th className="py-1.5 pr-3">Date</th>
                 <th className="py-1.5 pr-3">OR#</th>
                 <th className="py-1.5 pr-3 text-right">Amount Paid</th>
@@ -337,12 +386,16 @@ export default async function ContractPage({
                 return (
                   <tr
                     key={p?.id ?? `sched-${i}`}
-                    className="border-b border-surface"
+                    className="border-b border-line"
                   >
                     <td className="py-1.5 pr-3">
                       {p ? fmtDateShort(p.payment_date) : ""}
                     </td>
-                    <td className="py-1.5 pr-3">{p ? (p.receipt_no ?? "—") : ""}</td>
+                    <td className="py-1.5 pr-3">
+                      {p
+                        ? `${p.receipt_type ? `${p.receipt_type} ` : ""}${p.receipt_no ?? "—"}`
+                        : ""}
+                    </td>
                     <td className="py-1.5 pr-3 text-right font-medium">
                       {p ? peso(p.amount) : ""}
                     </td>
@@ -356,9 +409,9 @@ export default async function ContractPage({
                       {p && (
                         <Link
                           href={`/print/receipt/${p.id}`}
-                          className="text-xs text-brand hover:underline"
+                          className="text-xs font-medium text-brand hover:underline"
                         >
-                          🖨️
+                          Print
                         </Link>
                       )}
                     </td>
@@ -373,7 +426,7 @@ export default async function ContractPage({
           </p>
         </div>
         {(payments ?? []).some((p) => p.voided_at) && (
-          <div className="mt-3 border-t border-surface pt-2">
+          <div className="mt-3 border-t border-line pt-2">
             <div className="mb-1 text-xs font-semibold text-muted">Voided</div>
             {(payments ?? [])
               .filter((p) => p.voided_at)
@@ -388,14 +441,12 @@ export default async function ContractPage({
               ))}
           </div>
         )}
-      </section>
+      </SectionCard>
 
       {/* Follow-up message */}
-      <section className="rounded-card border border-surface bg-white p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-navy">
-            Follow-up message
-          </h2>
+      <SectionCard
+        title="Follow-up message"
+        action={
           <div className="flex gap-2">
             <CopyButton text={message} />
             {c.followup_tier === "demand" && (
@@ -403,21 +454,19 @@ export default async function ContractPage({
                 href={`/print/demand-letter/${c.id}`}
                 className="rounded-card bg-danger px-3 py-1.5 text-xs font-semibold text-white hover:bg-danger/90"
               >
-                📄 Demand letter
+                Demand letter
               </Link>
             )}
           </div>
-        </div>
-        <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-card bg-surface p-3 text-xs leading-relaxed text-navy">
+        }
+      >
+        <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-card bg-surface p-3 text-xs leading-relaxed text-ink">
           {message}
         </pre>
-      </section>
+      </SectionCard>
 
       {/* Notes */}
-      <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-navy">
-          Notes
-        </h2>
+      <SectionCard title="Notes">
         <div className="space-y-2">
           {(notes ?? []).map((n) => (
             <div
@@ -430,7 +479,7 @@ export default async function ContractPage({
                   timeStyle: "short",
                 })}
               </div>
-              <div className="whitespace-pre-wrap text-navy">
+              <div className="whitespace-pre-wrap text-ink">
                 {n.body}
               </div>
             </div>
@@ -440,21 +489,17 @@ export default async function ContractPage({
           )}
         </div>
         <NoteForm contractId={c.id} />
-      </section>
+      </SectionCard>
 
       {/* Print links */}
-      <div className="flex flex-wrap gap-2 text-sm">
-        <Link
-          href={`/print/contract/${c.id}`}
-          className="rounded-card border border-surface px-3 py-1.5 text-navy hover:bg-surface"
-        >
-          🖨️ Contract
-        </Link>
-        <Link
-          href={`/print/customer-card/${c.id}`}
-          className="rounded-card border border-surface px-3 py-1.5 text-navy hover:bg-surface"
-        >
-          🖨️ Customer card
+      <div className="flex flex-wrap gap-2">
+        {!isCash && (
+          <Link href={`/print/contract/${c.id}`} className={btnSecondary}>
+            Print contract
+          </Link>
+        )}
+        <Link href={`/print/customer-card/${c.id}`} className={btnSecondary}>
+          Print customer card
         </Link>
       </div>
     </div>

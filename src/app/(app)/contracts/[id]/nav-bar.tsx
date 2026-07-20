@@ -29,18 +29,18 @@ export function ContractNavBar({
       <Link
         href={`/contracts/${id}?nav=${sort}`}
         title={title}
-        className="rounded-card bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal-dark"
+        className="rounded-card border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink hover:bg-surface"
       >
         {symbol}
       </Link>
     ) : (
-      <span className="rounded-card bg-surface px-4 py-2 text-sm font-bold text-muted">
+      <span className="rounded-card bg-surface px-4 py-2.5 text-sm font-semibold text-muted/60">
         {symbol}
       </span>
     );
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-card border border-surface bg-white p-3">
+    <div className="flex flex-wrap items-center gap-2 rounded-card border border-line bg-white p-3">
       {arrow(prevId, "◀", "Previous open contract")}
       {arrow(nextId, "▶", "Next open contract")}
       <select
@@ -48,7 +48,7 @@ export function ContractNavBar({
         onChange={(e) =>
           router.replace(`?nav=${e.target.value}`, { scroll: false })
         }
-        className="rounded-card border border-surface px-2 py-2.5 text-base"
+        className="rounded-card border border-line px-2 py-2.5 text-base"
         aria-label="Browse order"
       >
         {NAV_SORTS.map((s) => (

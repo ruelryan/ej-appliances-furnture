@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { updateContract } from "../../actions";
-import { COLLECTION_STATUSES, DELIVERY_STATUSES, ITEM_TYPES } from "@/lib/messages";
+import { COLLECTION_STATUSES, ITEM_TYPES } from "@/lib/messages";
+import { btnPrimaryHero, input, label } from "@/components/ui";
 
 interface Contract {
   id: string;
@@ -10,8 +11,6 @@ interface Contract {
   item_description: string;
   item_type: string | null;
   quantity: number;
-  sales_agent: string | null;
-  delivery_status: string;
   payment_status: string;
   collection_status: string | null;
 }
@@ -28,8 +27,6 @@ export function EditForm({ contract }: { contract: Contract }) {
         item_description: String(fd.get("item_description") ?? "").trim(),
         item_type: String(fd.get("item_type") ?? "").trim() || null,
         quantity: Number(fd.get("quantity")),
-        sales_agent: String(fd.get("sales_agent") ?? "").trim() || null,
-        delivery_status: String(fd.get("delivery_status")),
         payment_status: String(fd.get("payment_status")),
         collection_status: String(fd.get("collection_status") ?? "") || null,
       });
@@ -37,13 +34,8 @@ export function EditForm({ contract }: { contract: Contract }) {
     });
   }
 
-  const input =
-    "w-full rounded-card border border-surface px-3 py-2.5 text-base";
-  const label =
-    "mb-1 block text-sm font-medium text-navy";
-
   return (
-    <form action={submit} className="space-y-3 rounded-card border border-surface bg-white p-4">
+    <form action={submit} className="space-y-3 rounded-card border border-line bg-white p-4">
       <div>
         <label className={label}>Item description</label>
         <input
@@ -86,18 +78,6 @@ export function EditForm({ contract }: { contract: Contract }) {
           />
         </div>
         <div>
-          <label className={label}>Sales agent</label>
-          <input name="sales_agent" defaultValue={contract.sales_agent ?? ""} className={input} />
-        </div>
-        <div>
-          <label className={label}>Delivery status</label>
-          <select name="delivery_status" defaultValue={contract.delivery_status} className={input}>
-            {DELIVERY_STATUSES.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-        <div>
           <label className={label}>Payment status</label>
           <select name="payment_status" defaultValue={contract.payment_status} className={input}>
             <option value="open">Open</option>
@@ -128,7 +108,7 @@ export function EditForm({ contract }: { contract: Contract }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-card bg-brand py-3 text-base font-bold text-white shadow-[0_2px_8px_rgba(244,77,85,0.3)] hover:bg-brand-dark disabled:opacity-50 disabled:shadow-none"
+        className={btnPrimaryHero}
       >
         {pending ? "Saving…" : "Save Changes"}
       </button>

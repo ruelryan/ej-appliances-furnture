@@ -54,7 +54,11 @@ export interface CreateContractInput {
   quantity: number;
   cashPrice: number;
   termMonths: number;
+  saleType?: "installment" | "cash";
   salesAgent: string;
+  agentId?: string;
+  productId?: string;
+  leadId?: string;
   note: string;
 }
 
@@ -90,15 +94,44 @@ export async function createContract(input: CreateContractInput) {
     p_item_type: input.itemType || null,
     p_quantity: input.quantity,
     p_cash_price: input.cashPrice,
-    p_term_months: input.termMonths,
+    p_term_months: input.saleType === "cash" ? 0 : input.termMonths,
     p_sales_agent: input.salesAgent || null,
     p_note: input.note || null,
+    p_agent_id: input.agentId || null,
+    p_product_id: input.productId || null,
+    p_sale_type: input.saleType ?? "installment",
   });
 
   if (error) return { error: error.message };
 
+  // If this contract came from a lead, mark it converted before redirecting.
+  if (input.leadId) {
+    await supabase.rpc("mark_lead_converted", {
+      p_lead_id: input.leadId,
+      p_contract_id: data.id,
+    });
+    revalidatePath("/leads");
+  }
+
   revalidatePath("/contracts");
   redirect(`/contracts/${data.id}`);
+}
+
+// Assign / reassign / clear the sales agent on a contract (owner/admin).
+// Keeps the commission row in sync via the set_contract_agent RPC.
+export async function setContractAgent(
+  contractId: string,
+  agentId: string | null
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_contract_agent", {
+    p_contract_id: contractId,
+    p_agent_id: agentId,
+  });
+  if (error) return { error: error.message };
+  revalidatePath(`/contracts/${contractId}`);
+  revalidatePath("/commissions");
+  return {};
 }
 
 export async function updateContract(
@@ -108,8 +141,6 @@ export async function updateContract(
     item_description: string;
     item_type: string | null;
     quantity: number;
-    sales_agent: string | null;
-    delivery_status: string;
     payment_status: string;
     collection_status: string | null;
   }

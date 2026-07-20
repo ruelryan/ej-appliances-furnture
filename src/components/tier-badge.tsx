@@ -1,16 +1,16 @@
-// Pills in the reference app's style: solid color, white text, fully round.
+// Soft status pills: tinted background, saturated text, fully round.
 const STYLES: Record<string, { label: string; cls: string }> = {
   on_track: {
     label: "On track",
-    cls: "bg-teal text-white",
+    cls: "bg-positive/10 text-positive",
   },
   overdue: {
     label: "Overdue",
-    cls: "bg-[#eda100] text-white",
+    cls: "bg-warning-bg text-warning",
   },
   demand: {
     label: "Demand",
-    cls: "bg-danger text-white",
+    cls: "bg-danger-bg text-danger",
   },
   closed: {
     label: "Closed",

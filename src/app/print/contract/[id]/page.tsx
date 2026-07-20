@@ -26,7 +26,7 @@ export default async function ContractPrintPage({
 
   return (
     <div className="text-[13px] leading-relaxed">
-      <PrintControls />
+      <PrintControls filename={`contract-${c.contract_no}`} />
       <Letterhead />
       <h1 className="mb-4 text-center text-base font-semibold">
         INSTALLMENT SALES CONTRACT
@@ -51,7 +51,7 @@ export default async function ContractPrintPage({
               ["Sales agent", c.sales_agent ?? "—"],
             ] as Array<[string, string]>
           ).map(([k, v]) => (
-            <tr key={k} className="border-b border-surface">
+            <tr key={k} className="border-b border-line">
               <td className="w-1/3 py-1.5 text-muted">{k}</td>
               <td className="py-1.5 font-medium">{v}</td>
             </tr>
@@ -60,7 +60,7 @@ export default async function ContractPrintPage({
       </table>
 
       <div className="mb-4 rounded border border-muted p-3">
-        <div className="mb-2 text-xs font-bold">PAYMENT TERMS</div>
+        <div className="mb-2 text-xs font-semibold">PAYMENT TERMS</div>
         <table className="w-full text-xs">
           <tbody>
             <tr>
@@ -80,8 +80,8 @@ export default async function ContractPrintPage({
               <td className="py-0.5 text-right font-medium">{peso(c.downpayment)}</td>
             </tr>
             <tr>
-              <td className="py-0.5 font-bold">Monthly amortization</td>
-              <td className="py-0.5 text-right font-bold">
+              <td className="py-0.5 font-semibold">Monthly amortization</td>
+              <td className="py-0.5 text-right font-semibold">
                 {peso(c.monthly_amortization)} × {c.term_months} months
               </td>
             </tr>
@@ -89,7 +89,7 @@ export default async function ContractPrintPage({
         </table>
       </div>
 
-      <div className="mb-2 text-xs font-bold">TERMS AND CONDITIONS</div>
+      <div className="mb-2 text-xs font-semibold">TERMS AND CONDITIONS</div>
       <ol className="mb-4 list-decimal space-y-1.5 pl-5 text-[11px]">
         <li>
           The customer agrees to pay the downpayment upon signing and the

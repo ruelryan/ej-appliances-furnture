@@ -32,7 +32,8 @@ wide first, desktop is the adaptation.
 Run this checklist over every screen you build or change. Each item is a
 known "AI-generated look" tell:
 
-- [ ] No fake bold: only loaded font weights (Poppins 500/600, Lato 400/700)
+- [ ] Weight discipline: Inter variable loads all weights, but the house style
+      caps UI emphasis at `font-semibold` (600) — no `font-bold` in the UI
 - [ ] One accent color doing one job; danger red never used decoratively
 - [ ] Uniform radius (`rounded-card`); no mixed 8/12/16 corners
 - [ ] Real data in examples, never lorem ipsum or "John Doe"
@@ -40,8 +41,8 @@ known "AI-generated look" tell:
 - [ ] Meta text is genuinely muted; headings genuinely heavier — visible
       hierarchy with the page zoomed out to 50%
 - [ ] No gradients unless the reference design has them (E & J's doesn't)
-- [ ] No emoji as icons on NEW surfaces without checking existing pages'
-      conventions first (this app deliberately uses a few — stay consistent)
+- [ ] No emoji in the UI — icons are the inline SVGs in `nav-links.tsx`; emoji
+      appear only inside customer-facing message templates (`messages.ts`)
 - [ ] Empty, loading, and error states designed — not just the happy path
 - [ ] Tap targets ≥ 40px on staff surfaces; inputs ≥ 16px font (blocks iOS zoom)
 - [ ] Interactive elements have hover/disabled states

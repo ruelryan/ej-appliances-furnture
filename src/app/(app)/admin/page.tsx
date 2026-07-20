@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { CreateUserForm } from "./create-user-form";
 import { ToggleActiveButton } from "./toggle-active-button";
+import { RoleSelect, ROLE_LABELS } from "./role-select";
+import { SectionCard } from "@/components/section-card";
+import { btnSecondary, theadRow } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -32,80 +35,69 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-navy">
+      <h1 className="text-xl font-semibold text-ink">
         Admin
       </h1>
 
       {/* Users */}
-      <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-navy">
-          Users
-        </h2>
+      <SectionCard title="Users">
         <div className="mb-4 space-y-2">
           {(users ?? []).map((u) => (
             <div
               key={u.id}
-              className="flex items-center justify-between rounded-card bg-surface px-3 py-2"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-surface px-3 py-2"
             >
               <div>
-                <span className="text-sm font-medium text-navy">
+                <span className="text-sm font-medium text-ink">
                   {u.full_name}
                 </span>
                 <span
-                  className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                  className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                     u.role === "owner"
-                      ? "bg-amber-100 text-amber-800"
-                      : "bg-surface text-navy"
+                      ? "bg-warning-bg text-warning"
+                      : "border border-line bg-white text-muted"
                   }`}
                 >
-                  {u.role.toUpperCase()}
+                  {(ROLE_LABELS[u.role] ?? u.role).toUpperCase()}
                 </span>
                 {!u.active && (
-                  <span className="ml-2 rounded bg-danger-bg px-1.5 py-0.5 text-[10px] font-bold text-danger">
+                  <span className="ml-2 rounded-full bg-danger-bg px-2 py-0.5 text-[10px] font-semibold text-danger">
                     DEACTIVATED
                   </span>
                 )}
               </div>
               {u.id !== profile.id && (
-                <ToggleActiveButton userId={u.id} active={u.active} />
+                <div className="flex items-center gap-2">
+                  <RoleSelect userId={u.id} role={u.role} />
+                  <ToggleActiveButton userId={u.id} active={u.active} />
+                </div>
               )}
             </div>
           ))}
         </div>
         <CreateUserForm />
-      </section>
+      </SectionCard>
 
       {/* Exports */}
-      <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-1 text-sm font-semibold text-navy">
-          Data exports
-        </h2>
-        <p className="mb-3 text-xs text-muted">
-          CSV downloads — open directly in Excel or Google Sheets. Do a full
-          export weekly as an offline backup.
-        </p>
+      <SectionCard
+        title="Data exports"
+        sub="CSV downloads — open directly in Excel or Google Sheets. Do a full export weekly as an offline backup."
+      >
         <div className="flex flex-wrap gap-2">
           {exports.map((e) => (
-            <a
-              key={e.href}
-              href={e.href}
-              className="rounded-card border border-surface px-3 py-1.5 text-sm font-medium text-navy hover:bg-surface"
-            >
-              ⬇️ {e.label}
+            <a key={e.href} href={e.href} className={btnSecondary}>
+              {e.label}
             </a>
           ))}
         </div>
-      </section>
+      </SectionCard>
 
       {/* Audit log */}
-      <section className="rounded-card border border-surface bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-navy">
-          Recent changes (audit log)
-        </h2>
+      <SectionCard title="Recent changes (audit log)">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-surface text-left text-muted">
+              <tr className={theadRow}>
                 <th className="py-1.5 pr-3">When</th>
                 <th className="py-1.5 pr-3">Who</th>
                 <th className="py-1.5 pr-3">Table</th>
@@ -116,7 +108,7 @@ export default async function AdminPage() {
             </thead>
             <tbody>
               {(audit ?? []).map((a) => (
-                <tr key={a.id} className="border-b border-surface">
+                <tr key={a.id} className="border-b border-line">
                   <td className="whitespace-nowrap py-1.5 pr-3 text-muted">
                     {new Date(a.changed_at).toLocaleString("en-PH", {
                       dateStyle: "short",
@@ -142,7 +134,7 @@ export default async function AdminPage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </SectionCard>
     </div>
   );
 }

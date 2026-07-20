@@ -2,16 +2,14 @@
 
 import { useActionState } from "react";
 import { createUser } from "./actions";
+import { btnPrimary, input } from "@/components/ui";
 
 export function CreateUserForm() {
   const [state, formAction, pending] = useActionState(createUser, null);
 
-  const input =
-    "w-full rounded-card border border-surface px-3 py-2.5 text-base";
-
   return (
-    <form action={formAction} className="space-y-3 border-t border-surface pt-4">
-      <h3 className="text-sm font-semibold text-navy">
+    <form action={formAction} className="space-y-3 border-t border-line pt-4">
+      <h3 className="text-sm font-semibold text-ink">
         Add user
       </h3>
       <div className="grid grid-cols-2 gap-3">
@@ -25,8 +23,11 @@ export function CreateUserForm() {
           required
           className={input}
         />
-        <select name="role" defaultValue="staff" className={input}>
-          <option value="staff">Staff</option>
+        <select name="role" defaultValue="collector" className={input}>
+          <option value="collector">Collector</option>
+          <option value="admin">Admin assistant</option>
+          <option value="sales_agent">Sales agent</option>
+          <option value="delivery">Delivery</option>
           <option value="owner">Owner</option>
         </select>
       </div>
@@ -37,16 +38,12 @@ export function CreateUserForm() {
         </p>
       )}
       {state && "success" in state && state.success && (
-        <p className="rounded-card bg-surface px-3 py-2 text-sm text-teal-dark">
+        <p className="rounded-card bg-positive/10 px-3 py-2 text-sm text-positive">
           {state.success}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
-      >
+      <button type="submit" disabled={pending} className={btnPrimary}>
         {pending ? "Creating…" : "Create account"}
       </button>
     </form>

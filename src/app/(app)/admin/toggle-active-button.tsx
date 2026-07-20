@@ -27,7 +27,7 @@ export function ToggleActiveButton({
       className={`rounded-card border px-2.5 py-1 text-xs font-semibold disabled:opacity-50 ${
         active
           ? "border-danger/40 text-danger hover:bg-danger-bg"
-          : "border-teal text-teal-dark hover:bg-surface"
+          : "border-positive text-positive-dark hover:bg-surface"
       }`}
     >
       {pending ? "…" : active ? "Deactivate" : "Reactivate"}

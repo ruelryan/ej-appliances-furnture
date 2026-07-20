@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
-/* Design tokens modeled on the reference scanner app:
-   coral-red primary, navy ink, teal pills, light-gray surfaces,
-   14px radius, Poppins headings + Lato body. Light theme only. */
+/* Design tokens — "fintech light": near-black ink, blue primary actions,
+   cool-gray surfaces, hairline borders, 12px radius, Inter throughout.
+   Light theme only. */
 :root {
   --background: #ffffff;
-  --foreground: #2f354a;
+  --foreground: #111827;
+  /* Single-font direction: headings share the body font (Inter). */
+  --font-heading: var(--font-body);
 
   /* Chart tokens (validated palette — see dataviz reference) */
   --chart-1: #2a78d6;
@@ -21,35 +23,40 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-lato);
-  --font-display: var(--font-poppins);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-heading);
 }
 
 @theme {
-  --color-brand: #f44d55;
-  --color-brand-dark: #e13a43;
-  --color-navy: #2f354a;
-  --color-teal: #669999;
-  --color-teal-dark: #578a8a;
-  --color-surface: #f0f1f2;
-  --color-muted: #7b8194;
-  --color-danger: #a32530;
-  --color-danger-bg: #fdecec;
-  --radius-card: 14px;
+  --color-brand: #2563eb;
+  --color-brand-dark: #1d4ed8;
+  --color-ink: #111827;
+  --color-positive: #047857;
+  --color-positive-dark: #065f46;
+  --color-surface: #f3f4f6;
+  --color-line: #e5e7eb;
+  --color-muted: #6b7280;
+  --color-warning: #b45309;
+  --color-warning-bg: #fffbeb;
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --radius-card: 12px;
+  --shadow-cta: 0 1px 2px 0 rgb(37 99 235 / 0.35);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-lato), system-ui, sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 
 h1,
 h2,
 h3 {
-  font-family: var(--font-poppins), system-ui, sans-serif;
+  font-family: var(--font-heading), system-ui, sans-serif;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 @media print {
