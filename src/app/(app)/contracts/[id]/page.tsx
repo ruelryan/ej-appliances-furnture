@@ -14,6 +14,7 @@ import { StatusForm } from "./status-form";
 import { ContractNavBar } from "./nav-bar";
 import { AgentCommissionPanel, type CommissionRow } from "./agent-commission-panel";
 import { DeliveryPanel } from "./delivery-panel";
+import { RepricePanel, type Repricing } from "./reprice-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +96,22 @@ export default async function ContractPage({
       supabase.from("v_commissions").select("*").eq("contract_id", id).maybeSingle(),
       supabase.from("v_deliveries").select("*").eq("contract_id", id).maybeSingle(),
     ]);
+
+  const { data: repricings } = await supabase
+    .from("contract_repricings")
+    .select("*")
+    .eq("contract_id", id)
+    .order("proposed_at", { ascending: false });
+
+  const repriceHistory = (repricings ?? []) as Repricing[];
+  const pendingReprice = repriceHistory.find((r) => r.status === "pending") ?? null;
+  // Mirrors the SQL guard in propose_reprice — the term has run its course and
+  // money is still owed. SQL re-checks it; this only decides whether to offer.
+  const repriceEligible =
+    c.payment_status !== "closed" &&
+    (c.term_months === 4 || c.term_months === 5 || c.term_months === 6) &&
+    Number(c.months_elapsed) >= Number(c.term_months) &&
+    Number(c.remaining_balance) > 0;
 
   const { data: delivery } = deliveryRes;
 
@@ -229,7 +246,7 @@ export default async function ContractPage({
             ))}
             {c.messenger_url && (
               <div className="flex justify-between gap-3">
-                <dt className="text-muted">Messenger</dt>
+                <dt className="text-muted">Personal Messenger</dt>
                 <dd>
                   <a
                     href={c.messenger_url}
@@ -237,6 +254,20 @@ export default async function ContractPage({
                     className="font-medium text-brand hover:underline"
                   >
                     Open chat
+                  </a>
+                </dd>
+              </div>
+            )}
+            {c.collection_gc_url && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted">Collection group chat</dt>
+                <dd>
+                  <a
+                    href={c.collection_gc_url}
+                    target="_blank"
+                    className="font-medium text-brand hover:underline"
+                  >
+                    Open group
                   </a>
                 </dd>
               </div>
@@ -301,6 +332,17 @@ export default async function ContractPage({
         title="Terms"
         sub="Grayed rows show what this contract would look like on the other terms — useful when renegotiating."
       >
+        {canManage && (
+          <div className="mb-3">
+            <RepricePanel
+              contractId={c.id}
+              currentTerm={Number(c.term_months)}
+              eligible={repriceEligible}
+              pending={pendingReprice}
+              history={repriceHistory}
+            />
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-sm tabular-nums">
             <thead>

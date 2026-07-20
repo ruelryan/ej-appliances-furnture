@@ -1,17 +1,22 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setHourlyRate } from "../actions";
+import { setHourlyRate, setMealAllowance } from "../actions";
 
 export function RateForm({
   profileId,
   currentRate,
+  currentMeal,
 }: {
   profileId: string;
   currentRate: string | number | null;
+  currentMeal?: string | number | null;
 }) {
   const [value, setValue] = useState(
     currentRate == null ? "" : String(Number(currentRate))
+  );
+  const [meal, setMeal] = useState(
+    currentMeal == null ? "" : String(Number(currentMeal))
   );
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -20,7 +25,10 @@ export function RateForm({
     setError("");
     startTransition(async () => {
       const res = await setHourlyRate(profileId, Number(value));
-      if (res.error) setError(res.error);
+      if (res.error) return setError(res.error);
+      // The allowance RPC requires the rate row to exist, so it always runs second.
+      const m = await setMealAllowance(profileId, Number(meal) || 0);
+      if (m.error) setError(m.error);
     });
   }
 
@@ -43,6 +51,23 @@ export function RateForm({
           />
         </div>
         <span className="text-xs text-muted">/ hour</span>
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">
+            ₱
+          </span>
+          <input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={meal}
+            onChange={(e) => setMeal(e.target.value)}
+            placeholder="0.00"
+            title="Meal allowance per day actually worked"
+            className="w-28 rounded-card border border-line py-2 pl-7 pr-3 text-base tabular-nums"
+          />
+        </div>
+        <span className="text-xs text-muted">meal / day</span>
         <button
           type="button"
           onClick={save}

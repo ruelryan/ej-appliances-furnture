@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getProfile, canPostPayments } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
 import { TierBadge } from "@/components/tier-badge";
 import { BackLink } from "@/components/back-link";
+import { formatAddress } from "@/lib/maps";
+import { getLocationTree } from "@/lib/locations";
+import { EditLinksForm } from "./edit-links-form";
+import { EditAddressForm } from "./edit-address-form";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +18,9 @@ export default async function CustomerPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const profile = await getProfile();
+  const mayEdit = profile ? canPostPayments(profile.role) : false;
+  const locationTree = mayEdit ? await getLocationTree() : {};
 
   const { data: customer } = await supabase
     .from("customers")
@@ -39,15 +46,29 @@ export default async function CustomerPage({
         </h1>
         <div className="mt-1 space-y-0.5 text-sm text-muted">
           <div>{(customer.phones ?? []).join(" / ") || "No phone on file"}</div>
-          {customer.address && <div>{customer.address}</div>}
-          <div className="flex gap-4 pt-1">
+          {/* Prefer the structured address; customers.address is kept as the
+              address-as-given and is only the fallback. */}
+          <div>{formatAddress(customer) || "No address on file"}</div>
+          {customer.landmark && (
+            <div className="text-xs">Landmark: {customer.landmark}</div>
+          )}
+          <div className="flex flex-wrap gap-4 pt-1">
             {customer.messenger_url && (
               <a
                 href={customer.messenger_url}
                 target="_blank"
                 className="font-medium text-brand hover:underline"
               >
-                Messenger
+                Personal Messenger
+              </a>
+            )}
+            {customer.collection_gc_url && (
+              <a
+                href={customer.collection_gc_url}
+                target="_blank"
+                className="font-medium text-brand hover:underline"
+              >
+                Collection group chat
               </a>
             )}
             {customer.gps_url && (
@@ -61,6 +82,28 @@ export default async function CustomerPage({
             )}
           </div>
         </div>
+        {mayEdit && (
+          <div className="mt-3">
+            <div className="flex flex-wrap gap-2">
+              <EditAddressForm
+                customerId={customer.id}
+                tree={locationTree}
+                current={{
+                  province: customer.province,
+                  municipality: customer.municipality,
+                  barangay: customer.barangay,
+                  street_purok: customer.street_purok,
+                  landmark: customer.landmark,
+                }}
+              />
+              <EditLinksForm
+                customerId={customer.id}
+                messengerUrl={customer.messenger_url}
+                collectionGcUrl={customer.collection_gc_url}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <section>

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { peso, fmtDate, fmtDateShort } from "@/lib/format";
+import { formatAddress } from "@/lib/maps";
 import { termLabel } from "@/lib/amortization";
 import { Letterhead } from "../../letterhead";
 import { PrintControls } from "../../print-controls";
@@ -33,7 +34,8 @@ export default async function CustomerCardPrintPage({
   const left: Array<[string, string]> = [
     ["Name", c.display_name],
     ["Contact", (c.phones ?? []).join(" / ") || "—"],
-    ["Address", c.address ?? "—"],
+    ["Address", formatAddress(c) || "—"],
+            ["Landmark", c.landmark || "—"],
     ["Sales agent", c.sales_agent ?? "—"],
     ["Item", c.item_description],
   ];

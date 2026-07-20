@@ -9,6 +9,8 @@ export type Payslip = {
   status: "draft" | "final";
   dtr_hours: string | number;
   dtr_pay: string | number;
+  basic_pay: string | number;
+  meal_allowance: string | number;
   days_worked: number;
   hourly_rate: string | number;
   extra_income: PayslipLine[];

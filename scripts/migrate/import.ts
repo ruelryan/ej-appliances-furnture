@@ -375,7 +375,8 @@ interface Customer {
   first: string;
   phones: string[];
   address: string;
-  messenger: string;
+  messenger: string;    // personal FB/Messenger — contracts.csv "FB link"
+  collectionGc: string; // collection group chat — collection.csv "Messenger Collection GC"
   gps: string;
 }
 
@@ -391,7 +392,7 @@ for (const c of contracts) {
   const key = normName(c.name);
   let cust = customersByKey.get(key);
   if (!cust) {
-    cust = { key, last: parts.last, first: parts.first, phones: [], address: "", messenger: "", gps: "" };
+    cust = { key, last: parts.last, first: parts.first, phones: [], address: "", messenger: "", collectionGc: "", gps: "" };
     customersByKey.set(key, cust);
   }
   // enrich with the latest non-empty values (later contracts win)
@@ -410,7 +411,10 @@ for (const k of collections) {
     continue;
   }
   const cust = customersByKey.get(key)!;
-  if (k.messenger && !cust.messenger) cust.messenger = k.messenger;
+  // "Messenger Collection GC" is the group chat, NOT the customer's own profile.
+  // It used to fall back into cust.messenger, which silently dropped one of the
+  // two links on every import; they are separate columns now.
+  if (k.messenger) cust.collectionGc = k.messenger;
   if (k.gmap && !cust.gps) cust.gps = k.gmap;
 }
 
@@ -465,6 +469,12 @@ const report = [
   `- Sum of contract cash prices: ₱${totalCashPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`,
   `- Orphan payments (contract not found): ${orphanPayments.length}`,
   `- Collection rows matched: ${collections.length}`,
+  ``,
+  `## Messenger links (these are two DIFFERENT links — see 0020 migration)`,
+  `- Customers with a personal FB/Messenger link ("FB link"): ${custList.filter((c) => c.messenger).length}`,
+  `- Customers with a collection group chat ("Messenger Collection GC"): ${custList.filter((c) => c.collectionGc).length}`,
+  `- Customers with both: ${custList.filter((c) => c.messenger && c.collectionGc).length}`,
+  `- Customers with neither: ${custList.filter((c) => !c.messenger && !c.collectionGc).length}`,
   ``,
   `## Possible duplicate customers (REVIEW BY HAND — not auto-merged)`,
   ...(nearDuplicates.length ? nearDuplicates.map((d) => `- ${d}`) : ["- none found"]),
@@ -523,6 +533,7 @@ async function main() {
           phones: c.phones,
           address: c.address || null,
           messenger_url: c.messenger || null,
+          collection_gc_url: c.collectionGc || null,
           gps_url: c.gps || null,
         }))
       )
@@ -640,6 +651,28 @@ async function main() {
     ...loadablePayments.map((p) => Number(p.paymentNo.replace(/^PAY/i, "")) || 0)
   );
   counterRows.push({ scope: "payment", last_value: maxPay });
+  // Series that survive the wipe — products, tasks, commissions and the rest —
+  // must be reseeded from the rows still in the database, or next_counter()
+  // restarts them at #0001 and the very next insert hits a unique violation.
+  // The first cutover missed this: 134 products up to PRD0438 and 2 tasks
+  // remained while their counters were gone, so adding any product or task
+  // failed until 0025_repair_id_counters.sql fixed it.
+  for (const [scope, table, column] of [
+    ["product", "products", "sku"],
+    ["task", "tasks", "task_no"],
+    ["commission", "commissions", "commission_no"],
+    ["collection_entry", "collection_entries", "entry_no"],
+    ["cash_advance", "cash_advances", "advance_no"],
+    ["lead", "leads", "lead_no"],
+    ["repricing", "contract_repricings", "amendment_no"],
+    ["delivery", "deliveries", "delivery_no"],
+  ] as const) {
+    const { data } = await db.from(table).select(column).order(column, { ascending: false }).limit(1);
+    const top = (data?.[0] as Record<string, string> | undefined)?.[column];
+    const n = top ? Number(String(top).replace(/^\D+/, "")) || 0 : 0;
+    counterRows.push({ scope, last_value: n });
+  }
+
   {
     const { error } = await db.from("id_counters").insert(counterRows);
     if (error) throw new Error("id_counters insert: " + error.message);

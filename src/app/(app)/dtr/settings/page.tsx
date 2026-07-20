@@ -50,6 +50,7 @@ export default async function DtrSettingsPage({
   const employees = profilesRes.data ?? [];
   const rateRows = ratesRes.data ?? [];
   const rateById = new Map(rateRows.map((r) => [r.id, r.hourly_rate]));
+  const mealById = new Map(rateRows.map((r) => [r.id, r.meal_allowance_per_day]));
   const contribById = new Map(
     rateRows.map((r) => [
       r.id,
@@ -94,6 +95,7 @@ export default async function DtrSettingsPage({
               <RateForm
                 profileId={e.id}
                 currentRate={rateById.get(e.id) ?? null}
+                currentMeal={mealById.get(e.id) ?? null}
               />
             </div>
           ))}

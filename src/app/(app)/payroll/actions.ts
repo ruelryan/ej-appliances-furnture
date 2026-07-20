@@ -67,3 +67,28 @@ export async function deletePayslip(id: string) {
   revalidateSlip(id);
   return {};
 }
+
+// ── 13th-month pay ───────────────────────────────────────────
+// Entitlement is computed by v_thirteenth_month from the basic_pay snapshot on
+// FINAL payslips (1/12 of basic salary earned in the calendar year). Payments
+// are recorded here rather than inferred from a magic label in extra_income —
+// parsing a fact back out of free text would be fragile.
+export async function record13thMonthPayment(
+  profileId: string,
+  year: number,
+  amount: number,
+  paidOn: string | null,
+  note: string
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("record_13th_month_payment", {
+    p_profile_id: profileId,
+    p_year: year,
+    p_amount: amount,
+    p_paid_on: paidOn,
+    p_note: note || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/payroll/13th-month");
+  return {};
+}

@@ -4,6 +4,49 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+// ── Term repricing (Good-as-Cash lapse) ──────────────────────
+// Two steps on purpose. propose_reprice only drafts the amendment; the
+// contract's pricing does not move until confirm_reprice records that the
+// customer signed it. Eligibility is re-checked in SQL, so these wrappers
+// cannot widen the rule.
+export async function proposeReprice(
+  contractId: string,
+  newTerm: number,
+  reason: string
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("propose_reprice", {
+    p_contract_id: contractId,
+    p_new_term: newTerm,
+    p_reason: reason || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath(`/contracts/${contractId}`);
+  return {};
+}
+
+export async function confirmReprice(repricingId: string, signedDate: string | null) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("confirm_reprice", {
+    p_repricing_id: repricingId,
+    p_signed_date: signedDate,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/contracts");
+  return {};
+}
+
+export async function revertReprice(contractId: string, reason: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("revert_reprice", {
+    p_contract_id: contractId,
+    p_reason: reason || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath(`/contracts/${contractId}`);
+  return {};
+}
+
 export async function addNote(contractId: string, formData: FormData) {
   const body = String(formData.get("body") ?? "").trim();
   if (!body) return;
@@ -45,7 +88,11 @@ export interface CreateContractInput {
     lastName: string;
     firstName: string;
     phones: string[];
-    address: string;
+    province: string;
+    municipality: string;
+    barangay: string;
+    streetPurok: string;
+    landmark: string;
     messengerUrl: string;
   };
   contractDate: string;
@@ -72,13 +119,26 @@ export async function createContract(input: CreateContractInput) {
     if (!nc?.lastName || !nc?.firstName) {
       return { error: "Customer name is required (Last name, First name)." };
     }
+    // `address` is still written, composed from the structured parts, so every
+    // existing reader — print pages, CSV export, the demand letter — keeps
+    // working unchanged while the structured columns become the source of truth.
+    const composed = [nc.streetPurok, nc.barangay, nc.municipality, nc.province]
+      .map((p) => (p ?? "").trim())
+      .filter(Boolean)
+      .join(", ");
+
     const { data: cust, error: custErr } = await supabase
       .from("customers")
       .insert({
         last_name: nc.lastName,
         first_name: nc.firstName,
         phones: nc.phones,
-        address: nc.address || null,
+        address: composed || null,
+        province: nc.province || null,
+        municipality: nc.municipality || null,
+        barangay: nc.barangay || null,
+        street_purok: nc.streetPurok || null,
+        landmark: nc.landmark || null,
         messenger_url: nc.messengerUrl || null,
       })
       .select("id")

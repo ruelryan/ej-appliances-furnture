@@ -7,6 +7,8 @@ import { computeTerms, TERM_OPTIONS, termLabel } from "@/lib/amortization";
 import { peso, phTodayISO } from "@/lib/format";
 import { ITEM_TYPES } from "@/lib/messages";
 import { btnPrimaryHero, input, label } from "@/components/ui";
+import { AddressFields, type LocationTree } from "@/components/address-fields";
+import { ProductPicker, type PickedProduct } from "./product-picker";
 
 interface CustomerHit {
   id: string;
@@ -19,13 +21,6 @@ interface CustomerHit {
 interface Agent {
   id: string;
   full_name: string;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  category: string | null;
-  price: number | string | null;
 }
 
 interface Prefill {
@@ -43,12 +38,12 @@ interface Prefill {
 
 export function ContractForm({
   agents,
-  products,
   prefill,
+  locationTree,
 }: {
   agents: Agent[];
-  products: Product[];
   prefill?: Prefill;
+  locationTree: LocationTree;
 }) {
   const [customer, setCustomer] = useState<CustomerHit | null>(null);
   const [newCustomerMode, setNewCustomerMode] = useState(!!prefill);
@@ -56,6 +51,9 @@ export function ContractForm({
   const [hits, setHits] = useState<CustomerHit[]>([]);
   const [cashPrice, setCashPrice] = useState(prefill?.cashPrice ?? "");
   const [productId, setProductId] = useState("");
+  const [picked, setPicked] = useState<PickedProduct | null>(null);
+  const [itemDescription, setItemDescription] = useState(prefill?.itemDescription ?? "");
+  const [itemType, setItemType] = useState(prefill?.itemType ?? "");
   const [saleType, setSaleType] = useState<"installment" | "cash">("installment");
   const [termMonths, setTermMonths] = useState(4);
   const [error, setError] = useState("");
@@ -104,7 +102,11 @@ export function ContractForm({
               .split("/")
               .map((s) => s.trim())
               .filter(Boolean),
-            address: String(fd.get("address") ?? "").trim(),
+            province: String(fd.get("province") ?? "").trim(),
+            municipality: String(fd.get("municipality") ?? "").trim(),
+            barangay: String(fd.get("barangay") ?? "").trim(),
+            streetPurok: String(fd.get("street_purok") ?? "").trim(),
+            landmark: String(fd.get("landmark") ?? "").trim(),
             messengerUrl: String(fd.get("messenger_url") ?? "").trim(),
           }
         : undefined,
@@ -175,16 +177,20 @@ export function ContractForm({
               defaultValue={prefill?.phone ?? ""}
               className={`col-span-2 ${input}`}
             />
-            <input
-              name="address"
-              placeholder="Full address"
-              defaultValue={prefill?.address ?? ""}
-              required
-              className={`col-span-2 ${input}`}
-            />
+            {/* Structured from here on. The old single free-text field is what
+                left 1,127 addresses needing a parser to make sense of them. */}
+            {prefill?.address && (
+              <p className="col-span-2 rounded-card bg-surface px-3 py-2 text-xs text-muted">
+                Address from the lead: <strong className="text-ink">{prefill.address}</strong>
+                {" — "}pick the matching barangay below.
+              </p>
+            )}
+            <AddressFields tree={locationTree} />
+            {/* Personal profile only. The collection group chat is created by
+                the admin after the contract exists — added on the customer page. */}
             <input
               name="messenger_url"
-              placeholder="Facebook/Messenger link (optional)"
+              placeholder="Customer's personal Facebook/Messenger link (optional)"
               defaultValue={prefill?.messengerUrl ?? ""}
               className={`col-span-2 ${input}`}
             />
@@ -261,37 +267,21 @@ export function ContractForm({
             ))}
           </div>
         </div>
-        {products.length > 0 && (
-          <div className="col-span-2">
-            <label className={label}>
-              Product <span className="text-muted">(optional — links stock)</span>
-            </label>
-            <select
-              value={productId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setProductId(id);
-                const p = products.find((x) => x.id === id);
-                if (p) {
-                  const descEl = document.querySelector<HTMLInputElement>('input[name="item_description"]');
-                  if (descEl) descEl.value = p.name;
-                  const typeEl = document.querySelector<HTMLSelectElement>('select[name="item_type"]');
-                  if (typeEl && p.category) typeEl.value = p.category;
-                  if (p.price != null) setCashPrice(String(p.price));
-                }
-              }}
-              className={input}
-            >
-              <option value="">— Not from catalog —</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                  {p.category ? ` (${p.category})` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <ProductPicker
+          picked={picked}
+          onPick={(p) => {
+            setPicked(p);
+            setProductId(p?.id ?? "");
+            // Controlled state, not a document.querySelector write into the DOM
+            // as this did before — that hack meant React and the DOM disagreed
+            // about the field's value.
+            if (p) {
+              setItemDescription(p.name);
+              if (p.category) setItemType(p.category);
+              if (p.price != null) setCashPrice(String(p.price));
+            }
+          }}
+        />
         <div className="col-span-2">
           <label className={label}>
             Item description
@@ -299,7 +289,8 @@ export function ContractForm({
           <input
             name="item_description"
             placeholder="e.g. Sharp Refrigerator 6 cu ft"
-            defaultValue={prefill?.itemDescription ?? ""}
+            value={itemDescription}
+            onChange={(e) => setItemDescription(e.target.value)}
             required
             className={input}
           />
@@ -310,7 +301,8 @@ export function ContractForm({
           </label>
           <select
             name="item_type"
-            defaultValue={prefill?.itemType || undefined}
+            value={itemType}
+            onChange={(e) => setItemType(e.target.value)}
             className={input}
           >
             {ITEM_TYPES.map((t) => (
