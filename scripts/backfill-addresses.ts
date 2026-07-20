@@ -32,12 +32,33 @@ if (!url || !key) {
 const db = createClient(url, key, { auth: { persistSession: false } });
 
 // ── matching helpers ─────────────────────────────────────────
-const norm = (s: unknown) =>
-  String(s ?? "")
+/**
+ * Abbreviations people actually write in Southern Leyte / Leyte addresses.
+ * Expanding these before matching turns most "typos" into exact matches:
+ * "Sto. Niño" → "santo niño", "St. Bernard" → "saint bernard".
+ */
+const ABBREV: Record<string, string> = {
+  sto: "santo", sta: "santa", st: "saint",
+  pob: "poblacion", brgy: "", bgy: "", brg: "", bo: "",
+  mac: "mac", // kept so "Mac Arthur" still tokenises; joined form handled below
+};
+
+const norm = (s: unknown) => {
+  const base = String(s ?? "")
     .toLowerCase()
-    .replace(/[^a-z0-9ñ ]+/g, " ")
+    .replace(/ñ/g, "n")            // Niño / Nino written both ways
+    .replace(/[^a-z0-9 ]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+  return base
+    .split(" ")
+    .map((t) => (t in ABBREV ? ABBREV[t] : t))
+    .filter(Boolean)
+    .join(" ");
+};
+
+/** Same string with spaces removed — catches "Mac Arthur" vs "MacArthur". */
+const squash = (s: string) => s.replace(/ /g, "");
 
 /** Levenshtein, capped — we only care about "within 2". */
 function editDistance(a: string, b: string, cap = 3): number {
@@ -89,10 +110,12 @@ function designatorClash(a: string, b: string): boolean {
   const lastA = ta[ta.length - 1];
   const lastB = tb[tb.length - 1];
   if (lastA === lastB) return false;
+  // Only a clash when the DIFFERING final token is itself a designator. An
+  // earlier version also treated any differing final token as a clash, which
+  // blocked genuine typo fixes ("Santa Felomena" → "Santa Filomena",
+  // "Anibongon" → "Anibongan") — far too broad.
   const isDesignator = (t: string) =>
-    t.length <= 2 || ["norte", "sur", "este", "oeste", "proper", "poblacion"].includes(t);
-  // differ in the final token, and either side's final token is a designator
-  if (ta.slice(0, -1).join(" ") === tb.slice(0, -1).join(" ")) return true;
+    t.length <= 2 || ["norte", "sur", "este", "oeste", "proper"].includes(t);
   return isDesignator(lastA) || isDesignator(lastB);
 }
 
@@ -102,14 +125,54 @@ function findFuzzy(hay: string, needle: string): number | null {
   if (!n || n.length < 5) return null;   // too short to fuzz safely
   const words = hay.split(" ");
   const span = n.split(" ").length;
-  for (let i = 0; i + span <= words.length; i++) {
-    const window = words.slice(i, i + span).join(" ");
-    if (window.length < 4) continue;
-    if (designatorClash(window, n)) continue;
-    const d = editDistance(window, n, 3);
-    if (d <= (n.length >= 8 ? 2 : 1)) return hay.indexOf(window);
+  // try the natural span, and one token either side — "Mac Arthur" is written
+  // as one word or two, and squash() lets those compare equal
+  for (const s of [span, span + 1, Math.max(1, span - 1)]) {
+    for (let i = 0; i + s <= words.length; i++) {
+      const window = words.slice(i, i + s).join(" ");
+      if (window.length < 4) continue;
+      if (designatorClash(window, n)) continue;
+      const a = squash(window), b = squash(n);
+      const d = editDistance(a, b, 3);
+      if (d <= (b.length >= 8 ? 2 : 1)) return hay.indexOf(window);
+    }
   }
   return null;
+}
+
+/**
+ * Municipality names to try for a reference entry. A chartered city is written
+ * both ways — "Maasin City" officially, "Maasin" colloquially — so both must
+ * match the stored "Maasin City".
+ */
+/**
+ * Local names people still use that differ from the official one. Cabalian is
+ * the former name of San Juan, Southern Leyte and is still in everyday use —
+ * six customers wrote it. The data corroborates it: those addresses cite Santa
+ * Filomena, Santa Cruz and Bobon, all real San Juan barangays.
+ */
+const MUNI_ALIASES: Record<string, string[]> = {
+  "San Juan": ["Cabalian"],
+};
+
+function muniAliases(m: string): string[] {
+  const out = [m, ...(MUNI_ALIASES[m] ?? [])];
+  if (/ city$/i.test(m)) out.push(m.replace(/ city$/i, ""));
+  return out;
+}
+
+/**
+ * The province is the tail of almost every address, and "Leyte" is ALSO a
+ * municipality. Without stripping it, "Palo, Leyte" and "Sogod, Southern
+ * Leyte" both matched the municipality Leyte and lost their real municipality.
+ * Returns the address with a trailing province removed.
+ */
+function stripProvince(hay: string): string {
+  for (const p of ["southern leyte", "so leyte", "s leyte", "leyte"]) {
+    if (hay === p) return "";
+    if (hay.endsWith(" " + p)) return hay.slice(0, -(p.length + 1)).trim();
+  }
+  return hay;
 }
 
 interface Loc { province: string; municipality: string; barangay: string }
@@ -139,6 +202,16 @@ async function main() {
   for (const l of locs) {
     if (!bgysByMuni.has(l.municipality)) bgysByMuni.set(l.municipality, []);
     bgysByMuni.get(l.municipality)!.push(l);
+  }
+
+  // barangay name -> every location bearing it. Names appearing once are safe
+  // to infer a municipality from; "Poblacion" and "Santo Niño" are not.
+  const uniqueBarangays = new Map<string, Loc[]>();
+  for (const l of locs) {
+    const k = norm(l.barangay);
+    if (k.length < 5) continue;              // too generic to infer from
+    if (!uniqueBarangays.has(k)) uniqueBarangays.set(k, []);
+    uniqueBarangays.get(k)!.push(l);
   }
 
   const customers: Array<{ id: string; display_name: string; address: string | null }> = [];
@@ -172,11 +245,24 @@ async function main() {
       muni: string; muniAt: number; muniFuzzy: boolean;
       bgy: Loc | null; bgyAt: number; bgyFuzzy: boolean; score: number;
     };
+    // Municipalities are searched in the address WITHOUT its trailing province,
+    // because "Leyte" is both.
+    const hayNoProv = stripProvince(hay);
+
     const cands: Cand[] = [];
     for (const m of municipalities) {
-      let at = findExact(hay, m);
+      let at: number | null = null;
       let fuzzy = false;
-      if (at === null) { at = findFuzzy(hay, m); fuzzy = at !== null; }
+      for (const alias of muniAliases(m)) {
+        at = findExact(hayNoProv, alias);
+        if (at !== null) break;
+      }
+      if (at === null) {
+        for (const alias of muniAliases(m)) {
+          at = findFuzzy(hayNoProv, alias);
+          if (at !== null) { fuzzy = true; break; }
+        }
+      }
       if (at === null) continue;
 
       // Barangay search is scoped to this municipality — "Poblacion" and
@@ -200,6 +286,36 @@ async function main() {
       // exact muni + exact bgy (4) > exact+fuzzy (3) > fuzzy+exact (2) > fuzzy+fuzzy (1) > muni alone (0)
       const score = bgy ? (fuzzy ? (bgyFuzzy ? 1 : 2) : (bgyFuzzy ? 3 : 4)) : (fuzzy ? -1 : 0);
       cands.push({ muni: m, muniAt: at, muniFuzzy: fuzzy, bgy, bgyAt, bgyFuzzy, score });
+    }
+
+    // Some addresses give only barangay + province ("Himay-angan, Southern
+    // Leyte"). If that barangay name is UNIQUE across the whole reference the
+    // municipality is unambiguous, so infer it. Ambiguous names are left alone —
+    // guessing between two real places would file the customer in the wrong town.
+    // ONLY when no municipality was named at all. If the customer wrote one, it
+    // stands even if its barangay could not be matched — inferring a different
+    // municipality from a barangay name silently relocates them. "Calayugan,
+    // Tomas Oppus" must not become Hinunangan just because Calayugan is a
+    // barangay there.
+    if (cands.length === 0) {
+      let inferred: Loc | null = null, inferredAt = -1, inferredFuzzy = false, ambiguous = false;
+      for (const [key, list] of uniqueBarangays) {
+        const ex = findExact(hayNoProv, key);
+        const at = ex !== null ? ex : findFuzzy(hayNoProv, key);
+        if (at === null) continue;
+        if (list.length > 1) { ambiguous = true; continue; }
+        if (!inferred || key.length > inferred.barangay.length) {
+          inferred = list[0]; inferredAt = at; inferredFuzzy = ex === null;
+        }
+      }
+      if (inferred) {
+        cands.push({
+          muni: inferred.municipality, muniAt: inferredAt, muniFuzzy: true,
+          bgy: inferred, bgyAt: inferredAt, bgyFuzzy: inferredFuzzy, score: 1,
+        });
+      } else if (ambiguous) {
+        // fall through: reported as unresolved rather than guessed
+      }
     }
 
     cands.sort((a, b) => b.score - a.score || b.muni.length - a.muni.length);

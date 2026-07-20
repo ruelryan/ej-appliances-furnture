@@ -38,6 +38,19 @@ if (!ws) {
 }
 const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
 
+/**
+ * The Sheet lists the chartered cities by bare name, but everyone — including
+ * the customers writing their own addresses — says "Maasin City". Storing the
+ * official name makes those exact matches instead of fuzzy ones.
+ */
+const CITY_NAMES: Record<string, string> = {
+  Maasin: "Maasin City",
+  Baybay: "Baybay City",
+  Ormoc: "Ormoc City",
+  Tacloban: "Tacloban City",
+};
+const officialName = (m: string) => CITY_NAMES[m] ?? m;
+
 const cell = (r: number, c: number) => String(rows[r]?.[c] ?? "").trim();
 const findRow = (label: string) =>
   rows.findIndex((r) => String(r?.[0] ?? "").trim().toLowerCase() === label);
@@ -56,7 +69,7 @@ const seen = new Set<string>();
 let dupes = 0;
 
 for (let c = 1; c < width; c++) {
-  const municipality = cell(muniRow, c);
+  const municipality = officialName(cell(muniRow, c));
   if (!municipality) continue;
   const province = cell(provRow, c);
   if (!province) {
