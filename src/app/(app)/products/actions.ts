@@ -114,3 +114,35 @@ export async function deleteProductPhoto(photoId: string) {
   revalidate();
   return {};
 }
+
+// ── Duplicate review ─────────────────────────────────────────
+// Items added from inside the contract form arrive as `pending`. Nothing is
+// ever auto-merged: at ~134 products the cost of a wrong merge is a wrong price
+// on a customer's contract, so the app ranks suspects and a human decides.
+
+export async function approveProduct(productId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("approve_product", { p_id: productId });
+  if (error) return { error: error.message };
+  revalidate();
+  revalidatePath("/products/review");
+  return {};
+}
+
+/**
+ * Irreversible. merge_products repoints contracts, deliveries, stock movements
+ * and photos onto the kept product, folds in its stock, then deletes the
+ * duplicate — and records what it did as a completed task for the audit trail.
+ */
+export async function mergeProducts(duplicateId: string, keepId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("merge_products", {
+    p_duplicate: duplicateId,
+    p_keep: keepId,
+  });
+  if (error) return { error: error.message };
+  revalidate();
+  revalidatePath("/products/review");
+  revalidatePath("/tasks");
+  return {};
+}

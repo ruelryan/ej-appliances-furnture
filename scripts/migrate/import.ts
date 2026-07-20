@@ -651,6 +651,28 @@ async function main() {
     ...loadablePayments.map((p) => Number(p.paymentNo.replace(/^PAY/i, "")) || 0)
   );
   counterRows.push({ scope: "payment", last_value: maxPay });
+  // Series that survive the wipe — products, tasks, commissions and the rest —
+  // must be reseeded from the rows still in the database, or next_counter()
+  // restarts them at #0001 and the very next insert hits a unique violation.
+  // The first cutover missed this: 134 products up to PRD0438 and 2 tasks
+  // remained while their counters were gone, so adding any product or task
+  // failed until 0025_repair_id_counters.sql fixed it.
+  for (const [scope, table, column] of [
+    ["product", "products", "sku"],
+    ["task", "tasks", "task_no"],
+    ["commission", "commissions", "commission_no"],
+    ["collection_entry", "collection_entries", "entry_no"],
+    ["cash_advance", "cash_advances", "advance_no"],
+    ["lead", "leads", "lead_no"],
+    ["repricing", "contract_repricings", "amendment_no"],
+    ["delivery", "deliveries", "delivery_no"],
+  ] as const) {
+    const { data } = await db.from(table).select(column).order(column, { ascending: false }).limit(1);
+    const top = (data?.[0] as Record<string, string> | undefined)?.[column];
+    const n = top ? Number(String(top).replace(/^\D+/, "")) || 0 : 0;
+    counterRows.push({ scope, last_value: n });
+  }
+
   {
     const { error } = await db.from("id_counters").insert(counterRows);
     if (error) throw new Error("id_counters insert: " + error.message);

@@ -22,19 +22,14 @@ export default async function NewContractPage({
 
   const locationTree = await getLocationTree();
 
-  const [{ data: agents }, { data: products }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name")
-      .eq("role", "sales_agent")
-      .eq("active", true)
-      .order("full_name"),
-    supabase
-      .from("products")
-      .select("id, name, category, price")
-      .eq("active", true)
-      .order("name"),
-  ]);
+  // Products are no longer fetched here. The picker searches on demand via the
+  // search_products RPC, so the form no longer ships the whole catalogue.
+  const { data: agents } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .eq("role", "sales_agent")
+    .eq("active", true)
+    .order("full_name");
 
   let prefill: React.ComponentProps<typeof ContractForm>["prefill"];
   if (leadId) {
@@ -73,7 +68,6 @@ export default async function NewContractPage({
       )}
       <ContractForm
         agents={agents ?? []}
-        products={products ?? []}
         prefill={prefill}
         locationTree={locationTree}
       />
