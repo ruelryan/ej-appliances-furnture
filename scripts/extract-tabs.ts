@@ -1,24 +1,34 @@
 /**
- * Decodes a Drive download_file_content JSON result into an .xlsx and
- * extracts the migration tabs as CSVs.
- *   npx tsx scripts/extract-tabs.ts <download-result.json> <output-dir>
+ * Extracts the migration tabs from the Sheet as CSVs. Accepts either a Drive
+ * download_file_content JSON result, or an .xlsx saved straight from
+ * File > Download > Microsoft Excel (which avoids pulling 2 MB of base64
+ * through a tool call).
+ *   npx tsx scripts/extract-tabs.ts <download-result.json | workbook.xlsx> <output-dir>
  */
 import fs from "node:fs";
 import path from "node:path";
 import * as XLSX from "xlsx";
 
-const [jsonPath, outDir] = process.argv.slice(2);
-if (!jsonPath || !outDir) {
-  console.error("Usage: npx tsx scripts/extract-tabs.ts <download-result.json> <output-dir>");
+const [srcPath, outDir] = process.argv.slice(2);
+if (!srcPath || !outDir) {
+  console.error("Usage: npx tsx scripts/extract-tabs.ts <download-result.json | workbook.xlsx> <output-dir>");
   process.exit(1);
 }
 
 fs.mkdirSync(outDir, { recursive: true });
 
-const payload = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
 const xlsxPath = path.join(outDir, "eandj-sheet.xlsx");
-fs.writeFileSync(xlsxPath, Buffer.from(payload.content, "base64"));
-console.log(`Saved workbook: ${xlsxPath} (${payload.title})`);
+if (srcPath.toLowerCase().endsWith(".json")) {
+  const payload = JSON.parse(fs.readFileSync(srcPath, "utf8"));
+  fs.writeFileSync(xlsxPath, Buffer.from(payload.content, "base64"));
+  console.log(`Saved workbook: ${xlsxPath} (${payload.title})`);
+} else {
+  // Copy to the canonical name so a re-run is reproducible from the folder alone.
+  if (path.resolve(srcPath) !== path.resolve(xlsxPath)) {
+    fs.copyFileSync(srcPath, xlsxPath);
+  }
+  console.log(`Using workbook: ${srcPath}`);
+}
 
 const wb = XLSX.readFile(xlsxPath, { cellDates: false });
 console.log("Tabs found:", wb.SheetNames.join(" | "));
