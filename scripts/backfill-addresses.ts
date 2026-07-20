@@ -153,6 +153,33 @@ function findFuzzy(hay: string, needle: string): number | null {
  */
 const MUNI_ALIASES: Record<string, string[]> = {
   "San Juan": ["Cabalian"],
+  // "Saint Enopan" in one address — confirmed by Ryan as Inopacan.
+  Inopacan: ["Saint Enopan", "St Enopan"],
+};
+
+/**
+ * Sitios and puroks people name instead of the barangay. Keyed
+ * "Municipality|sitio" so the same sitio name in two towns can't collide.
+ * Calayugan is a sitio of San Antonio, Tomas Oppus — several customers write
+ * it, and it is ALSO a barangay of Hinunangan, which is exactly why the
+ * municipality has to be part of the key.
+ */
+const SITIO_TO_BARANGAY: Record<string, string> = {
+  "Tomas Oppus|calayugan": "San Antonio",
+};
+
+/**
+ * Addresses resolved by hand where no rule can reach them. Keyed on the
+ * normalised original so a changed address falls back to matching rather than
+ * silently keeping a stale answer.
+ */
+const MANUAL: Record<string, { municipality: string; barangay: string | null }> = {
+  // "Basak, San Southern Leyte" — Basak exists in San Juan and Maasin City;
+  // the truncated "San" settles it.
+  "basak san southern leyte": { municipality: "San Juan", barangay: "Basak" },
+  // Apitong is the local name of Tacloban's Barangay 92.
+  "mount side charity lane apitong tacloban city leyte":
+    { municipality: "Tacloban City", barangay: "Barangay 92" },
 };
 
 function muniAliases(m: string): string[] {
@@ -167,12 +194,20 @@ function muniAliases(m: string): string[] {
  * Leyte" both matched the municipality Leyte and lost their real municipality.
  * Returns the address with a trailing province removed.
  */
-function stripProvince(hay: string): string {
-  for (const p of ["southern leyte", "so leyte", "s leyte", "leyte"]) {
-    if (hay === p) return "";
-    if (hay.endsWith(" " + p)) return hay.slice(0, -(p.length + 1)).trim();
+function stripProvince(hay: string): { rest: string; province: string | null } {
+  const map: Array<[string, string]> = [
+    ["southern leyte", "Southern Leyte"],
+    ["so leyte", "Southern Leyte"],
+    ["s leyte", "Southern Leyte"],
+    ["leyte", "Leyte"],
+  ];
+  for (const [needle, province] of map) {
+    if (hay === needle) return { rest: "", province };
+    if (hay.endsWith(" " + needle)) {
+      return { rest: hay.slice(0, -(needle.length + 1)).trim(), province };
+    }
   }
-  return hay;
+  return { rest: hay, province: null };
 }
 
 interface Loc { province: string; municipality: string; barangay: string }
@@ -236,6 +271,23 @@ async function main() {
     if (!raw) { unresolved.push({ name: c.display_name, address: "(blank)" }); continue; }
     const hay = norm(raw);
 
+    // Hand-resolved addresses win outright.
+    const manual = MANUAL[hay];
+    if (manual) {
+      const loc = locs.find(
+        (l) => l.municipality === manual.municipality &&
+               (manual.barangay === null || l.barangay === manual.barangay)
+      );
+      if (loc) {
+        full.push({ name: c.display_name, address: raw,
+          parsed: `${manual.barangay ?? "—"}, ${loc.municipality}, ${loc.province} (manual)`, fuzzy: "" });
+        updates.push({ id: c.id, province: loc.province, municipality: loc.municipality,
+          barangay: manual.barangay, street_purok: null });
+        continue;
+      }
+      console.warn(`  ! manual entry for "${raw}" does not exist in ph_locations — falling through`);
+    }
+
     // Score EVERY municipality that appears, with the best barangay each one
     // yields, then take the highest-scoring pair. Taking the first municipality
     // hit is wrong: "Alejos, Bato, Leyte" matches the municipality *Leyte*
@@ -247,7 +299,7 @@ async function main() {
     };
     // Municipalities are searched in the address WITHOUT its trailing province,
     // because "Leyte" is both.
-    const hayNoProv = stripProvince(hay);
+    const { rest: hayNoProv, province: statedProvince } = stripProvince(hay);
 
     const cands: Cand[] = [];
     for (const m of municipalities) {
@@ -275,6 +327,19 @@ async function main() {
           if (l.barangay.length > bgyExactLen) { bgy = l; bgyAt = ex; bgyFuzzy = false; bgyExactLen = l.barangay.length; }
         }
       }
+      // A named sitio stands in for its barangay, but only once we know which
+      // municipality we are in — "Calayugan" means San Antonio in Tomas Oppus
+      // and is a barangay in its own right in Hinunangan.
+      if (!bgy) {
+        for (const [key, barangay] of Object.entries(SITIO_TO_BARANGAY)) {
+          const [keyMuni, sitio] = key.split("|");
+          if (keyMuni !== m) continue;
+          const at2 = findExact(hay, sitio);
+          if (at2 === null) continue;
+          const target = bgysByMuni.get(m)!.find((l) => l.barangay === barangay);
+          if (target) { bgy = target; bgyAt = at2; bgyFuzzy = false; }
+        }
+      }
       if (!bgy) {
         let bestLen = -1;
         for (const l of bgysByMuni.get(m)!) {
@@ -299,11 +364,15 @@ async function main() {
     // barangay there.
     if (cands.length === 0) {
       let inferred: Loc | null = null, inferredAt = -1, inferredFuzzy = false, ambiguous = false;
-      for (const [key, list] of uniqueBarangays) {
+      for (const [key, all] of uniqueBarangays) {
         const ex = findExact(hayNoProv, key);
         const at = ex !== null ? ex : findFuzzy(hayNoProv, key);
         if (at === null) continue;
-        if (list.length > 1) { ambiguous = true; continue; }
+        // If the address names a province, only that province's entries count.
+        // "Tinago" exists in four municipalities but just one in Southern
+        // Leyte, so "Tinago Southern Leyte" is unambiguous after scoping.
+        const list = statedProvince ? all.filter((l) => l.province === statedProvince) : all;
+        if (list.length !== 1) { if (list.length > 1) ambiguous = true; continue; }
         if (!inferred || key.length > inferred.barangay.length) {
           inferred = list[0]; inferredAt = at; inferredFuzzy = ex === null;
         }

@@ -86,6 +86,48 @@ for (let c = 1; c < width; c++) {
   }
 }
 
+/**
+ * Municipalities absent from the Sheet's coverage tab but present in customer
+ * addresses. Tacloban City is a highly urbanised city, administratively
+ * independent of Leyte province, which is why it is not in the delivery grid.
+ *
+ * Its barangays are officially NUMBERED; locals use names — "Apitong" is
+ * Barangay 92, corroborated by a customer address reading "Mount Side Charity
+ * Lane, Apitong" against a published "Mountain Side Subdivision, Brgy. 92
+ * Apitong". Source: philatlas.com, count 138 matching the PSA figure. Note the
+ * sequence has gaps (no 1, 3, 4, 9, 10, 11) — historical merges, unverified —
+ * so treat this list as good-enough-for-matching rather than authoritative.
+ */
+const EXTRA: Array<{ province: string; municipality: string; barangays: string[] }> = [
+  {
+    province: "Leyte",
+    municipality: "Tacloban City",
+    barangays: [
+      ...["2", "5", "5-A", "6", "6-A", "7", "8", "8-A", "12", "13", "14", "15", "16", "17",
+        "18", "19", "20", "21", "21-A", "22", "23", "23-A", "24", "25", "26", "27", "28",
+        "29", "30", "31", "32", "33", "34", "35", "35-A", "36", "36-A", "37", "37-A", "38",
+        "39", "40", "41", "42", "42-A", "43", "43-A", "43-B", "44", "44-A", "45", "46",
+        "47", "48", "48-A", "48-B", "49", "50", "50-A", "50-B", "51", "51-A", "52", "53",
+        "54", "54-A", "56", "56-A", "57", "58", "59", "59-A", "59-B", "60", "60-A", "61",
+        "62", "62-A", "62-B", "63", "64", "65", "66", "66-A", "67", "68", "69", "70", "71",
+        "72", "73", "74", "75", "76", "77", "78", "79", "80", "81", "82", "83", "83-A",
+        "83-B", "83-C", "84", "85", "86", "87", "88", "89", "90", "91", "92", "93", "94",
+        "94-A", "95", "95-A", "96", "97", "98", "99", "100", "101", "102", "103", "103-A",
+        "104", "105", "106", "107", "108", "109", "109-A", "110"].map((n) => `Barangay ${n}`),
+      "El Reposo", "Libertad", "Nula-tula",
+    ],
+  },
+];
+
+for (const e of EXTRA) {
+  for (const b of e.barangays) {
+    const key = `${e.province}|${e.municipality}|${b}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ province: e.province, municipality: e.municipality, barangay: b });
+  }
+}
+
 const byProvince = new Map<string, Set<string>>();
 for (const r of out) {
   if (!byProvince.has(r.province)) byProvince.set(r.province, new Set());
