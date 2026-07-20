@@ -109,6 +109,29 @@ async function main() {
     };
   }).filter((x) => x.model || x.sheetName);
 
+  // The Pricelist repeats some products (12 models appear twice), which the
+  // first import turned into duplicate catalog entries — each one showing up
+  // again in the product picker. Collapse rows that share a model AND a price;
+  // a shared model at DIFFERENT prices is a real variant, so keep both. Where
+  // the sheet describes one model two ways ("Epson Printer L5290" vs "Epson
+  // EcoTank L5290 … with ADF"), keep the more descriptive name.
+  const seen = new Map<string, (typeof items)[number]>();
+  let collapsed = 0;
+  for (const it of items) {
+    const key = `${it.model.toLowerCase()}|${it.price ?? ""}`;
+    const prev = seen.get(key);
+    if (!prev) { seen.set(key, it); continue; }
+    collapsed++;
+    if ((it.sheetName?.length ?? 0) > (prev.sheetName?.length ?? 0)) prev.sheetName = it.sheetName;
+    if (!prev.driveId && it.driveId) prev.driveId = it.driveId;
+    if (!prev.spec && it.spec) prev.spec = it.spec;
+    prev.stock = Math.max(prev.stock, it.stock);
+  }
+  const deduped = [...seen.values()];
+  if (collapsed) console.log(`Collapsed ${collapsed} duplicate Pricelist row(s) → ${deduped.length} products.`);
+  items.length = 0;
+  items.push(...deduped);
+
   console.log(`${items.length} products found. ${items.filter((x) => x.driveId).length} have a photo link.\n`);
 
   if (!load) {
