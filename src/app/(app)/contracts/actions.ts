@@ -66,20 +66,19 @@ export async function addNote(contractId: string, formData: FormData) {
   revalidatePath(`/contracts/${contractId}`);
 }
 
-export async function updateStatus(contractId: string, formData: FormData) {
-  const collection = String(formData.get("collection_status") ?? "");
-  const delivery = String(formData.get("delivery_status") ?? "");
-
+// The only manual status left on a contract, owner-only. The old updateStatus /
+// collection_status hand-typed field was retired in 0027 — the collection
+// situation is now derived from the log + tier and never hand-set.
+export async function setRepossessionStage(contractId: string, stage: string) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("update_contract_status", {
+  const { error } = await supabase.rpc("set_repossession_stage", {
     p_contract_id: contractId,
-    p_collection_status: collection || null,
-    p_delivery_status: delivery || null,
+    p_stage: stage,
   });
-
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
   revalidatePath(`/contracts/${contractId}`);
   revalidatePath("/collections");
+  return {};
 }
 
 export interface CreateContractInput {
@@ -202,7 +201,6 @@ export async function updateContract(
     item_type: string | null;
     quantity: number;
     payment_status: string;
-    collection_status: string | null;
   }
 ) {
   const supabase = await createClient();
