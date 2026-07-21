@@ -83,8 +83,11 @@ directly where the app would have to use an RPC (an RPC guarded by
 roles matrix, business/legal rules, testing, operations). **Standing rule: any
 commit that changes user-facing behavior, a route, a role's access, a business
 rule, or the schema updates the matching `docs/` page in the same commit.** On
-drift, the code is the truth — fix the doc. (`docs/README.md` also mentions an
-in-app `/help` staff manual that is **not written yet**.)
+drift, the code is the truth — fix the doc. The **staff-facing** manual is the
+in-app `/help` hub (role-filtered topic pages in
+`src/app/(app)/help/topics.tsx`, linked from the top bar — not a nav tab; the
+mobile tab bar is full). Behavior changes that affect staff update the matching
+`/help` topic too.
 
 ## E2E suite (Playwright) — runs against PRODUCTION
 

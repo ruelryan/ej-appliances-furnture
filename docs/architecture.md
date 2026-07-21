@@ -16,6 +16,8 @@ src/
       page.tsx             dashboard (redirects sales_agent -> /commissions, delivery -> /deliveries)
       contracts/ customers/ payments/ collections/ commissions/ leads/
       deliveries/ products/ tasks/ dtr/ payroll/ analytics/ admin/ account/
+      help/                the in-app staff manual: role-filtered topic pages
+                           (topics.tsx), linked from the top bar
         page.tsx           server component; reads via the Supabase server client
         actions.ts         colocated server actions ("use server") — every mutation for that module
     print/                 print pages (A4 browser-print CSS, no app chrome, own layout):

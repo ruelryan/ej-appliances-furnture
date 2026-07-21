@@ -36,6 +36,12 @@ export default async function AppLayout({
           </span>
         </Link>
         <div className="flex items-center gap-3">
+          <Link
+            href="/help"
+            className="text-xs text-muted hover:text-ink hover:underline"
+          >
+            Help
+          </Link>
           <Link href="/account" className="text-xs text-muted hover:text-ink hover:underline">
             {profile.full_name}
             {isOwner && (
