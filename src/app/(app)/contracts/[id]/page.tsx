@@ -52,10 +52,10 @@ export default async function ContractPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ nav?: string }>;
+  searchParams: Promise<{ nav?: string; leadWarn?: string }>;
 }) {
   const { id } = await params;
-  const { nav } = await searchParams;
+  const { nav, leadWarn } = await searchParams;
   const sort = ["name", "lastpaid", "overdue"].includes(nav ?? "")
     ? (nav as string)
     : "name";
@@ -197,6 +197,18 @@ export default async function ContractPage({
         position={navIndex === -1 ? null : navIndex + 1}
         total={ordered.length}
       />
+
+      {leadWarn && (
+        <div className="rounded-card border border-warning/40 bg-warning-bg px-4 py-3 text-sm text-warning">
+          The sale was saved, but its lead could not be marked as converted —
+          it may have been resolved by someone else in the meantime. Check{" "}
+          <Link href="/leads" className="font-semibold underline">
+            Leads
+          </Link>{" "}
+          before doing anything with that lead: converting it again would
+          create a duplicate sale.
+        </div>
+      )}
 
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>

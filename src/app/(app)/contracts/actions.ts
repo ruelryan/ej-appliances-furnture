@@ -164,16 +164,21 @@ export async function createContract(input: CreateContractInput) {
   if (error) return { error: error.message };
 
   // If this contract came from a lead, mark it converted before redirecting.
+  // The contract already exists at this point, so a failure here must not
+  // fail the action (re-submitting would create a duplicate sale) — surface
+  // it as a warning banner on the contract page instead.
+  let leadWarn = false;
   if (input.leadId) {
-    await supabase.rpc("mark_lead_converted", {
+    const { error: leadError } = await supabase.rpc("mark_lead_converted", {
       p_lead_id: input.leadId,
       p_contract_id: data.id,
     });
+    leadWarn = !!leadError;
     revalidatePath("/leads");
   }
 
   revalidatePath("/contracts");
-  redirect(`/contracts/${data.id}`);
+  redirect(`/contracts/${data.id}${leadWarn ? "?leadWarn=1" : ""}`);
 }
 
 // Assign / reassign / clear the sales agent on a contract (owner/admin).
