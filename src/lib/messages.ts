@@ -146,14 +146,6 @@ export function buildDemandLetterBody(
   );
 }
 
-export const COLLECTION_STATUSES = [
-  "Paid",
-  "Asked for extension",
-  "Collect in-person",
-  "Pull-out letter prepared",
-  "Pull-out letter sent",
-  "Item for pull-out",
-] as const;
 
 export const DELIVERY_STATUSES = [
   "Out for Delivery",

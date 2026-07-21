@@ -18,7 +18,7 @@ export default async function ContractsPage({
   let query = supabase
     .from("v_contract_financials")
     .select(
-      "id, contract_no, display_name, item_description, contract_date, total_price, total_paid, remaining_balance, overdue_amount, followup_tier, payment_status, sales_agent, term_months"
+      "id, contract_no, display_name, item_description, contract_date, total_price, total_paid, remaining_balance, overdue_amount, followup_tier, payment_status, sales_agent, term_months, collection_situation"
     )
     .order("contract_date", { ascending: false })
     .limit(100);
@@ -101,6 +101,11 @@ export default async function ContractsPage({
                   #{c.contract_no} · {fmtDateShort(c.contract_date)}
                   {c.sales_agent ? ` · ${c.sales_agent}` : ""}
                 </div>
+                {c.payment_status === "open" && c.collection_situation && (
+                  <div className="mt-0.5 truncate text-xs text-brand">
+                    {c.collection_situation}
+                  </div>
+                )}
               </div>
               <div className="shrink-0 text-right">
                 <TierBadge tier={c.followup_tier} />

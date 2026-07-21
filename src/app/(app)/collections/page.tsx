@@ -505,6 +505,11 @@ async function AdminBoard() {
                       }`
                     : "unassigned"}
                 </div>
+                {c.collection_situation && (
+                  <div className="truncate text-xs text-brand">
+                    {c.collection_situation}
+                  </div>
+                )}
               </div>
               <AssignDialog
                 contractId={c.id}

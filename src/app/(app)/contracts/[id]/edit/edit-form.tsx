@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateContract } from "../../actions";
-import { COLLECTION_STATUSES, ITEM_TYPES } from "@/lib/messages";
+import { ITEM_TYPES } from "@/lib/messages";
 import { btnPrimaryHero, input, label } from "@/components/ui";
 
 interface Contract {
@@ -12,7 +12,6 @@ interface Contract {
   item_type: string | null;
   quantity: number;
   payment_status: string;
-  collection_status: string | null;
 }
 
 export function EditForm({ contract }: { contract: Contract }) {
@@ -28,7 +27,6 @@ export function EditForm({ contract }: { contract: Contract }) {
         item_type: String(fd.get("item_type") ?? "").trim() || null,
         quantity: Number(fd.get("quantity")),
         payment_status: String(fd.get("payment_status")),
-        collection_status: String(fd.get("collection_status") ?? "") || null,
       });
       if (res?.error) setError(res.error);
     });
@@ -82,19 +80,6 @@ export function EditForm({ contract }: { contract: Contract }) {
           <select name="payment_status" defaultValue={contract.payment_status} className={input}>
             <option value="open">Open</option>
             <option value="closed">Closed</option>
-          </select>
-        </div>
-        <div className="col-span-2">
-          <label className={label}>Collection status</label>
-          <select
-            name="collection_status"
-            defaultValue={contract.collection_status ?? ""}
-            className={input}
-          >
-            <option value="">— none —</option>
-            {COLLECTION_STATUSES.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
           </select>
         </div>
       </div>

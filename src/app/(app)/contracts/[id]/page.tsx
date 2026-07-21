@@ -10,7 +10,7 @@ import { CopyButton } from "@/components/copy-button";
 import { SectionCard } from "@/components/section-card";
 import { btnPrimary, btnSecondary, theadRow } from "@/components/ui";
 import { NoteForm } from "./note-form";
-import { StatusForm } from "./status-form";
+import { RepossessionControl } from "./repossession-control";
 import { ContractNavBar } from "./nav-bar";
 import { AgentCommissionPanel, type CommissionRow } from "./agent-commission-panel";
 import { DeliveryPanel } from "./delivery-panel";
@@ -218,7 +218,9 @@ export default async function ContractPage({
             <span className="text-xs text-muted">
               {c.payment_status === "open" ? "Open" : "Closed"} ·{" "}
               {c.delivery_status}
-              {c.collection_status ? ` · ${c.collection_status}` : ""}
+              {c.payment_status === "open" && c.collection_situation
+                ? ` · ${c.collection_situation}`
+                : ""}
             </span>
           </div>
         </div>
@@ -403,8 +405,14 @@ export default async function ContractPage({
         contractId={c.id}
       />
 
-      {/* Status update (staff-allowed) */}
-      <StatusForm contractId={c.id} collectionStatus={c.collection_status} />
+      {/* Repossession — owner-only. Replaces the old hand-typed status form;
+          the collection situation is now derived and shown in the header. */}
+      {isOwner && c.payment_status === "open" && (
+        <RepossessionControl
+          contractId={c.id}
+          stage={c.repossession_stage}
+        />
+      )}
 
       {/* Payment history */}
       <SectionCard
