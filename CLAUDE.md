@@ -19,7 +19,7 @@ technical trade-offs plainly and confirm before destructive actions.
   5,901 payments (₱24,256,852.39, reconciled to the centavo)**. The Sheet is no
   longer the source of truth; anything recorded there now is a divergence.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
-  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0026 applied to
+  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0027 applied to
   prod**. Catalog: **134 products**, all with photos and perceptual hashes
   (seeded by `scripts/import-pricelist.ts`; 12 duplicates merged out).
 - GitHub: `ruelryan/ej-appliances-furnture`. Active work is on
@@ -32,13 +32,15 @@ technical trade-offs plainly and confirm before destructive actions.
 - Beyond the original brief, now also shipped: two Messenger links per
   customer (0020), promise-to-pay + field receipt numbers (0021), term
   repricing (0022), structured addresses + collector GPS (0023), product
-  typeahead + duplicate review (0024), meal allowance + 13th-month pay (0026).
-- **Open, and needing a human not a commit**: Roger's employment contract is
-  drafted but unsigned (scratchpad HTML) with blanks and no Schedule A
-  targets; his SSS/PhilHealth/Pag-IBIG amounts are still zero, so his 16–end
-  slip deducts nothing; and his ₱100/day meal allowance is not yet entered in
-  /dtr/settings. His hourly rate IS set correctly at ₱56.25 (= ₱450 for an
-  8-hour day). See "Legal watch-outs" below.
+  typeahead + duplicate review (0024), meal allowance + 13th-month pay (0026),
+  and retiring the hand-typed collection status for a derived one + owner-only
+  repossession stage (0027).
+- **Roger Dasal** starts as collector 2026-07-22 (Mon–Wed, 3-day week). Rate
+  ₱56.25/hr and ₱100/day meal allowance are set; **24 Tomas Oppus accounts
+  assigned**. Still open (human, not a commit): his contract needs signing
+  *before* he works (Art. 296), and his SSS/PhilHealth/Pag-IBIG **amounts** are
+  still zero so his 16–end slip deducts nothing. Contract + onboarding drafts
+  live in the session scratchpad. See "Legal watch-outs" below.
 
 ## Commands
 
@@ -236,6 +238,20 @@ directly where the app would have to use an RPC (an RPC guarded by
   with no special-casing. On a test period 40% of `dtr_pay` would have been
   wrongly included. `v_thirteenth_month` + `thirteenth_month_payments` drive
   the owner-only `/payroll/13th-month` report.
+- **Contract status signals** (the `collection_status` cleanup, 0027): there are
+  now three, and only two are manual. `followup_tier` (auto, money+dates) and
+  the new `collection_situation` (auto, derived on `v_contract_financials` from
+  `followup_tier` + the latest non-cancelled `collection_entries` row — e.g.
+  "Promised to pay Jul 26", "Not reached", "Overdue — no visit logged") are
+  never hand-set. `payment_status` (owner closes a contract) and
+  `repossession_stage` (owner-only, `set_repossession_stage`: none →
+  letter_prepared → letter_sent → for_pullout → repossessed) are the only
+  manual ones. The old hand-typed `collection_status` text column, its
+  `StatusForm`, `update_contract_status` RPC and `COLLECTION_STATUSES` constant
+  are **deleted** — it was redundant, blank on 93% of rows, and invisible to
+  collectors. `repossession_stage` is deliberately NOT auto-advanced by the
+  demand letter (serving a letter and deciding to pull out are separate calls),
+  and taking the item back cancels the sale under the Recto Law.
 - **Analytics** (owner-only route `/analytics`): dashboards (monthly sales,
   collections-vs-expected, by-agent, aging, cashflow) built on the financial
   views; Recharts in `charts.tsx`. Consult the dataviz skill before changing.
@@ -302,6 +318,12 @@ These shaped real code. Do not "simplify" them away.
   columns: it must be DROPPED and recreated, not replaced. Both bit us in 0020
   and again in 0023. After any view change, verify with
   `select <newcol> from v_contract_collections limit 1`.
+  **And when you DROP `v_contract_financials` (needed to remove a column, as
+  0027 did), FOUR views depend on it, not one:** `v_contract_collections` plus
+  the analytics views `v_aging`, `v_dashboard_stats`, `v_top_customers`. Drop
+  all four first and recreate all four, or the drop fails with "other objects
+  depend on it". Get their live definitions with
+  `select pg_get_viewdef('public.v_aging'::regclass, true)` before dropping.
 - **`create or replace function` with a changed argument list creates an
   OVERLOAD**, and PostgREST `rpc()` then resolves ambiguously. `drop function`
   first (see 0010's comment, and 0021's `log_collection`).
