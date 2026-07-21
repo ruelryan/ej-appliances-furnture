@@ -19,7 +19,7 @@ technical trade-offs plainly and confirm before destructive actions.
   5,901 payments (₱24,256,852.39, reconciled to the centavo)**. The Sheet is no
   longer the source of truth; anything recorded there now is a divergence.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
-  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0027 applied to
+  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0028 applied to
   prod**. Catalog: **134 products**, all with photos and perceptual hashes
   (seeded by `scripts/import-pricelist.ts`; 12 duplicates merged out).
 - GitHub: `ruelryan/ej-appliances-furnture`. Active work is on
@@ -35,6 +35,9 @@ technical trade-offs plainly and confirm before destructive actions.
   typeahead + duplicate review (0024), meal allowance + 13th-month pay (0026),
   and retiring the hand-typed collection status for a derived one + owner-only
   repossession stage (0027).
+- New but **not yet committed** (untracked in the working tree): the `docs/`
+  developer reference, the Playwright e2e suite (`e2e/`, `playwright.config.ts`,
+  `scripts/e2e/`), and the rewritten `scripts/backup-prod.ts`.
 - **Roger Dasal** starts as collector 2026-07-22 (Mon–Wed, 3-day week). Rate
   ₱56.25/hr and ₱100/day meal allowance are set; **24 Tomas Oppus accounts
   assigned**. Still open (human, not a commit): his contract needs signing
@@ -54,6 +57,9 @@ npx tsx scripts/check-connection.ts       # env/DB sanity check
 npx tsx scripts/apply-migrations.ts 0005  # apply a single new migration
 npx tsx scripts/verify-sql-terms.ts       # SQL math vs golden fixture
 npx tsx scripts/verify-dtr.ts             # DTR hours/holiday SQL vs fixtures
+npm run e2e:readonly                      # Playwright read-only suite — safe any time
+npm run e2e:writes   # Playwright write suite — WRITES TO PROD; full procedure in docs/testing.md
+npx tsx scripts/backup-prod.ts            # full JSON dump of all tables → eandj-data\backup-*
 npx tsx scripts/migrate/import.ts --dir <csvs> [--load]  # Sheet re-import
 npx tsx scripts/extract-tabs.ts <book.xlsx|drive.json> <dir>  # Sheet tabs → CSVs
 npx tsx scripts/import-locations.ts --file <book.xlsx> [--load]  # seed ph_locations
@@ -71,6 +77,27 @@ directly where the app would have to use an RPC (an RPC guarded by
 `.env.local` (gitignored) holds Supabase URL/keys and `SUPABASE_DB_PASSWORD`
 (quote it — it contains `#`).
 
+## Docs
+
+`docs/` is the developer reference (architecture, database + full RPC catalog,
+roles matrix, business/legal rules, testing, operations). **Standing rule: any
+commit that changes user-facing behavior, a route, a role's access, a business
+rule, or the schema updates the matching `docs/` page in the same commit.** On
+drift, the code is the truth — fix the doc. (`docs/README.md` also mentions an
+in-app `/help` staff manual that is **not written yet**.)
+
+## E2E suite (Playwright) — runs against PRODUCTION
+
+There is no staging database. `e2e/specs/readonly/` is safe any time;
+`e2e/specs/writes/` writes to the live business DB and follows the strict
+backup → setup-test-users → run → cleanup-test-data → teardown procedure in
+`docs/testing.md`. In `playwright.config.ts`, `workers: 1` and `retries: 0`
+are load-bearing (a retry would double-write) — never change them, never run
+the suite in CI, and never point it at the Vercel URL. Test accounts
+(`test-*@eandj.test`, created by `scripts/e2e/setup-test-users.ts --apply`
+into gitignored `.env.e2e`) must be torn down the same day; guard specs
+prove via `audit_log` that read-only runs wrote nothing.
+
 ## Architecture (the rules that matter)
 
 - **Business math lives in exactly two synced places**, both tested against
@@ -83,8 +110,8 @@ directly where the app would have to use an RPC (an RPC guarded by
   balance, followup tier) come ONLY from the `v_contract_financials` view
   (0002 migration), computed in Asia/Manila. Never recompute in JS.
 - **Writes go through SECURITY DEFINER functions** (`create_contract`,
-  `record_payment`, `void_payment`, `unvoid_payment`,
-  `update_contract_status`) — never insert contracts/payments directly; IDs
+  `record_payment`, `void_payment`, `unvoid_payment`, `close_contract`) —
+  never insert contracts/payments directly; IDs
   (YYYY### and PAY####) come from the race-safe `id_counters` table.
 - **Roles (5, migration 0011)**: `owner`, `admin` (admin assistant — posts
   payments/receipts, creates contracts), `collector` (assigned worklist, logs
@@ -239,7 +266,7 @@ directly where the app would have to use an RPC (an RPC guarded by
   wrongly included. `v_thirteenth_month` + `thirteenth_month_payments` drive
   the owner-only `/payroll/13th-month` report.
 - **Contract status signals** (the `collection_status` cleanup, 0027): there are
-  now three, and only two are manual. `followup_tier` (auto, money+dates) and
+  now four, and only two are manual. `followup_tier` (auto, money+dates) and
   the new `collection_situation` (auto, derived on `v_contract_financials` from
   `followup_tier` + the latest non-cancelled `collection_entries` row — e.g.
   "Promised to pay Jul 26", "Not reached", "Overdue — no visit logged") are
@@ -248,8 +275,8 @@ directly where the app would have to use an RPC (an RPC guarded by
   letter_prepared → letter_sent → for_pullout → repossessed) are the only
   manual ones. The old hand-typed `collection_status` text column, its
   `StatusForm`, `update_contract_status` RPC and `COLLECTION_STATUSES` constant
-  are **deleted** — it was redundant, blank on 93% of rows, and invisible to
-  collectors. `repossession_stage` is deliberately NOT auto-advanced by the
+  are **deleted** — it was redundant, blank on 95% of rows (1,443 of 1,511, per
+  the 0027 migration comment), and invisible to collectors. `repossession_stage` is deliberately NOT auto-advanced by the
   demand letter (serving a letter and deciding to pull out are separate calls),
   and taking the item back cancels the sale under the Recto Law.
 - **Analytics** (owner-only route `/analytics`): dashboards (monthly sales,
@@ -324,6 +351,9 @@ These shaped real code. Do not "simplify" them away.
   all four first and recreate all four, or the drop fails with "other objects
   depend on it". Get their live definitions with
   `select pg_get_viewdef('public.v_aging'::regclass, true)` before dropping.
+  `v_deliveries` was the third victim: its `d.*` silently lacked `product_id`
+  (added 0015) until 0028 drop-and-recreated it with enumerated columns.
+  Assume any `select x.*` view has this problem.
 - **`create or replace function` with a changed argument list creates an
   OVERLOAD**, and PostgREST `rpc()` then resolves ambiguously. `drop function`
   first (see 0010's comment, and 0021's `log_collection`).
@@ -358,6 +388,9 @@ These shaped real code. Do not "simplify" them away.
   folder holds the timestamped `backup-*/` JSON snapshots, the Sheet exports,
   `migration-report.md` and `address-backfill-report.md` (which lists the 109
   customers still needing a barangay chosen by hand).
-- **Take a backup before anything destructive.** `backup-prod.mjs`-style full
-  JSON dumps of all 23 tables have already made two risky operations
-  recoverable. The delivery statuses after the cutover were restored from one.
+- **Take a backup before anything destructive.** `npx tsx scripts/backup-prod.ts`
+  dumps every table (stable-sorted pagination, row counts verified against the
+  server, manifest + auth users) to `eandj-data\backup-*\`. Full dumps have
+  already made two risky operations recoverable — the delivery statuses after
+  the cutover were restored from one. The `product-photos` bucket is not
+  backed up (re-derivable from the pricelist import).
