@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
+import { formatAddress, directionsUrl, hasExactPin } from "@/lib/maps";
 import { SectionCard } from "@/components/section-card";
 import { StatTile } from "@/components/stat-tile";
 import { DeliveryControls } from "./delivery-controls";
@@ -95,6 +96,11 @@ export default async function DeliveriesPage({
           <div className="space-y-3">
             {shown.map((d) => {
               const late = d.days_awaiting_invoice != null && d.days_awaiting_invoice > 14;
+              // v_deliveries aliases the legacy free text as customer_address;
+              // formatAddress/directionsUrl expect it under `address`.
+              const located = { ...d, address: d.customer_address };
+              const dirUrl = directionsUrl(located);
+              const exact = hasExactPin(located);
               return (
                 <div key={d.id} className="rounded-card border border-line p-3">
                   <div className="flex items-start justify-between gap-2">
@@ -117,14 +123,20 @@ export default async function DeliveriesPage({
                         {d.quantity > 1 ? ` ×${d.quantity}` : ""} · #{d.contract_no} · {fmtDateShort(d.contract_date)}
                       </div>
                       <div className="mt-0.5 truncate text-xs text-muted">
-                        {d.customer_address ?? "—"}
+                        {formatAddress(located) || "—"}
+                        {d.landmark ? ` · near ${d.landmark}` : ""}
                         {d.supplier_name ? ` · supplier: ${d.supplier_name}` : ""}
                         {d.supplier_cost != null ? ` · cost ${peso(d.supplier_cost)}` : ""}
                       </div>
                     </div>
-                    {d.gps_url && (
-                      <a href={d.gps_url} target="_blank" className="shrink-0 rounded-card border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface">
-                        Map
+                    {dirUrl && (
+                      <a
+                        href={dirUrl}
+                        target="_blank"
+                        className="shrink-0 rounded-card border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface"
+                        title={exact ? "Exact tagged location" : "Approximate — from the address"}
+                      >
+                        Directions{exact ? "" : " ~"}
                       </a>
                     )}
                   </div>
