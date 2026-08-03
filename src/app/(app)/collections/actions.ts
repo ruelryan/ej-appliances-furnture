@@ -71,6 +71,25 @@ export async function postCollectionEntry(input: {
   return { paymentId: data.id as string };
 }
 
+// ── Close an entry against a payment that already exists ──────
+// The admin's habit is to record payments on the Contracts tab, which leaves
+// the collector's entry stranded in the to-post queue. This links the two
+// WITHOUT creating a second payment for the same cash.
+export async function linkCollectionPayment(input: {
+  entryId: string;
+  paymentId: string;
+}) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("link_collection_payment", {
+    p_entry_id: input.entryId,
+    p_payment_id: input.paymentId,
+  });
+  if (error) return { error: error.message };
+  revalidate();
+  revalidatePath("/payments");
+  return {};
+}
+
 export async function cancelCollectionEntry(entryId: string, reason: string) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("cancel_collection_entry", {

@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { postCollectionEntry } from "./actions";
 import { input, label } from "@/components/ui";
+import { fmtDateShort } from "@/lib/format";
 
 const RECEIPT_TYPES = ["Appliances", "Furniture"];
 
@@ -13,10 +14,16 @@ export function PostEntryDialog({
   entryId,
   amountLabel,
   defaultReceiptType,
+  duplicateOf = null,
 }: {
   entryId: string;
   amountLabel: string;
   defaultReceiptType?: string | null;
+  // A payment already on this contract for the same amount. Posting anyway is
+  // allowed — a genuine second payment of the same size is possible — but the
+  // consequence has to be on screen, because it is not reversible without a
+  // void.
+  duplicateOf?: { paymentNo: string; paymentDate: string } | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -58,7 +65,11 @@ export function PostEntryDialog({
           setReceiptNo("");
           setOpen(true);
         }}
-        className="rounded-card bg-positive px-3 py-1.5 text-xs font-semibold text-white hover:bg-positive-dark"
+        className={`rounded-card px-3 py-1.5 text-xs font-semibold ${
+          duplicateOf
+            ? "border border-line bg-white text-muted hover:bg-surface"
+            : "bg-positive text-white hover:bg-positive-dark"
+        }`}
       >
         Post payment
       </button>
@@ -79,6 +90,20 @@ export function PostEntryDialog({
               This records the payment against the contract and opens the
               receipt to print or send.
             </p>
+
+            {duplicateOf && (
+              <p className="mb-3 rounded-card bg-danger-bg px-3 py-2 text-xs text-danger">
+                <span className="font-semibold">
+                  {duplicateOf.paymentNo} already exists
+                </span>{" "}
+                on this contract for {amountLabel}, dated{" "}
+                {fmtDateShort(duplicateOf.paymentDate)}. If that is this same
+                collection, close the dialog and use{" "}
+                <span className="font-semibold">Link {duplicateOf.paymentNo}</span>{" "}
+                instead — posting here creates a <em>second</em> payment and the
+                customer&apos;s balance will be wrong by {amountLabel}.
+              </p>
+            )}
 
             <label className={label}>Official receipt / booklet no.</label>
             <input
@@ -125,9 +150,17 @@ export function PostEntryDialog({
                 type="button"
                 onClick={submit}
                 disabled={pending}
-                className="flex-1 rounded-card bg-positive py-2 text-sm font-semibold text-white hover:bg-positive-dark disabled:opacity-40"
+                className={`flex-1 rounded-card py-2 text-sm font-semibold text-white disabled:opacity-40 ${
+                  duplicateOf
+                    ? "bg-danger hover:bg-danger/90"
+                    : "bg-positive hover:bg-positive-dark"
+                }`}
               >
-                {pending ? "Posting…" : "Post & print"}
+                {pending
+                  ? "Posting…"
+                  : duplicateOf
+                    ? "Post a second payment"
+                    : "Post & print"}
               </button>
             </div>
           </div>

@@ -11,6 +11,7 @@ import { StatTile } from "@/components/stat-tile";
 import { LogCollectionDialog } from "./log-collection-dialog";
 import { PostEntryDialog } from "./post-entry-dialog";
 import { CancelEntryButton } from "./cancel-entry-button";
+import { LinkPaymentButton } from "./link-payment-button";
 import { AssignDialog } from "./assign-dialog";
 import { TagGpsButton } from "./tag-gps-button";
 import {
@@ -138,28 +139,35 @@ async function CollectorBoard() {
   const supabase = await createClient();
   const today = phTodayISO();
 
-  const [{ data: worklist }, { data: entries }, { data: advances }, { data: promises }] =
-    await Promise.all([
-      supabase
-        .from("v_contract_collections")
-        .select("*")
-        .eq("payment_status", "open")
-        .order("collection_priority", { ascending: true, nullsFirst: false })
-        .order("overdue_amount", { ascending: false }),
-      supabase
-        .from("collection_entries")
-        .select(
-          "*, contract:contracts(contract_no, customer:customers(display_name))"
-        )
-        .eq("work_date", today)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("cash_advances")
-        .select("*, cash_advance_expenses(amount)")
-        .in("status", ["requested", "open"])
-        .order("requested_at", { ascending: false }),
-      supabase.from("v_open_promises").select("*"),
-    ]);
+  const [
+    { data: worklist },
+    { data: entries },
+    { data: advances },
+    { data: promises },
+    { data: position },
+  ] = await Promise.all([
+    supabase
+      .from("v_contract_collections")
+      .select("*")
+      .eq("payment_status", "open")
+      .order("collection_priority", { ascending: true, nullsFirst: false })
+      .order("overdue_amount", { ascending: false }),
+    supabase
+      .from("collection_entries")
+      .select(
+        "*, contract:contracts(contract_no, customer:customers(display_name))"
+      )
+      .eq("work_date", today)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("cash_advances")
+      .select("*, cash_advance_expenses(amount)")
+      .in("status", ["requested", "open"])
+      .order("requested_at", { ascending: false }),
+    supabase.from("v_open_promises").select("*"),
+    // RLS returns only this collector's own row.
+    supabase.from("v_collector_remittance").select("*").maybeSingle(),
+  ]);
 
   // A promise whose date has arrived outranks everything else — the customer
   // said they would pay today, so that is the visit most likely to collect.
@@ -200,23 +208,39 @@ async function CollectorBoard() {
     .filter((e) => e.method === "online" && e.status !== "cancelled")
     .reduce((s, e) => s + Number(e.amount), 0);
   const openAdvances = (advances ?? []).filter((a) => a.status === "open");
+  const onHand = Number(position?.cash_on_hand ?? 0);
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-ink">My collections</h1>
-        <Link
-          href="/collections/report"
-          className="rounded-card border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
-        >
-          Daily report
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/collections/remittances"
+            className="rounded-card border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
+          >
+            Remittances
+          </Link>
+          <Link
+            href="/collections/report"
+            className="rounded-card border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
+          >
+            Daily report
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile label="Assigned" value={String((worklist ?? []).length)} />
         <StatTile label="Cash today" value={peso(cashToday)} />
         <StatTile label="Online today" value={peso(onlineToday)} />
+        {/* Cash not yet handed in. The SOP rule is to remit the same day, so
+            anything above zero is a prompt, not just information. */}
+        <StatTile
+          label="Cash on hand"
+          value={peso(onHand)}
+          alert={onHand > 0}
+        />
       </div>
 
       <SectionCard
@@ -308,6 +332,8 @@ async function AdminBoard() {
     { data: dayRollup },
     { data: advances },
     { data: worklist },
+    { data: positions },
+    { data: candidates },
   ] = await Promise.all([
     supabase
       .from("collection_entries")
@@ -336,6 +362,10 @@ async function AdminBoard() {
       .in("followup_tier", ["overdue", "demand"])
       .order("overdue_amount", { ascending: false })
       .limit(60),
+    supabase.from("v_collector_remittance").select("*"),
+    // Payments that already exist for a pending entry — the admin records most
+    // payments on the Contracts tab, which leaves the entry stranded here.
+    supabase.from("v_entry_payment_candidates").select("*"),
   ]);
 
   const collectorList = collectors ?? [];
@@ -346,17 +376,34 @@ async function AdminBoard() {
     0
   );
   const requests = (advances ?? []).filter((a) => a.status === "requested");
+  const cashWithCollectors = (positions ?? []).reduce(
+    (s, p) => s + Number(p.cash_on_hand),
+    0
+  );
+  // One suggestion per entry — the view is already strict (same contract, exact
+  // amount, within a week), so the first match is the one to offer.
+  const matchByEntry = new Map(
+    (candidates ?? []).map((c) => [c.entry_id as string, c])
+  );
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-ink">Collections</h1>
-        <Link
-          href="/collections/report"
-          className="rounded-card border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
-        >
-          Daily report
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/collections/remittances"
+            className="rounded-card border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
+          >
+            Remittances
+          </Link>
+          <Link
+            href="/collections/report"
+            className="rounded-card border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
+          >
+            Daily report
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -367,16 +414,19 @@ async function AdminBoard() {
           value={String(requests.length)}
           alert={requests.length > 0}
         />
+        {/* Replaces the old "Collectors active" headcount — how much field cash
+            is unaccounted for is the number worth watching. */}
         <StatTile
-          label="Collectors active"
-          value={String(collectorList.length)}
+          label="Cash with collectors"
+          value={peso(cashWithCollectors)}
+          alert={cashWithCollectors > 0}
         />
       </div>
 
       {/* To-post queue */}
       <SectionCard
         title="To post"
-        sub="Collected entries logged by collectors — post to record the payment and print the receipt."
+        sub="Collected entries logged by collectors. If you already recorded the payment on the contract, link it here instead of posting again."
       >
         {(pending ?? []).length === 0 ? (
           <p className="py-4 text-center text-sm text-muted">
@@ -384,32 +434,60 @@ async function AdminBoard() {
           </p>
         ) : (
           <div className="space-y-2">
-            {(pending ?? []).map((e) => (
-              <div
-                key={e.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-surface px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-ink">
-                    {e.contract?.customer?.display_name ?? "—"} ·{" "}
-                    {peso(e.amount)}
+            {(pending ?? []).map((e) => {
+              const match = matchByEntry.get(e.id);
+              return (
+                <div
+                  key={e.id}
+                  className={`flex flex-wrap items-center justify-between gap-2 rounded-card px-3 py-2 ${
+                    match ? "bg-warning-bg" : "bg-surface"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-ink">
+                      {e.contract?.customer?.display_name ?? "—"} ·{" "}
+                      {peso(e.amount)}
+                    </div>
+                    <div className="truncate text-xs text-muted">
+                      #{e.contract?.contract_no} · {e.method}
+                      {e.reference_no ? ` · ${e.reference_no}` : ""} ·{" "}
+                      {collectorName(e.collector_id)}
+                    </div>
+                    {match && (
+                      <div className="mt-0.5 text-xs font-medium text-ink">
+                        Already recorded as {match.payment_no} on{" "}
+                        {fmtDateShort(match.payment_date)}
+                        {match.receipt_no ? ` · receipt ${match.receipt_no}` : ""}
+                        {" — link it instead of posting again."}
+                      </div>
+                    )}
                   </div>
-                  <div className="truncate text-xs text-muted">
-                    #{e.contract?.contract_no} · {e.method}
-                    {e.reference_no ? ` · ${e.reference_no}` : ""} ·{" "}
-                    {collectorName(e.collector_id)}
+                  <div className="flex items-center gap-2">
+                    {match && (
+                      <LinkPaymentButton
+                        entryId={e.id}
+                        paymentId={match.payment_id}
+                        paymentNo={match.payment_no}
+                      />
+                    )}
+                    <PostEntryDialog
+                      entryId={e.id}
+                      amountLabel={peso(e.amount)}
+                      defaultReceiptType={e.contract?.item_type}
+                      duplicateOf={
+                        match
+                          ? {
+                              paymentNo: match.payment_no,
+                              paymentDate: match.payment_date,
+                            }
+                          : null
+                      }
+                    />
+                    <CancelEntryButton entryId={e.id} />
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <PostEntryDialog
-                    entryId={e.id}
-                    amountLabel={peso(e.amount)}
-                    defaultReceiptType={e.contract?.item_type}
-                  />
-                  <CancelEntryButton entryId={e.id} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </SectionCard>

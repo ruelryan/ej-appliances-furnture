@@ -60,12 +60,20 @@ export default async function CollectorReportPage({
         <h1 className="text-xl font-semibold text-ink">
           Daily report — {fmtDateShort(day)}
         </h1>
-        <Link
-          href="/collections"
-          className="rounded-card border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
-        >
-          Back
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/collections/remittances"
+            className="rounded-card border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
+          >
+            Remittances
+          </Link>
+          <Link
+            href="/collections"
+            className="rounded-card border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-surface"
+          >
+            Back
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -80,9 +88,11 @@ export default async function CollectorReportPage({
       </div>
 
       {/* Remittance reconcile */}
+      {/* One day's activity. The running balance of what each collector still
+          owes lives on /collections/remittances. */}
       <SectionCard
-        title="Remittance"
-        sub="Cash collected must equal cash turned in. Online entries carry a reference; the admin posts each collected entry as a payment."
+        title="Activity by collector"
+        sub="What each collector took in on this day. Cash must match what they hand in — the running balance is on the Remittances page."
       >
         {rows.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted">

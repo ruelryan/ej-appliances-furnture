@@ -2,10 +2,11 @@
  * Full JSON backup of every production table.
  *   npx tsx scripts/backup-prod.ts
  *
- * Writes to C:\Users\ryan\Documents\eandj-data\backup-<YYYY-MM-DD-HHmm>\
- * (outside the repo — the dumps contain customer PII and must never be
- * committed). One <table>.json per table, plus manifest.json with row
- * counts and auth-users.json (auth accounts, no secrets).
+ * Writes to <home>\Documents\eandj-data\backup-<YYYY-MM-DD-HHmm>\ (outside the
+ * repo — the dumps contain customer PII and must never be committed), or to
+ * EANDJ_DATA_DIR if that is set. One <table>.json per table, plus
+ * manifest.json with row counts and auth-users.json (auth accounts, no
+ * secrets).
  *
  * The product-photos Storage bucket is NOT backed up — photos are
  * re-derivable from the pricelist import; noted in the manifest.
@@ -14,6 +15,7 @@
  * server-side count. Read-only: never writes to the database.
  */
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
@@ -26,7 +28,13 @@ const db = createClient(
   { auth: { persistSession: false } }
 );
 
-const OUT_ROOT = "C:\\Users\\ryan\\Documents\\eandj-data";
+// Resolved from the home directory rather than a hardcoded profile name: the
+// path was written on a machine whose Windows user was "ryan", so the script
+// failed outright on any other. EANDJ_DATA_DIR overrides for a data folder
+// kept somewhere else entirely.
+const OUT_ROOT =
+  process.env.EANDJ_DATA_DIR ??
+  path.join(os.homedir(), "Documents", "eandj-data");
 
 // Every table in migrations 0001–0027, with a stable sort column so
 // paginated reads can't overlap or drop rows (PostgREST caps at 1000).

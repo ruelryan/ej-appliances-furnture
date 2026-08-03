@@ -666,6 +666,7 @@ async function main() {
     ["lead", "leads", "lead_no"],
     ["repricing", "contract_repricings", "amendment_no"],
     ["delivery", "deliveries", "delivery_no"],
+    ["remittance", "remittances", "remit_no"],
   ] as const) {
     const { data } = await db.from(table).select(column).order(column, { ascending: false }).limit(1);
     const top = (data?.[0] as Record<string, string> | undefined)?.[column];

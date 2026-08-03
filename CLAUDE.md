@@ -12,20 +12,24 @@ copy of the old script: `C:\Users\ryan\Downloads\eandjappscript.txt`). Owner:
 Ryan (ruelryanrosal@gmail.com) — not a professional developer; explain
 technical trade-offs plainly and confirm before destructive actions.
 
-## Status (2026-07-21)
+## Status (2026-08-03)
 
 - **Deployed to Vercel**: https://eandj-chi.vercel.app. **Cutover is done** —
   the Sheet was re-imported on 2026-07-20: **1,511 contracts, 1,127 customers,
   5,901 payments (₱24,256,852.39, reconciled to the centavo)**. The Sheet is no
   longer the source of truth; anything recorded there now is a divergence.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
-  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0028 applied to
-  prod**. Catalog: **134 products**, all with photos and perceptual hashes
+  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0028 and 0030
+  applied to prod** (0029 is still pending — see below). Catalog: **134 products**, all with photos and perceptual hashes
   (seeded by `scripts/import-pricelist.ts`; 12 duplicates merged out).
-- GitHub: `ruelryan/ej-appliances-furnture`. Active work is on
-  **`redesign/fintech-light`**, which deploys from local via `vercel --prod`
-  (linked project "eandj"). **`main` lags behind** — merge deliberately.
-  An older Vite prototype is parked on `old-vite-app`.
+- GitHub: `ruelryan/ej-appliances-furnture`. `redesign/fintech-light` has been
+  merged into **`main`** (4dee47a) and its local branch deleted — main is now
+  current. Two branches are in flight off main:
+  **`security/rls-and-rpc-hardening`** (0029, still uncommitted — see below) and
+  **`feat/collector-remittances`** (0030, committed and applied). They are
+  independent; 0030 touches no object 0029 changes.
+  Deploys go from local via `vercel --prod` (linked project "eandj"). An older
+  Vite prototype is parked on `old-vite-app` (remote only).
 - **Users are now real**: owner Ruel Ryan Rosal, admin Analyn Clemente,
   collector Roger Dasal. The four sample/test accounts were hard-deleted
   2026-07-20 (archive: `eandj-data/deleted-test-accounts.json`).
@@ -34,16 +38,32 @@ technical trade-offs plainly and confirm before destructive actions.
   repricing (0022), structured addresses + collector GPS (0023), product
   typeahead + duplicate review (0024), meal allowance + 13th-month pay (0026),
   and retiring the hand-typed collection status for a derived one + owner-only
-  repossession stage (0027).
-- New but **not yet committed** (untracked in the working tree): the `docs/`
-  developer reference, the Playwright e2e suite (`e2e/`, `playwright.config.ts`,
-  `scripts/e2e/`), and the rewritten `scripts/backup-prod.ts`.
-- **Roger Dasal** starts as collector 2026-07-22 (Mon–Wed, 3-day week). Rate
+  repossession stage (0027), and collector remittances + entry↔payment linking
+  (0030).
+- The `docs/` developer reference, the Playwright e2e suite and the rewritten
+  `scripts/backup-prod.ts` are now committed (4f3bb78, 9e24f0b).
+- **In flight on `security/rls-and-rpc-hardening` — uncommitted, and 0029 NOT
+  yet applied to prod** (verified live 2026-08-03: `profiles.role` default is
+  still `'staff'`, old policies in place). The branch holds migration
+  `0029_security_hardening.sql` (customers writes narrowed to owner/admin;
+  client EXECUTE revoked on `payslip_recompute`/`next_counter`;
+  `search_products`/`find_duplicate_candidates` now honour `is_active_user()`;
+  `handle_new_user` creates profiles INACTIVE with least-privilege role
+  `collector`) plus paired code changes: `createUser` in `admin/actions.ts`
+  sets `active: true` (**deploy the code before or with the migration**, or
+  new /admin users land inert), the CSV export route now paginates past the
+  1,000-row cap and escapes formula-starting cells, and
+  `src/lib/supabase/filters.ts` (quote helpers against `.or()` filter-grammar
+  injection — written but **not yet imported anywhere**). The same audit's
+  financial-integrity findings (overpayment caps, the `post_collection_entry`
+  double-post race, `close_contract`, repricing re-validation) were
+  deliberately deferred to a later migration — they change business behaviour.
+- **Roger Dasal** started as collector 2026-07-22 (Mon–Wed, 3-day week). Rate
   ₱56.25/hr and ₱100/day meal allowance are set; **24 Tomas Oppus accounts
-  assigned**. Still open (human, not a commit): his contract needs signing
-  *before* he works (Art. 296), and his SSS/PhilHealth/Pag-IBIG **amounts** are
-  still zero so his 16–end slip deducts nothing. Contract + onboarding drafts
-  live in the session scratchpad. See "Legal watch-outs" below.
+  assigned**. Still open (human, not a commit — re-verified in prod
+  2026-08-03): his SSS/PhilHealth/Pag-IBIG **amounts are all still zero**, so
+  his 16–end slips deduct nothing; whether his contract was signed before he
+  started (Art. 296) is unconfirmed. See "Legal watch-outs" below.
 
 ## Commands
 
@@ -177,8 +197,28 @@ prove via `audit_log` that read-only runs wrote nothing.
   which are NOT payments until owner/admin `post_collection_entry` posts them
   via `record_payment`. Cash advances tracked issue→close
   (`cash_advances`/`cash_advance_expenses`). Accountability = daily report
-  (`v_collector_day`, `/collections/report`) + remittance reconcile, no
-  per-visit GPS. Routes `/collections`, `/collections/report`.
+  (`v_collector_day`, `/collections/report`) + the remittance ledger (0030), no
+  per-visit GPS. Routes `/collections`, `/collections/report`,
+  `/collections/remittances`.
+- **Collector remittances** (0030): `remittances` (`RMT####`) is one row per
+  hand-over of field cash; `v_collector_remittance.cash_on_hand` = cash
+  collected − remitted, per collector. Three deliberate properties: entry
+  **status is irrelevant** (pending and posted both count — posting is
+  bookkeeping, the cash is in the bag until handed over); **online contributes
+  zero** (GCash goes straight to the office — performance, but nothing to
+  remit); **a voided payment does not refund custody** (cancel the *entry* if
+  the cash never existed). `record_remittance` owner/admin,
+  `cancel_remittance` **owner-only**; never deleted. No opening balances were
+  seeded — an assumed "settled on paper" row would record a hand-over the app
+  never witnessed. `v_collector_month` is the history.
+  **`post_collection_entry` and the Contracts tab are the same act** — both
+  call `record_payment`, so doing both creates two payments for one collection.
+  The house workflow is the Contracts tab, which strands the collector's entry
+  as a ghost in the to-post queue; `v_entry_payment_candidates` finds those
+  pairs (same contract, exact amount, ±7 days, unvoided, unlinked) and
+  `link_collection_payment` closes the entry against the payment that already
+  exists, **creating nothing**. Posting a matched entry is still possible but
+  the dialog warns in red.
 - **Commission & leads** (0013): assign an agent to a contract
   (`set_contract_agent`); a `commissions` row (one/contract, 10% of
   `cash_price` snapshot) goes pending→earned (when downpayment fully paid, per
@@ -364,7 +404,10 @@ These shaped real code. Do not "simplify" them away.
   other series restarts at #0001 and collides with surviving rows — after the
   2026-07-20 cutover, adding *any* product or task failed. 0025 repairs all
   counters from the rows present; `import.ts` now reseeds them. Re-run 0025 if
-  a future import misbehaves (it is idempotent).
+  a future import misbehaves (it is idempotent). **Both lists are hardcoded**,
+  so a migration that adds a new `next_counter` series must add it to
+  `import.ts` AND ship its own repair block — 0030 does exactly that for
+  `remittance`, and re-running 0030 is the remedy for that series.
 - **Fuzzy search: use `word_similarity`, not `similarity`.** `similarity()`
   normalises over the whole string, so a short query against a long product
   name barely separates ("sharp tv 32" scored 0.35 vs the right TVs and 0.09 vs
@@ -387,7 +430,10 @@ These shaped real code. Do not "simplify" them away.
 - `middleware.ts` is deprecated in Next 16 (works; rename to proxy.ts only
   deliberately — it's the auth gate).
 - Migration CSVs, reports and DB backups live OUTSIDE the repo in
-  `C:\Users\ryan\Documents\eandj-data\` (customer PII — never commit). That
+  `<home>\Documents\eandj-data\` (customer PII — never commit) — on the current
+  machine `C:\Users\ACER\Documents\eandj-data\`. `backup-prod.ts` had this
+  hardcoded to a `ryan` profile and failed outright on any other machine; it
+  now resolves from `os.homedir()`, with `EANDJ_DATA_DIR` to override. That
   folder holds the timestamped `backup-*/` JSON snapshots, the Sheet exports,
   `migration-report.md` and `address-backfill-report.md` (which lists the 109
   customers still needing a barangay chosen by hand).

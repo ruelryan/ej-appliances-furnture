@@ -9,8 +9,8 @@ Defined by the CHECK constraint on `profiles.role` (migration 0011) and the `Rol
 | Role | Person (2026-07) | What it is for |
 |---|---|---|
 | `owner` | Ruel Ryan Rosal | Everything. Sole access to analytics, user management, DTR settings, payroll finalization, 13th-month, contract editing, voiding payments, closing contracts, repossession stages. |
-| `admin` | Analyn Clemente | The admin assistant. Posts payments and receipts, creates contracts, posts collectors' logged collections into payments, manages products/deliveries/suppliers/leads, edits customer links and addresses. Everywhere SQL says `can_post_payments()`, admin qualifies alongside owner. |
-| `collector` | Roger Dasal | Works an assigned, priority-ordered worklist; logs collection visits (`log_collection`) which are NOT payments until an owner/admin posts them; requests cash advances; may tag GPS/landmarks for customers on their own worklist. **Never posts payments** — that is enforced in `record_payment` itself. Sees only contracts assigned to them. |
+| `admin` | Analyn Clemente | The admin assistant. Posts payments and receipts, creates contracts, posts collectors' logged collections into payments (or links them to a payment already recorded — `link_collection_payment`), records cash remittances from collectors, manages products/deliveries/suppliers/leads, edits customer links and addresses. Everywhere SQL says `can_post_payments()`, admin qualifies alongside owner. |
+| `collector` | Roger Dasal | Works an assigned, priority-ordered worklist; logs collection visits (`log_collection`) which are NOT payments until an owner/admin posts them; requests cash advances; may tag GPS/landmarks for customers on their own worklist. Sees their own remittance balance but **cannot record or cancel one** — the office receives the cash, so the office records it. **Never posts payments** — that is enforced in `record_payment` itself. Sees only contracts assigned to them. |
 | `sales_agent` | (none currently) | Restricted read-only: their own contracts, commissions, and the customers tied to their own deals. May submit leads. Cannot see other customers' PII (RLS on `customers` narrows for this role specifically). |
 | `delivery` | (none currently) | The delivery queue: sees all contracts (needed for fulfilment), marks availability and delivery, links products. |
 | `staff` | legacy | The pre-0011 catch-all, migrated to `admin`; kept in the CHECK constraint and in the TS `canPostPayments` during transition. Not offered in the /admin role picker. |
@@ -28,7 +28,7 @@ These are the gates as actually written in each `page.tsx` (verified against the
 | `/payroll/13th-month` | yes | – | – | – | – | `role !== "owner"` → `/` |
 | `/contracts/[id]/edit` | yes | – | – | – | – | `role !== "owner"` → `/contracts/[id]` |
 | `/products`, `/products/review` | yes | yes | – | – | – | owner/admin/staff (review uses `canPostPayments`) → else `/` |
-| `/collections`, `/collections/report`, `/collections/sop` | yes | yes | yes | – | – | collector or owner/admin/staff → else `/` |
+| `/collections`, `/collections/report`, `/collections/remittances`, `/collections/sop` | yes | yes | yes | – | – | collector or owner/admin/staff → else `/` |
 | `/deliveries` | yes | yes | – | – | yes | delivery or owner/admin/staff → else `/` |
 | `/commissions`, `/leads` | yes | yes | – | yes | – | owner/admin/staff or sales_agent → else `/` |
 | `/api/export/[dataset]` | yes | – | – | – | – | `role !== "owner"` → 403 response |
