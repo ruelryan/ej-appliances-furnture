@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient, getProfile } from "@/lib/supabase/server";
+import { canPostPayments, createClient, getProfile } from "@/lib/supabase/server";
 import { peso, phTodayISO, fmtDateShort } from "@/lib/format";
 import { SectionCard } from "@/components/section-card";
 import { StatTile } from "@/components/stat-tile";
@@ -25,7 +25,7 @@ export default async function CollectorReportPage({
 
   const role = profile.role;
   const isCollector = role === "collector";
-  const canPost = role === "owner" || role === "admin" || role === "staff";
+  const canPost = canPostPayments(role);
   if (!isCollector && !canPost) redirect("/");
 
   const { date } = await searchParams;

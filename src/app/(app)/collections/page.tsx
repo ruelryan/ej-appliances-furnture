@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient, getProfile } from "@/lib/supabase/server";
+import { canPostPayments, createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDateShort, phTodayISO } from "@/lib/format";
 import { buildFollowupMessage, type ContractFinancials } from "@/lib/messages";
 import { directionsUrl, hasExactPin } from "@/lib/maps";
@@ -37,7 +37,7 @@ export default async function CollectionsPage() {
 
   const role = profile.role;
   const isCollector = role === "collector";
-  const canPost = role === "owner" || role === "admin" || role === "staff";
+  const canPost = canPostPayments(role);
   if (!isCollector && !canPost) redirect("/"); // sales_agent / delivery
 
   return isCollector ? <CollectorBoard /> : <AdminBoard />;

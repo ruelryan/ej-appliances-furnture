@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient, getProfile } from "@/lib/supabase/server";
+import { canPostPayments, createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
 import { computeTerms, TERM_OPTIONS, termLabel } from "@/lib/amortization";
 import { buildFollowupMessage, type ContractFinancials } from "@/lib/messages";
@@ -63,10 +63,7 @@ export default async function ContractPage({
   const profile = await getProfile();
   const isOwner = profile?.role === "owner";
   const isDelivery = profile?.role === "delivery";
-  const canManage =
-    profile?.role === "owner" ||
-    profile?.role === "admin" ||
-    profile?.role === "staff";
+  const canManage = profile ? canPostPayments(profile.role) : false;
 
   const { data: c } = await supabase
     .from("v_contract_financials")

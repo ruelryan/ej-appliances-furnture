@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { notFound, redirect } from "next/navigation";
+import { createClient, getProfile } from "@/lib/supabase/server";
 import { fmtHours, monthLabel, periodLabel, peso } from "@/lib/format";
 import { Letterhead, SignatureBlocks } from "../../letterhead";
 import { PrintControls } from "../../print-controls";
@@ -14,6 +14,15 @@ export default async function PrintPayslipPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  // /print/* renders outside the authenticated shell and print/layout.tsx has
+  // no auth of its own, so each page carries its own gate. RLS decides WHICH
+  // rows come back (payslips_select: the owner, or your own final slips); this
+  // is what stops a deactivated account with a still-valid cookie from
+  // rendering at all, since getProfile returns null unless active.
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+
   const supabase = await createClient();
 
   const { data: slip } = await supabase

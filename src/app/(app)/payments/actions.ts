@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { quoteIlikePattern } from "@/lib/supabase/filters";
 
 export async function recordPayment(input: {
   contractId: string;
@@ -63,7 +64,12 @@ export async function searchContracts(term: string) {
       "id, contract_no, display_name, item_description, remaining_balance, monthly_amortization, payment_status"
     )
     .eq("payment_status", "open")
-    .or(`contract_no.ilike.%${q}%,display_name.ilike.%${q}%`)
+    // Quoted, not interpolated raw: .or() parses its whole argument as
+    // PostgREST's filter grammar, where a comma starts another condition. A
+    // search term containing one would otherwise add filters of its own.
+    .or(
+      `contract_no.ilike.${quoteIlikePattern(q)},display_name.ilike.${quoteIlikePattern(q)}`
+    )
     .order("display_name")
     .limit(10);
 

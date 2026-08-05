@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { notFound, redirect } from "next/navigation";
+import { createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDate } from "@/lib/format";
 import { Letterhead, SignatureBlocks } from "../../letterhead";
 import { PrintControls } from "../../print-controls";
@@ -12,6 +12,12 @@ export default async function ReceiptPage({
   params: Promise<{ paymentId: string }>;
 }) {
   const { paymentId } = await params;
+
+  // See the note in print/payslip: /print/* has no shared auth gate, and
+  // getProfile is what enforces `active`.
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+
   const supabase = await createClient();
 
   const { data: p } = await supabase

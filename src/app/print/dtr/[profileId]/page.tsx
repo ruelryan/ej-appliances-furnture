@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { notFound, redirect } from "next/navigation";
+import { createClient, getProfile } from "@/lib/supabase/server";
 import {
   fmtHours,
   fmtTime,
@@ -36,6 +36,11 @@ export default async function PrintDtrPage({
   const month = /^\d{4}-\d{2}$/.test(monthParam ?? "")
     ? (monthParam as string)
     : phTodayISO().slice(0, 7);
+
+  // See the note in print/payslip: /print/* has no shared auth gate, and
+  // getProfile is what enforces `active`.
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
 
   const supabase = await createClient();
 

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient, getProfile } from "@/lib/supabase/server";
+import { canPostPayments, createClient, getProfile } from "@/lib/supabase/server";
 import { SectionCard } from "@/components/section-card";
 import { StatTile } from "@/components/stat-tile";
 import { ProductCard, type Product } from "./product-card";
@@ -10,8 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function ProductsPage() {
   const profile = await getProfile();
   if (!profile) redirect("/login");
-  const canManage =
-    profile.role === "owner" || profile.role === "admin" || profile.role === "staff";
+  const canManage = canPostPayments(profile.role);
   if (!canManage) redirect("/");
 
   const supabase = await createClient();

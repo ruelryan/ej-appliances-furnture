@@ -32,7 +32,12 @@ export type Role =
   | "collector"
   | "sales_agent"
   | "delivery"
-  | "staff"; // legacy; migrated to 'admin' in 0011, kept for safety
+  // Legacy. 0011 migrated every staff row to admin and /admin will not assign
+  // it, but the value stays in the profiles CHECK constraint, so it stays in
+  // the union. It now carries NO capabilities — canPostPayments excludes it,
+  // matching can_post_payments() in SQL. The nav allowlists still list it, but
+  // those only decide which links are drawn.
+  | "staff";
 
 export interface Profile {
   id: string;
@@ -42,9 +47,15 @@ export interface Profile {
 }
 
 // Capability helpers — mirror the SQL guards so UI gating matches RLS.
-// owner + admin (and legacy staff) may post payments / create contracts.
+//
+// This must agree with can_post_payments() in 0011, which accepts owner and
+// admin ONLY. It used to include legacy 'staff' as a transition safety, which
+// made the two disagree: a staff user was shown the full admin board and every
+// button on it errored, because the RPCs refuse them. There are no staff
+// accounts left — the 0011 migration moved them all to admin, and /admin will
+// not assign the role — so the asymmetry was protecting nobody.
 export function canPostPayments(role: Role): boolean {
-  return role === "owner" || role === "admin" || role === "staff";
+  return role === "owner" || role === "admin";
 }
 export function isOwnerRole(role: Role): boolean {
   return role === "owner";

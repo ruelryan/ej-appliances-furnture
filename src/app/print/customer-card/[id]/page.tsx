@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { notFound, redirect } from "next/navigation";
+import { createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDate, fmtDateShort } from "@/lib/format";
 import { formatAddress } from "@/lib/maps";
 import { termLabel } from "@/lib/amortization";
@@ -14,6 +14,12 @@ export default async function CustomerCardPrintPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  // See the note in print/payslip: /print/* has no shared auth gate, and
+  // getProfile is what enforces `active`.
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+
   const supabase = await createClient();
 
   const { data: c } = await supabase

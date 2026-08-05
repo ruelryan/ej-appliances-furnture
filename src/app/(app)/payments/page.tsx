@@ -3,6 +3,7 @@ import { createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
 import { RestorePaymentButton, VoidPaymentButton } from "./void-button";
 import { btnPrimary, btnSecondary, input } from "@/components/ui";
+import { quoteIlikePattern } from "@/lib/supabase/filters";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,12 @@ export default async function PaymentsPage({
     .limit(100);
 
   if (q.trim()) {
-    query = query.or(`payment_no.ilike.%${q.trim()}%,receipt_no.ilike.%${q.trim()}%`);
+    // Quoted: inside .or() the argument is PostgREST filter grammar, where a
+    // comma in the search term would start a condition of its own.
+    const pattern = quoteIlikePattern(q.trim());
+    query = query.or(
+      `payment_no.ilike.${pattern},receipt_no.ilike.${pattern}`
+    );
   }
 
   const { data: payments } = await query;

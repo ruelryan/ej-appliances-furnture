@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient, getProfile } from "@/lib/supabase/server";
+import { canPostPayments, createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDateShort, monthLabel, phTodayISO } from "@/lib/format";
 import { SectionCard } from "@/components/section-card";
 import { StatTile } from "@/components/stat-tile";
@@ -54,12 +54,14 @@ export default async function RemittancesPage({
 
   const role = profile.role;
   const isCollector = role === "collector";
-  const canPost = role === "owner" || role === "admin" || role === "staff";
+  const canPost = canPostPayments(role);
   if (!isCollector && !canPost) redirect("/");
 
-  // Only owner/admin may write; staff can look but not touch (can_post_payments
-  // excludes them in SQL anyway — this just keeps the buttons off their screen).
-  const canRecord = role === "owner" || role === "admin";
+  // Same predicate as the page gate. These were two different definitions of
+  // the admin tier four lines apart — canPost included legacy staff, canRecord
+  // did not — so a staff user reached the page and found the write controls
+  // missing rather than refused. Both now mirror can_post_payments() in SQL.
+  const canRecord = canPost;
   const isOwner = role === "owner";
 
   const { month } = await searchParams;

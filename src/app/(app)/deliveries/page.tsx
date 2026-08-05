@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient, getProfile } from "@/lib/supabase/server";
+import { canPostPayments, createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
 import { formatAddress, directionsUrl, hasExactPin } from "@/lib/maps";
 import { SectionCard } from "@/components/section-card";
@@ -37,7 +37,7 @@ export default async function DeliveriesPage({
   if (!profile) redirect("/login");
   const role = profile.role;
   const isDelivery = role === "delivery";
-  const canManage = role === "owner" || role === "admin" || role === "staff";
+  const canManage = canPostPayments(role);
   if (!isDelivery && !canManage) redirect("/");
 
   const { tab = "active" } = await searchParams;

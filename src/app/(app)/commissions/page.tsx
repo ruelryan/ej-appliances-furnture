@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient, getProfile } from "@/lib/supabase/server";
+import { canPostPayments, createClient, getProfile } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
 import { SectionCard } from "@/components/section-card";
 import { StatTile } from "@/components/stat-tile";
@@ -31,7 +31,7 @@ export default async function CommissionsPage({
   const profile = await getProfile();
   if (!profile) redirect("/login");
   const role = profile.role;
-  const canManage = role === "owner" || role === "admin" || role === "staff";
+  const canManage = canPostPayments(role);
   const isAgent = role === "sales_agent";
   if (!canManage && !isAgent) redirect("/");
 

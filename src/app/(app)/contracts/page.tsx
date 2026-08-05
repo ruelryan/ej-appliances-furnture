@@ -4,6 +4,7 @@ import { peso, fmtDateShort } from "@/lib/format";
 import { TierBadge } from "@/components/tier-badge";
 import { PaidProgress } from "@/components/paid-progress";
 import { btnPrimary, btnSecondary, input } from "@/components/ui";
+import { quoteIlikePattern } from "@/lib/supabase/filters";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,11 @@ export default async function ContractsPage({
 
   const term = q.trim();
   if (term) {
+    // Quoted: inside .or() the argument is PostgREST filter grammar, where a
+    // comma in the search term would start a condition of its own.
+    const pattern = quoteIlikePattern(term);
     query = query.or(
-      `contract_no.ilike.%${term}%,display_name.ilike.%${term}%,item_description.ilike.%${term}%`
+      `contract_no.ilike.${pattern},display_name.ilike.${pattern},item_description.ilike.${pattern}`
     );
   }
 
