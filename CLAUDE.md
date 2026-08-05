@@ -12,7 +12,7 @@ copy of the old script: `C:\Users\ryan\Downloads\eandjappscript.txt`). Owner:
 Ryan (ruelryanrosal@gmail.com) — not a professional developer; explain
 technical trade-offs plainly and confirm before destructive actions.
 
-## Status (2026-08-03)
+## Status (2026-08-05)
 
 - **Deployed to Vercel**: https://eandj-chi.vercel.app. **Cutover is done** —
   the Sheet was re-imported on 2026-07-20: **1,511 contracts, 1,127 customers,
@@ -24,10 +24,15 @@ technical trade-offs plainly and confirm before destructive actions.
   (seeded by `scripts/import-pricelist.ts`; 12 duplicates merged out).
 - GitHub: `ruelryan/ej-appliances-furnture`. `redesign/fintech-light` has been
   merged into **`main`** (4dee47a) and its local branch deleted — main is now
-  current. Two branches are in flight off main:
-  **`security/rls-and-rpc-hardening`** (0029, still uncommitted — see below) and
-  **`feat/collector-remittances`** (0030, committed and applied). They are
-  independent; 0030 touches no object 0029 changes.
+  current. Branch state (verified 2026-08-05):
+  **`feat/collector-remittances`** is checked out, holds 0030 (committed as
+  e655219, pushed to origin, applied to prod) and is **not yet merged to main**;
+  **`security/rls-and-rpc-hardening`** exists but is **empty — zero commits
+  ahead of main**. The 0029 security work is **uncommitted in the working tree
+  of `feat/collector-remittances`**, not on the branch named for it. Uncommitted
+  changes follow a `git checkout`, so switching branches carries the security
+  work along — commit or stash it deliberately before moving. The two changesets
+  are independent (0030 touches no object 0029 changes).
   Deploys go from local via `vercel --prod` (linked project "eandj"). An older
   Vite prototype is parked on `old-vite-app` (remote only).
 - **Users are now real**: owner Ruel Ryan Rosal, admin Analyn Clemente,
@@ -42,9 +47,9 @@ technical trade-offs plainly and confirm before destructive actions.
   (0030).
 - The `docs/` developer reference, the Playwright e2e suite and the rewritten
   `scripts/backup-prod.ts` are now committed (4f3bb78, 9e24f0b).
-- **In flight on `security/rls-and-rpc-hardening` — uncommitted, and 0029 NOT
-  yet applied to prod** (verified live 2026-08-03: `profiles.role` default is
-  still `'staff'`, old policies in place). The branch holds migration
+- **In flight — uncommitted in the working tree, and 0029 NOT yet applied to
+  prod** (verified live 2026-08-03: `profiles.role` default is
+  still `'staff'`, old policies in place). The changeset is migration
   `0029_security_hardening.sql` (customers writes narrowed to owner/admin;
   client EXECUTE revoked on `payslip_recompute`/`next_counter`;
   `search_products`/`find_duplicate_candidates` now honour `is_active_user()`;
@@ -60,7 +65,7 @@ technical trade-offs plainly and confirm before destructive actions.
   deliberately deferred to a later migration — they change business behaviour.
 - **Roger Dasal** started as collector 2026-07-22 (Mon–Wed, 3-day week). Rate
   ₱56.25/hr and ₱100/day meal allowance are set; **24 Tomas Oppus accounts
-  assigned**. Still open (human, not a commit — re-verified in prod
+  assigned**. Still open (human, not a commit — last verified in prod
   2026-08-03): his SSS/PhilHealth/Pag-IBIG **amounts are all still zero**, so
   his 16–end slips deduct nothing; whether his contract was signed before he
   started (Art. 296) is unconfirmed. See "Legal watch-outs" below.
@@ -79,13 +84,23 @@ npx tsx scripts/verify-sql-terms.ts       # SQL math vs golden fixture
 npx tsx scripts/verify-dtr.ts             # DTR hours/holiday SQL vs fixtures
 npm run e2e:readonly                      # Playwright read-only suite — safe any time
 npm run e2e:writes   # Playwright write suite — WRITES TO PROD; full procedure in docs/testing.md
+npx tsx scripts/e2e/setup-test-users.ts --apply   # create test-*@eandj.test → .env.e2e
+npx tsx scripts/e2e/cleanup-test-data.ts          # remove rows the write suite created
+npx tsx scripts/e2e/teardown-test-users.ts        # delete the test accounts (same day)
 npx tsx scripts/backup-prod.ts            # full JSON dump of all tables → eandj-data\backup-*
 npx tsx scripts/migrate/import.ts --dir <csvs> [--load]  # Sheet re-import
 npx tsx scripts/extract-tabs.ts <book.xlsx|drive.json> <dir>  # Sheet tabs → CSVs
 npx tsx scripts/import-locations.ts --file <book.xlsx> [--load]  # seed ph_locations
+npx tsx scripts/import-pricelist.ts [--apply]       # seed catalog + photos + dHashes
+npx tsx scripts/import-products.ts [--apply]        # products from a plain list
+npx tsx scripts/create-owner.ts                     # bootstrap the first owner account
 npx tsx scripts/backfill-addresses.ts [--apply]     # free text → barangay/municipality
 npx tsx scripts/backfill-photo-hashes.ts [--apply]  # dHash existing product photos
 ```
+
+`npm run e2e` (bare) runs **both** suites — it writes to prod. Use the
+`:readonly` / `:writes` scripts, never the bare one. `npm test` only picks up
+`src/**/*.test.ts` (`vitest.config.ts`), so Playwright specs never leak in.
 
 One-off data scripts follow a house pattern: **dry run by default, `--apply` to
 write**, and they print a report before touching anything. They authenticate
@@ -120,6 +135,11 @@ prove via `audit_log` that read-only runs wrote nothing.
 
 ## Architecture (the rules that matter)
 
+- **Stack pins that change how you write code**: Next **16.2** (App Router;
+  read `node_modules/next/dist/docs/` before writing route/API code — see
+  AGENTS.md), React **19.2**, Tailwind **v4** (CSS-first — there is **no
+  `tailwind.config`**; tokens live in `@theme`/`:root` in
+  `src/app/globals.css`), Vitest 4, Playwright 1.61. Path alias `@/` → `src/`.
 - **Business math lives in exactly two synced places**, both tested against
   `GOLDEN_CASES` in `src/lib/amortization.ts`: SQL `compute_terms()` in
   `supabase/migrations/0001_schema.sql` and TS `computeTerms()`. Change both
