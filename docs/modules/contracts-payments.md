@@ -33,6 +33,8 @@ A cash/outright sale (0016) is not a separate model — it is a contract with `s
 
 (A fourth lookalike, `collection_entries.or_no` — the collector's *field* receipt booklet — belongs to [collections.md](collections.md); it is not any of these.)
 
+**Two limits, added in 0032.** `record_payment` refuses a contract whose `payment_status` is `closed`, and refuses any amount more than **₱100 above the outstanding balance**. Before that there was no ceiling at all, so a mistyped amount drove `remaining_balance` negative — and since `followup_tier` reads `≤ 0` as `on_track` and `collection_situation` as "Fully paid", an extra zero looked exactly like a customer who had finished paying, and the account silently left every worklist. The ₱100 allowance is there because a final payment routinely comes in a little over (the customer rounds up, or the collector adds a few pesos rather than make change at the door); it is far too narrow to hide a misplaced digit, which is the error worth catching. Cash sales are unaffected by construction — `term_months = 0` with downpayment = total = `cash_price`, so the single payment equals `total_price` exactly.
+
 **Payments are never deleted.** `void_payment(p_payment_id, p_reason)` stamps `voided_at`/`voided_by`/`void_reason`; `unvoid_payment` clears them. Both are **owner-only** — stricter than recording, which admin can also do. Every financial view filters `voided_at is null`, so voiding a payment instantly moves every derived number (balance, tier, commission earning, analytics) without touching any row but the payment's own. The `/print/receipt/[paymentId]` page renders the acknowledgment for a recorded payment.
 
 ## Time-dependent numbers and the follow-up tiers
@@ -67,7 +69,7 @@ After 0027 a contract carries exactly four status signals, and only two are manu
 |---|---|---|
 | `followup_tier` | **Auto** (view) | Money + dates: closed / on_track / overdue / demand |
 | `collection_situation` | **Auto** (view) | Human-readable situation derived from the tier, the repossession stage (which dominates when set), and the latest non-cancelled collection entry — e.g. "Promised to pay Jul 26", "Not reached (last tried Jul 18)", "Overdue — no visit logged" |
-| `payment_status` | Manual, owner | `open` / `closed` — the owner closes a finished contract (`close_contract`, or the edit page) |
+| `payment_status` | Manual, owner | `open` / `closed` — the owner closes a finished contract (`close_contract`, or the edit page). Since 0032 `close_contract` raises if the contract is missing or already closed rather than silently doing nothing, and a `closed` contract refuses new payments. There is no reopen RPC: the owner sets the status back on the edit page. Closing with a balance outstanding is still allowed — a write-off, a settlement, or a repossession all end a contract with money on the books. |
 | `repossession_stage` | Manual, owner | The pipeline above |
 
 The old hand-typed `collection_status` text column, its `StatusForm`, the `update_contract_status` RPC, and the `COLLECTION_STATUSES` constant were **deleted** in 0027 — the column was blank on 95% of rows, nothing read it as logic, and collectors couldn't see it. Do not reintroduce a hand-typed status; if a new situation needs surfacing, extend the `collection_situation` derivation. (`delivery_status` still exists on contracts but is a trigger-synced legacy label owned by [deliveries-inventory-products.md](deliveries-inventory-products.md), never hand-edited.)

@@ -20,19 +20,17 @@ technical trade-offs plainly and confirm before destructive actions.
   longer the source of truth; anything recorded there now is a divergence.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
   `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0028 and 0030
-  applied to prod** (0029 is still pending — see below). Catalog: **134 products**, all with photos and perceptual hashes
+  applied to prod**; **0029, 0031 and 0032 are committed but NOT yet applied**
+  — see below. Catalog: **134 products**, all with photos and perceptual hashes
   (seeded by `scripts/import-pricelist.ts`; 12 duplicates merged out).
 - GitHub: `ruelryan/ej-appliances-furnture`. `redesign/fintech-light` has been
   merged into **`main`** (4dee47a) and its local branch deleted — main is now
-  current. Branch state (verified 2026-08-05):
-  **`feat/collector-remittances`** is checked out, holds 0030 (committed as
-  e655219, pushed to origin, applied to prod) and is **not yet merged to main**;
-  **`security/rls-and-rpc-hardening`** exists but is **empty — zero commits
-  ahead of main**. The 0029 security work is **uncommitted in the working tree
-  of `feat/collector-remittances`**, not on the branch named for it. Uncommitted
-  changes follow a `git checkout`, so switching branches carries the security
-  work along — commit or stash it deliberately before moving. The two changesets
-  are independent (0030 touches no object 0029 changes).
+  current. Branch state (2026-08-05): **`feat/collector-remittances`** is
+  checked out and holds 0030 (e655219, pushed, applied to prod) plus the whole
+  security/integrity audit — 0029, 0031, 0032 and the app-layer cleanup, all
+  committed locally, **none pushed, none applied to prod, nothing merged to
+  main**. **`security/rls-and-rpc-hardening`** exists but is **empty — zero
+  commits ahead of main**; the 0029 work never lived there despite the name.
   Deploys go from local via `vercel --prod` (linked project "eandj"). An older
   Vite prototype is parked on `old-vite-app` (remote only).
 - **Users are now real**: owner Ruel Ryan Rosal, admin Analyn Clemente,
@@ -47,22 +45,46 @@ technical trade-offs plainly and confirm before destructive actions.
   (0030).
 - The `docs/` developer reference, the Playwright e2e suite and the rewritten
   `scripts/backup-prod.ts` are now committed (4f3bb78, 9e24f0b).
-- **In flight — uncommitted in the working tree, and 0029 NOT yet applied to
-  prod** (verified live 2026-08-03: `profiles.role` default is
-  still `'staff'`, old policies in place). The changeset is migration
-  `0029_security_hardening.sql` (customers writes narrowed to owner/admin;
-  client EXECUTE revoked on `payslip_recompute`/`next_counter`;
-  `search_products`/`find_duplicate_candidates` now honour `is_active_user()`;
-  `handle_new_user` creates profiles INACTIVE with least-privilege role
-  `collector`) plus paired code changes: `createUser` in `admin/actions.ts`
-  sets `active: true` (**deploy the code before or with the migration**, or
-  new /admin users land inert), the CSV export route now paginates past the
-  1,000-row cap and escapes formula-starting cells, and
-  `src/lib/supabase/filters.ts` (quote helpers against `.or()` filter-grammar
-  injection — written but **not yet imported anywhere**). The same audit's
-  financial-integrity findings (overpayment caps, the `post_collection_entry`
-  double-post race, `close_contract`, repricing re-validation) were
-  deliberately deferred to a later migration — they change business behaviour.
+- **Security + integrity audit (2026-08-05) — committed, NOT applied to prod.**
+  Four commits on the current branch, to be applied in order:
+  - **0029 security hardening.** Only ONE `revoke execute` existed in the whole
+    schema (`0010:127`), and Postgres grants EXECUTE to `PUBLIC` by default, so
+    four SECURITY DEFINER functions with no auth check were callable by anyone
+    holding the anon key from the browser bundle: `search_products` and
+    `find_duplicate_candidates` (catalogue + selling price + stock),
+    `next_counter` (burn the `PAY####` series, leaving gaps that read as
+    deleted payments), `payslip_recompute` (rewrite a finalised payslip from
+    live rates, inflating the 13th-month base). Also narrows `customers`
+    writes to owner/admin (a bare `is_active_user()` walked around four RPCs
+    via direct PATCH), scopes `contract_repricings`/`contract_notes`/
+    `thirteenth_month_payments`, and makes `handle_new_user` create profiles
+    INACTIVE with least privilege. Paired code: `createUser` sets
+    `active: true` — **deploy the code before or with the migration** or new
+    /admin users land inert — plus export-route pagination + CSV-injection
+    escaping and `src/lib/supabase/filters.ts`.
+  - **0031 collection integrity.** The `post_collection_entry` double-post race
+    (now `for update` + a conditional write), an amount/date check on
+    `link_collection_payment` (it compared only `contract_id`, so a ₱10,000
+    entry could close against a ₱500 payment), a **unique index** on
+    `collection_entries.payment_id`, the new `unlink_collection_payment`, the
+    same read-then-write fix on `cancel_collection_entry`/
+    `mark_commission_paid`/`add_advance_expense`, **audit triggers on the four
+    cash tables**, `cancelled_cash` on the day/month views, and a fix so a role
+    change no longer deletes a collector's outstanding cash liability.
+  - **0032 payment caps.** `record_payment` refuses a closed contract and any
+    amount more than **₱100 over the balance**; `close_contract` no longer
+    fails silently. This is the only behaviour change staff will notice.
+  - **App-layer cleanup.** `canPostPayments` drops legacy `staff` to match
+    `can_post_payments()`, eight hand-typed role triples collapse into it,
+    `filters.ts` is wired into all three `.or()` searches, and the six ungated
+    print pages now require an active profile.
+
+  **Deliberately NOT changed:** the collector keeps self-cancel (a field
+  mis-key should be fixable by the person who made it — the control is the
+  audit trail plus `cancelled_cash` on the report); cash-advance expenses are
+  still uncapped (overspend-and-reimburse is legitimate, and it is now
+  audited); and collectors/delivery still read the whole customer book, which
+  `0013:462-463` chose on purpose.
 - **Roger Dasal** started as collector 2026-07-22 (Mon–Wed, 3-day week). Rate
   ₱56.25/hr and ₱100/day meal allowance are set; **24 Tomas Oppus accounts
   assigned**. Still open (human, not a commit — last verified in prod
@@ -393,6 +415,20 @@ These shaped real code. Do not "simplify" them away.
 
 ## Gotchas
 
+- **SELECT → check in plpgsql → UPDATE is the house bug.** It reads as correct
+  and is not: under READ COMMITTED two callers both pass the check. It caused
+  the `post_collection_entry` double-post (two payments for one bag of cash)
+  and the same shape was in `cancel_collection_entry`, `mark_commission_paid`
+  and `add_advance_expense`. In a money RPC either lock the row
+  (`select ... for update`) or put the predicate in the UPDATE
+  (`where id = $1 and status = 'pending'` + `if not found then raise`) — 0031
+  does both. And when an invariant spans two rows ("one payment, one entry"),
+  a pre-check cannot hold it: use a constraint. Also: **EXECUTE is granted to
+  `PUBLIC` by default**, so a new SECURITY DEFINER function is callable by
+  `anon` unless you `revoke` it or check the caller inside.
+- `audit_row_changes()` is `after update` only — **inserts are never audited**,
+  on any table. A row that is created and then cancelled leaves one audit
+  trail entry (the cancel), not two.
 - PowerShell 5.1 host: no `&&`; git messages with inner double quotes break —
   use single-quoted here-strings without embedded `"`.
 - PostgREST caps reads at 1000 rows — paginate with `.range()` for full scans,

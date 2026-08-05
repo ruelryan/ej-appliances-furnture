@@ -64,13 +64,19 @@ The TypeScript mirror lives in `src/lib/supabase/server.ts`:
 ```ts
 export type Role = "owner" | "admin" | "collector" | "sales_agent" | "delivery" | "staff";
 export function canPostPayments(role: Role): boolean {
-  return role === "owner" || role === "admin" || role === "staff";
+  return role === "owner" || role === "admin";
 }
 export function isOwnerRole(role: Role): boolean;
 export async function getProfile(): Promise<Profile | null>; // null unless the profile exists AND is active
 ```
 
-Note the deliberate asymmetry: the TS `canPostPayments` still includes legacy `staff` (a UI-side safety during the transition), while the SQL `can_post_payments()` accepts only owner/admin. Since all writes go through SQL, the SQL version is the one that decides.
+`canPostPayments` mirrors `can_post_payments()` exactly. It used to also include legacy `staff` as a transition safety, which made the two disagree: a staff user was routed to the full admin board and every button on it errored, because the RPCs refuse them. 0011 migrated every staff row to `admin` and `/admin` will not assign the role, so the asymmetry protected nobody — it was removed (0032-era cleanup). `staff` stays in the `Role` union because the `profiles` CHECK constraint still permits the value; it now carries **no capabilities**. The nav allowlists in `nav-links.tsx` still list it, but those only decide which links are drawn.
+
+The same commit replaced eight hand-typed `owner || admin || staff` triples with calls to `canPostPayments`, so there is one definition to keep in step with SQL rather than nine.
+
+### Print pages carry their own gate
+
+`src/app/print/*` renders outside the authenticated shell and `print/layout.tsx` has no auth logic, so **every print page must gate itself**. Two of them (`amendment`, `demand-letter`) gate on `canPostPayments` because *document-generation authority* is not something RLS expresses — RLS scopes which contracts you can read, not which documents you may produce and serve. The other six (`payslip`, `commission-statement`, `dtr`, `contract`, `customer-card`, `receipt`) require an active profile via `getProfile()`; RLS decides which rows come back, and the gate is what stops a deactivated account with a still-valid cookie from rendering anything.
 
 ## User lifecycle
 
