@@ -4,6 +4,7 @@ import { createClient, getProfile } from "@/lib/supabase/server";
 import { peso, phTodayISO, fmtDateShort } from "@/lib/format";
 import { SectionCard } from "@/components/section-card";
 import { StatTile } from "@/components/stat-tile";
+import { UnlinkEntryButton } from "../unlink-entry-button";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function CollectorReportPage({
   const { data: entries } = await supabase
     .from("collection_entries")
     .select(
-      "*, contract:contracts(contract_no, customer:customers(display_name))"
+      "*, contract:contracts(contract_no, customer:customers(display_name)), payment:payments(payment_no, voided_at)"
     )
     .eq("work_date", day)
     .order("collector_id")
@@ -53,6 +54,10 @@ export default async function CollectorReportPage({
   const totalOnline = rows.reduce((s, r) => s + Number(r.online_total), 0);
   const totalPosted = rows.reduce((s, r) => s + Number(r.posted_total), 0);
   const totalPending = rows.reduce((s, r) => s + Number(r.pending_total), 0);
+  // Cancelled collected cash. A cancelled entry leaves cash_on_hand, so this is
+  // the one number that can move a collector's balance without a hand-over —
+  // it belongs on screen rather than only in audit_log (0031).
+  const totalCancelled = rows.reduce((s, r) => s + Number(r.cancelled_cash), 0);
 
   return (
     <div className="space-y-5">
@@ -76,7 +81,7 @@ export default async function CollectorReportPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile label="Cash collected" value={peso(totalCash)} />
         <StatTile label="Online collected" value={peso(totalOnline)} />
         <StatTile label="Posted" value={peso(totalPosted)} />
@@ -85,6 +90,11 @@ export default async function CollectorReportPage({
           value={peso(totalPending)}
           alert={totalPending > 0}
         />
+        <StatTile
+          label="Cancelled cash"
+          value={peso(totalCancelled)}
+          alert={totalCancelled > 0}
+        />
       </div>
 
       {/* Remittance reconcile */}
@@ -92,7 +102,7 @@ export default async function CollectorReportPage({
           owes lives on /collections/remittances. */}
       <SectionCard
         title="Activity by collector"
-        sub="What each collector took in on this day. Cash must match what they hand in — the running balance is on the Remittances page."
+        sub="What each collector took in on this day. Cash must match what they hand in — the running balance is on the Remittances page. Cancelled cash was logged and then withdrawn, so it is no longer part of that balance: check it against the receipt booklet."
       >
         {rows.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted">
@@ -108,7 +118,8 @@ export default async function CollectorReportPage({
                   <th className="py-1.5 pr-3">Collected</th>
                   <th className="py-1.5 pr-3">Cash</th>
                   <th className="py-1.5 pr-3">Online</th>
-                  <th className="py-1.5">Posted</th>
+                  <th className="py-1.5 pr-3">Posted</th>
+                  <th className="py-1.5">Cancelled</th>
                 </tr>
               </thead>
               <tbody>
@@ -127,8 +138,15 @@ export default async function CollectorReportPage({
                     <td className="py-1.5 pr-3 tabular-nums">
                       {peso(r.online_total)}
                     </td>
-                    <td className="py-1.5 tabular-nums">
+                    <td className="py-1.5 pr-3 tabular-nums">
                       {peso(r.posted_total)}
+                    </td>
+                    <td
+                      className={`py-1.5 tabular-nums ${
+                        Number(r.cancelled_cash) > 0 ? "text-danger" : ""
+                      }`}
+                    >
+                      {peso(r.cancelled_cash)}
                     </td>
                   </tr>
                 ))}
@@ -174,8 +192,32 @@ export default async function CollectorReportPage({
                     >
                       {e.status}
                     </span>
+                    {e.payment?.payment_no ? (
+                      <>
+                        {" · "}
+                        <span
+                          className={
+                            e.payment.voided_at ? "text-danger" : "text-muted"
+                          }
+                        >
+                          {e.payment.payment_no}
+                          {e.payment.voided_at ? " (voided)" : ""}
+                        </span>
+                      </>
+                    ) : null}
                   </div>
                 </div>
+                {/* A voided payment leaves the entry posted and pointing at
+                    nothing — it drops out of the to-post queue while the
+                    collector is still charged for the cash. Unlink puts it
+                    back. */}
+                {canPost && e.status === "posted" && e.payment_id ? (
+                  <UnlinkEntryButton
+                    entryId={e.id}
+                    paymentNo={e.payment?.payment_no ?? null}
+                    paymentVoided={Boolean(e.payment?.voided_at)}
+                  />
+                ) : null}
               </div>
             ))}
           </div>

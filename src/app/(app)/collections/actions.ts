@@ -54,16 +54,22 @@ export async function logCollection(input: {
 }
 
 // ── Owner/admin posts a pending entry into a real payment ─────
+// `force` is the admin acknowledging the duplicate warning. Without it the RPC
+// refuses when v_entry_payment_candidates already matches this entry to a
+// payment — the Contracts tab and this button both call record_payment, so
+// doing both creates two payments for one collection (0031).
 export async function postCollectionEntry(input: {
   entryId: string;
   receiptNo: string;
   receiptType: string;
+  force?: boolean;
 }) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("post_collection_entry", {
     p_entry_id: input.entryId,
     p_receipt_no: input.receiptNo,
     p_receipt_type: input.receiptType,
+    p_force: input.force ?? false,
   });
   if (error) return { error: error.message };
   revalidate();
@@ -83,6 +89,23 @@ export async function linkCollectionPayment(input: {
   const { error } = await supabase.rpc("link_collection_payment", {
     p_entry_id: input.entryId,
     p_payment_id: input.paymentId,
+  });
+  if (error) return { error: error.message };
+  revalidate();
+  revalidatePath("/payments");
+  return {};
+}
+
+// ── Separate an entry from the payment it was closed against ──
+// The remedy for a mis-link, and for the entry left stranded when the owner
+// voids a payment that came from a collection: the entry goes back to pending
+// and returns to the to-post queue. Admin may do this once the payment is
+// voided; unlinking a LIVE payment is owner-only (0031).
+export async function unlinkCollectionPayment(entryId: string, reason: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("unlink_collection_payment", {
+    p_entry_id: entryId,
+    p_reason: reason || null,
   });
   if (error) return { error: error.message };
   revalidate();

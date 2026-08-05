@@ -50,6 +50,10 @@ export function PostEntryDialog({
         entryId,
         receiptNo: receiptNo.trim(),
         receiptType,
+        // Clicking through the red warning IS the confirmation. Without this
+        // the RPC refuses (0031) — which is the point: the warning used to be
+        // React state only, and the browser can call the RPC directly.
+        force: duplicateOf !== null,
       });
       if (res.error) setError(res.error);
       else if (res.paymentId) router.push(`/print/receipt/${res.paymentId}`);

@@ -33,6 +33,8 @@ interface MonthRow {
   cash_total: number | string;
   online_total: number | string;
   posted_total: number | string;
+  cancelled_cash: number | string;
+  cancelled_count: number;
 }
 
 // "2026-08" → the previous / next month, wrapping the year.
@@ -281,7 +283,8 @@ export default async function RemittancesPage({
                   <th className="py-1.5 pr-3">Collected</th>
                   <th className="py-1.5 pr-3">Promises</th>
                   <th className="py-1.5 pr-3">Cash</th>
-                  <th className="py-1.5">Online</th>
+                  <th className="py-1.5 pr-3">Online</th>
+                  <th className="py-1.5">Cancelled</th>
                 </tr>
               </thead>
               <tbody>
@@ -294,7 +297,16 @@ export default async function RemittancesPage({
                     <td className="py-1.5 pr-3">{m.collected_count}</td>
                     <td className="py-1.5 pr-3">{m.promised_count}</td>
                     <td className="py-1.5 pr-3">{peso(m.cash_total)}</td>
-                    <td className="py-1.5 text-muted">{peso(m.online_total)}</td>
+                    <td className="py-1.5 pr-3 text-muted">
+                      {peso(m.online_total)}
+                    </td>
+                    <td
+                      className={`py-1.5 ${
+                        Number(m.cancelled_cash) > 0 ? "text-danger" : "text-muted"
+                      }`}
+                    >
+                      {peso(m.cancelled_cash)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
