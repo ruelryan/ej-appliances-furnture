@@ -54,10 +54,12 @@ export async function createUser(_prev: unknown, formData: FormData) {
 
   if (error) return { error: error.message };
 
-  // handle_new_user trigger creates the profile; set the requested role
+  // handle_new_user creates the profile INACTIVE with a least-privilege role
+  // (0029), so an account created outside this screen can read nothing. This
+  // is the deliberate activation step — set the role and switch it on.
   const { error: roleErr } = await admin
     .from("profiles")
-    .update({ role, full_name: fullName })
+    .update({ role, full_name: fullName, active: true })
     .eq("id", data.user.id);
 
   if (roleErr) return { error: roleErr.message };
