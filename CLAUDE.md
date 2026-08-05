@@ -19,9 +19,9 @@ technical trade-offs plainly and confirm before destructive actions.
   5,901 payments (₱24,256,852.39, reconciled to the centavo)**. The Sheet is no
   longer the source of truth; anything recorded there now is a divergence.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
-  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0028 and 0030
-  applied to prod**; **0029, 0031 and 0032 are committed but NOT yet applied**
-  — see below. Catalog: **134 products**, all with photos and perceptual hashes
+  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0032 all applied
+  to prod** (0029/0031/0032 applied and verified 2026-08-05, code deployed the
+  same day). Catalog: **136 products**, all with photos and perceptual hashes
   (seeded by `scripts/import-pricelist.ts`; 12 duplicates merged out).
 - GitHub: `ruelryan/ej-appliances-furnture`. `redesign/fintech-light` has been
   merged into **`main`** (4dee47a) and its local branch deleted — main is now
@@ -33,9 +33,10 @@ technical trade-offs plainly and confirm before destructive actions.
   commits ahead of main**; the 0029 work never lived there despite the name.
   Deploys go from local via `vercel --prod` (linked project "eandj"). An older
   Vite prototype is parked on `old-vite-app` (remote only).
-- **Users are now real**: owner Ruel Ryan Rosal, admin Analyn Clemente,
-  collector Roger Dasal. The four sample/test accounts were hard-deleted
-  2026-07-20 (archive: `eandj-data/deleted-test-accounts.json`).
+- **Users are now real** — **four** of them (verified in prod 2026-08-05):
+  owner Ruel Ryan Rosal, admins Analyn Clemente and **Elvira Rosal** (added
+  2026-07-24), collector Roger Dasal. The four sample/test accounts were
+  hard-deleted 2026-07-20 (archive: `eandj-data/deleted-test-accounts.json`).
 - Beyond the original brief, now also shipped: two Messenger links per
   customer (0020), promise-to-pay + field receipt numbers (0021), term
   repricing (0022), structured addresses + collector GPS (0023), product
@@ -45,8 +46,16 @@ technical trade-offs plainly and confirm before destructive actions.
   (0030).
 - The `docs/` developer reference, the Playwright e2e suite and the rewritten
   `scripts/backup-prod.ts` are now committed (4f3bb78, 9e24f0b).
-- **Security + integrity audit (2026-08-05) — committed, NOT applied to prod.**
-  Four commits on the current branch, to be applied in order:
+- **Security + integrity audit (2026-08-05) — APPLIED to prod and deployed.**
+  Backup taken first (`eandj-data\backup-2026-08-05-1825`, 28 tables, 20,843
+  rows). Migrations went in **before** the code deploy, not after as originally
+  planned: the new code calls `unlink_collection_payment` and passes `p_force`,
+  neither of which exists until 0031, so deploying first would have broken
+  collection posting. The old code kept working throughout because `p_force`
+  has a default and PostgREST resolves the 3-arg call to it. Verified from
+  outside with the anon key afterwards: `search_products` returns `[]`,
+  `next_counter` and `payslip_recompute` return *permission denied*. The four
+  commits:
   - **0029 security hardening.** Only ONE `revoke execute` existed in the whole
     schema (`0010:127`), and Postgres grants EXECUTE to `PUBLIC` by default, so
     four SECURITY DEFINER functions with no auth check were callable by anyone
@@ -429,6 +438,18 @@ These shaped real code. Do not "simplify" them away.
 - `audit_row_changes()` is `after update` only — **inserts are never audited**,
   on any table. A row that is created and then cancelled leaves one audit
   trail entry (the cancel), not two.
+- **Two code paths have never run in prod, so treat them as untested**: there
+  are **zero cash sales** (no contract with `term_months = 0`), and as of
+  2026-08-05 there were **no pending `collected` collection entries** — the
+  to-post queue was empty, and all 34 pending entries were non-collecting visit
+  outcomes (14 not_available, 14 promised, 6 refused, ₱0 between them). Only 3
+  collected entries exist and all are posted.
+- To exercise a guarded RPC against prod without a JWT, wrap it in a
+  transaction and impersonate:
+  `perform set_config('request.jwt.claims', json_build_object('sub', <uuid>)::text, true)`.
+  A `DO` block that ends with `raise exception '%', log` returns the results in
+  the error message **and** forces the rollback — that is how 0031/0032 were
+  verified against live data without writing any.
 - PowerShell 5.1 host: no `&&`; git messages with inner double quotes break —
   use single-quoted here-strings without embedded `"`.
 - PostgREST caps reads at 1000 rows — paginate with `.range()` for full scans,
