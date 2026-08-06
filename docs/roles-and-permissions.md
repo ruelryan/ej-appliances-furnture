@@ -6,14 +6,14 @@ The app has five business roles plus one legacy value, enforced in three layers 
 
 Defined by the CHECK constraint on `profiles.role` (migration 0011) and the `Role` union in `src/lib/supabase/server.ts`:
 
-| Role | Person (2026-07) | What it is for |
+| Role | Person (2026-08) | What it is for |
 |---|---|---|
-| `owner` | Ruel Ryan Rosal | Everything. Sole access to analytics, user management, DTR settings, payroll finalization, 13th-month, contract editing, voiding payments, closing contracts, repossession stages. |
+| `owner` | Ruel Ryan Rosal, Elvira Rosal | Everything. Sole access to analytics, user management, DTR settings, payroll finalization, 13th-month, contract editing, voiding payments, closing contracts, repossession stages. **There are two owners** (Elvira is a co-owner of the business, promoted from `admin` on 2026-08-06) — nothing in the schema or the app selects "the" owner row, and `is_owner()` matches on `auth.uid()`, so the role is safely multi-holder. Keep it that way. |
 | `admin` | Analyn Clemente | The admin assistant. Posts payments and receipts, creates contracts, posts collectors' logged collections into payments (or links them to a payment already recorded — `link_collection_payment`), records cash remittances from collectors, manages products/deliveries/suppliers/leads, edits customer links and addresses. Everywhere SQL says `can_post_payments()`, admin qualifies alongside owner. |
 | `collector` | Roger Dasal | Works an assigned, priority-ordered worklist; logs collection visits (`log_collection`) which are NOT payments until an owner/admin posts them; requests cash advances; may tag GPS/landmarks for customers on their own worklist. Sees their own remittance balance but **cannot record or cancel one** — the office receives the cash, so the office records it. **Never posts payments** — that is enforced in `record_payment` itself. Sees only contracts assigned to them. |
 | `sales_agent` | (none currently) | Restricted read-only: their own contracts, commissions, and the customers tied to their own deals. May submit leads. Cannot see other customers' PII (RLS on `customers` narrows for this role specifically). |
 | `delivery` | (none currently) | The delivery queue: sees all contracts (needed for fulfilment), marks availability and delivery, links products. |
-| `staff` | legacy | The pre-0011 catch-all, migrated to `admin`; kept in the CHECK constraint and in the TS `canPostPayments` during transition. Not offered in the /admin role picker. |
+| `staff` | legacy | The pre-0011 catch-all, migrated to `admin`; still permitted by the CHECK constraint, but **no longer treated as a payment-poster** — `canPostPayments` dropped it in the 2026-08-05 cleanup to match `can_post_payments()` in SQL, which never included it. No account holds this role. Not offered in the /admin role picker. |
 
 ## Per-route access
 

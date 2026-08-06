@@ -33,10 +33,16 @@ technical trade-offs plainly and confirm before destructive actions.
   commits ahead of main**; the 0029 work never lived there despite the name.
   Deploys go from local via `vercel --prod` (linked project "eandj"). An older
   Vite prototype is parked on `old-vite-app` (remote only).
-- **Users are now real** — **four** of them (verified in prod 2026-08-05):
-  owner Ruel Ryan Rosal, admins Analyn Clemente and **Elvira Rosal** (added
-  2026-07-24), collector Roger Dasal. The four sample/test accounts were
-  hard-deleted 2026-07-20 (archive: `eandj-data/deleted-test-accounts.json`).
+- **Users are now real** — **four** of them (verified in prod 2026-08-06):
+  **two owners** — Ruel Ryan Rosal and **Elvira Rosal** (Ryan's mother and a
+  co-owner of the business; account added 2026-07-24 as `admin`, promoted to
+  `owner` 2026-08-06) — admin Analyn Clemente, collector Roger Dasal. The four
+  sample/test accounts were hard-deleted 2026-07-20 (archive:
+  `eandj-data/deleted-test-accounts.json`). **Nothing assumes a single owner**:
+  `is_owner()` (`0001:42`) matches on `auth.uid()`, and no app code selects
+  "the" owner row — keep it that way. Elvira does not clock in (no
+  `employee_rates` row, no punches, no payslips); the DTR tab is visible to her
+  but demands nothing, and no payslip can be computed without a rate row.
 - Beyond the original brief, now also shipped: two Messenger links per
   customer (0020), promise-to-pay + field receipt numbers (0021), term
   repricing (0022), structured addresses + collector GPS (0023), product
@@ -96,10 +102,12 @@ technical trade-offs plainly and confirm before destructive actions.
   `0013:462-463` chose on purpose.
 - **Roger Dasal** started as collector 2026-07-22 (Mon–Wed, 3-day week). Rate
   ₱56.25/hr and ₱100/day meal allowance are set; **24 Tomas Oppus accounts
-  assigned**. Still open (human, not a commit — last verified in prod
-  2026-08-03): his SSS/PhilHealth/Pag-IBIG **amounts are all still zero**, so
-  his 16–end slips deduct nothing; whether his contract was signed before he
-  started (Art. 296) is unconfirmed. See "Legal watch-outs" below.
+  assigned**. His employment contract **was signed before he started**
+  (confirmed by Ryan 2026-08-06) — Art. 296 is satisfied, no action needed.
+  Still open (human, not a commit — verified in prod 2026-08-06): his
+  SSS/PhilHealth/Pag-IBIG **amounts are all still zero** in `employee_rates`,
+  so his 16–end slips deduct nothing. Ryan is entering the real figures within
+  a day or two of 2026-08-06; until then do not finalize a 16–end slip for him.
 
 ## Commands
 

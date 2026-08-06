@@ -51,7 +51,7 @@ Followed as the conduct standard even though E & J is not a financing company re
 
 - **13th-month pay** is 1/12 of *basic* salary; the law excludes allowances, overtime premiums, and holiday-pay premiums. `payslips.basic_pay` is therefore `sum(hours_worked × hourly_rate)` — **not** `dtr_pay`, which bakes holiday multipliers in. On a test period, 40% of `dtr_pay` would have been wrongly included. See `docs/modules/payroll-dtr.md`.
 - **Meal allowance** (`employee_rates.meal_allowance_per_day`) is paid per day actually worked and kept in its own column precisely so it stays out of the 13th-month base.
-- **Art. 296 (probationary employment)**: an employee's contract must be signed *before* they start work. (This drove Roger Dasal's onboarding sequence in July 2026.)
+- **Art. 296 (probationary employment)**: an employee's contract must be signed *before* they start work. (This drove Roger Dasal's onboarding sequence in July 2026; his contract was confirmed signed before his 2026-07-22 start.)
 - Holiday pay: worked regular holiday ×2.00, worked special ×1.30, unworked regular holiday pays 8 hours only on weekdays. The math lives only in SQL (`dtr_hours()`, `v_dtr_days`).
 
 ## Terms of sale (business policy, not law)
