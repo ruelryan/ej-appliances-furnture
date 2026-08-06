@@ -23,16 +23,23 @@ technical trade-offs plainly and confirm before destructive actions.
   to prod** (0029/0031/0032 applied and verified 2026-08-05, code deployed the
   same day). Catalog: **136 products**, all with photos and perceptual hashes
   (seeded by `scripts/import-pricelist.ts`; 12 duplicates merged out).
-- GitHub: `ruelryan/ej-appliances-furnture`. `redesign/fintech-light` has been
-  merged into **`main`** (4dee47a) and its local branch deleted — main is now
-  current. Branch state (2026-08-05): **`feat/collector-remittances`** is
-  checked out and holds 0030 (e655219, pushed, applied to prod) plus the whole
-  security/integrity audit — 0029, 0031, 0032 and the app-layer cleanup, all
-  committed locally, **none pushed, none applied to prod, nothing merged to
-  main**. **`security/rls-and-rpc-hardening`** exists but is **empty — zero
-  commits ahead of main**; the 0029 work never lived there despite the name.
-  Deploys go from local via `vercel --prod` (linked project "eandj"). An older
-  Vite prototype is parked on `old-vite-app` (remote only).
+- GitHub: `ruelryan/ej-appliances-furnture`. Branch state (2026-08-06):
+  **`main` is current and is the branch to work from** — `feat/collector-
+  remittances` (0030 plus the whole 0029/0031/0032 security + integrity audit)
+  was fast-forwarded into it at **3415c47** and pushed; local and origin agree,
+  and prod runs this code. The merged branch still exists locally and on origin
+  and can be deleted. `redesign/fintech-light` was merged earlier (4dee47a) and
+  its local branch deleted. **`security/rls-and-rpc-hardening`** exists but is
+  **empty — zero commits ahead of main**; the 0029 work never lived there
+  despite the name. An older Vite prototype is parked on `old-vite-app` (remote
+  only).
+- **Vercel is NOT connected to GitHub** (verified 2026-08-06: `vercel project
+  inspect` shows no linked repo, and all 19 deployments were made from the
+  CLI). **Pushing or merging never deploys anything** — prod only changes when
+  someone runs `vercel --prod` from local (linked project "eandj",
+  org `melonminds`). The upside: a stale branch can never silently redeploy
+  over prod. The cost: after a merge, remember that GitHub and prod are still
+  two separate acts.
 - **Users are now real** — **four** of them (verified in prod 2026-08-06):
   **two owners** — Ruel Ryan Rosal and **Elvira Rosal** (Ryan's mother and a
   co-owner of the business; account added 2026-07-24 as `admin`, promoted to
