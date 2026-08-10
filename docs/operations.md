@@ -15,7 +15,16 @@ Day-to-day operational procedures. The app is deployed on Vercel and backed by a
 
 ## Deploying
 
-Deploys go straight from the local checkout: `vercel --prod` (linked project "eandj"). `npm run build` must pass before deploying. There is no CI deploy pipeline.
+There are **two** ways code reaches production, and both are live:
+
+1. **Pushing to `main` deploys it automatically.** The Vercel project ("eandj", org `melonminds`) is connected to `ruelryan/ej-appliances-furnture`. Any push to `main` builds and promotes to production with no further action; a push to any other branch builds a Preview.
+2. **`vercel --prod` from the local checkout**, which deploys the working tree regardless of what is on GitHub.
+
+`npm run build` must pass before either. There is no CI test pipeline — nothing runs `npm test` or the e2e suite before a deploy, so a red test does not block production.
+
+**Migrations are NOT part of either path.** They are applied by hand with `npx tsx scripts/apply-migrations.ts <n>`. Because a push to `main` deploys on its own, **apply the migration before pushing** any commit that depends on one. The reverse order is a real outage: 0031 added `unlink_collection_payment` and the `p_force` argument, and the app code calling them would have failed against a database that did not have them yet.
+
+To verify how a given deployment was triggered, run `vercel inspect <url>`. A Git-triggered build carries an `eandj-git-<branch>-melonminds.vercel.app` alias; a CLI build does not. Note that `vercel project inspect` prints no Git section at all in CLI 58.x — do not read its silence as "not connected".
 
 ## Backups
 

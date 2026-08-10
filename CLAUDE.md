@@ -33,13 +33,26 @@ technical trade-offs plainly and confirm before destructive actions.
   **empty — zero commits ahead of main**; the 0029 work never lived there
   despite the name. An older Vite prototype is parked on `old-vite-app` (remote
   only).
-- **Vercel is NOT connected to GitHub** (verified 2026-08-06: `vercel project
-  inspect` shows no linked repo, and all 19 deployments were made from the
-  CLI). **Pushing or merging never deploys anything** — prod only changes when
-  someone runs `vercel --prod` from local (linked project "eandj",
-  org `melonminds`). The upside: a stale branch can never silently redeploy
-  over prod. The cost: after a merge, remember that GitHub and prod are still
-  two separate acts.
+- **Vercel IS connected to GitHub — a push to `main` deploys to production by
+  itself.** (Project "eandj", org `melonminds`. Corrected 2026-08-10; a
+  2026-08-06 entry here claimed the opposite and was wrong.) A push to any
+  other branch builds a Preview. **`vercel project inspect` does not print a
+  Git section in CLI 58.x, and `vercel ls` has no branch column — absence of
+  evidence there is NOT evidence of absence.** The reliable test is
+  `vercel inspect <url>`: a Git-triggered build carries a
+  `eandj-git-<branch>-melonminds.vercel.app` alias, a CLI build does not.
+  **Consequence that matters: code can reach prod before its migration is
+  applied.** Migrations are still manual (`scripts/apply-migrations.ts`), so
+  for any commit that needs one, **apply the migration first, then push** — the
+  reverse order is what would have broken collection posting in 0031, where new
+  code called `unlink_collection_payment` before it existed.
+- **Preview deploys cannot reach the database.** All three Supabase env vars
+  (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY`) are scoped to **Production only** (verified
+  2026-08-10). Previews therefore build green but fail at runtime. That is a
+  safety property, not a bug — there is no staging DB, so a preview that DID
+  have keys would be a public URL onto live customer data. **Do not add these
+  vars to the Preview scope.**
 - **Users are now real** — **four** of them (verified in prod 2026-08-06):
   **two owners** — Ruel Ryan Rosal and **Elvira Rosal** (Ryan's mother and a
   co-owner of the business; account added 2026-07-24 as `admin`, promoted to
@@ -226,8 +239,7 @@ prove via `audit_log` that read-only runs wrote nothing.
   a person or a role, comment thread, nav badge); **product catalog** (0018 —
   `products.price` (selling price, pre-fills the new-sale form) +
   `products.description` (0019) + uploaded `product_photos` in the **public
-  Supabase Storage bucket `product-photos`**, managed on `/products`). Deploys
-  go straight from local via `vercel --prod` (linked project "eandj").
+  Supabase Storage bucket `product-photos`**, managed on `/products`).
 - **Payroll** (0009): semi-monthly payslips (1–15, 16–end) SNAPSHOT all
   amounts at create/refresh/finalize (like contracts) — income = period sum
   of `v_dtr_days.day_pay` + jsonb extra lines; gov contributions (EE/ER on

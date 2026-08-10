@@ -98,7 +98,7 @@ The visual language is "fintech light", chosen July 2026 and encoded in the proj
 
 ## Deploys and operations
 
-- **Deploys go straight from local**: `vercel --prod` on the `redesign/fintech-light` branch (linked Vercel project "eandj"). **`main` lags behind** — merge deliberately, not habitually.
+- **Deploys**: the Vercel project ("eandj") is connected to GitHub, so **a push to `main` deploys to production on its own**; `vercel --prod` from local is the second path. `main` is current and is the branch to work from. See [operations.md](operations.md) for the migration-ordering rule this creates.
 - `npm run build` must pass before commit; `npm test` and `npm run lint` are the other pre-flight checks.
 - Supabase's free tier pauses after ~7 idle days, so `.github/workflows/keepalive.yml` pings `https://eandj-chi.vercel.app/api/health` daily.
 - Migrations are applied with `npx tsx scripts/apply-migrations.ts <number>`; environment sanity via `scripts/check-connection.ts`. Backups, imports, and the rest of the operational playbook are in [operations.md](operations.md).
