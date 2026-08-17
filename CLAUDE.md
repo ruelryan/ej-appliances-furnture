@@ -12,7 +12,10 @@ copy of the old script: `C:\Users\ryan\Downloads\eandjappscript.txt`). Owner:
 Ryan (ruelryanrosal@gmail.com) — not a professional developer; explain
 technical trade-offs plainly and confirm before destructive actions.
 
-## Status (2026-08-05)
+## Status (last reviewed 2026-08-17)
+
+Facts here carry their own date. Trust the per-entry date, not the heading —
+this section is the volatile half of the file and drifts fastest.
 
 - **Deployed to Vercel**: https://eandj-chi.vercel.app. **Cutover is done** —
   the Sheet was re-imported on 2026-07-20: **1,511 contracts, 1,127 customers,
@@ -23,16 +26,20 @@ technical trade-offs plainly and confirm before destructive actions.
   to prod** (0029/0031/0032 applied and verified 2026-08-05, code deployed the
   same day). Catalog: **136 products**, all with photos and perceptual hashes
   (seeded by `scripts/import-pricelist.ts`; 12 duplicates merged out).
-- GitHub: `ruelryan/ej-appliances-furnture`. Branch state (2026-08-06):
+- GitHub: `ruelryan/ej-appliances-furnture`. Branch state (2026-08-17):
   **`main` is current and is the branch to work from** — `feat/collector-
   remittances` (0030 plus the whole 0029/0031/0032 security + integrity audit)
   was fast-forwarded into it at **3415c47** and pushed; local and origin agree,
-  and prod runs this code. The merged branch still exists locally and on origin
-  and can be deleted. `redesign/fintech-light` was merged earlier (4dee47a) and
-  its local branch deleted. **`security/rls-and-rpc-hardening`** exists but is
-  **empty — zero commits ahead of main**; the 0029 work never lived there
-  despite the name. An older Vite prototype is parked on `old-vite-app` (remote
-  only).
+  and prod runs this code. That branch and the empty
+  `security/rls-and-rpc-hardening` were **deleted 2026-08-17**. Two branches
+  remain, both on purpose:
+  - **`redesign/fintech-light`** (remote only) — mostly merged at 4dee47a, but
+    it still carries **one unmerged commit, 659d70e "In-app staff manual at
+    /help"** (2026-07-21): `src/app/(app)/help/` with a 785-line `topics.tsx`,
+    12 role-filtered topics, linked from the top bar. **`/help` is written but
+    is NOT in `main` and NOT deployed.** Merge it or drop it deliberately —
+    do not delete this branch until then.
+  - **`old-vite-app`** (remote only) — the older Vite prototype, parked.
 - **Vercel IS connected to GitHub — a push to `main` deploys to production by
   itself.** (Project "eandj", org `melonminds`. Corrected 2026-08-10; a
   2026-08-06 entry here claimed the opposite and was wrong.) A push to any
@@ -133,16 +140,19 @@ technical trade-offs plainly and confirm before destructive actions.
 
 ```
 npm run dev      # dev server (localhost:3000)
+npm start        # serve a production build (after npm run build)
 npm test         # Vitest — amortization golden cases + date math
 npx vitest run src/lib/__tests__/amortization.test.ts   # one file (-t "name" for one case)
 npm run lint     # ESLint
 npm run build    # production build; must pass before commit
 npx tsx scripts/check-connection.ts       # env/DB sanity check
+npx tsx scripts/apply-migrations.ts       # apply ALL migrations in order (fresh DB)
 npx tsx scripts/apply-migrations.ts 0005  # apply a single new migration
 npx tsx scripts/verify-sql-terms.ts       # SQL math vs golden fixture
 npx tsx scripts/verify-dtr.ts             # DTR hours/holiday SQL vs fixtures
 npm run e2e:readonly                      # Playwright read-only suite — safe any time
 npm run e2e:writes   # Playwright write suite — WRITES TO PROD; full procedure in docs/testing.md
+npx playwright test e2e/specs/readonly/auth.spec.ts   # one spec (-g "name" for one test)
 npx tsx scripts/e2e/setup-test-users.ts --apply   # create test-*@eandj.test → .env.e2e
 npx tsx scripts/e2e/cleanup-test-data.ts          # remove rows the write suite created
 npx tsx scripts/e2e/teardown-test-users.ts        # delete the test accounts (same day)
@@ -173,12 +183,22 @@ directly where the app would have to use an RPC (an RPC guarded by
 
 ## Docs
 
-`docs/` is the developer reference (architecture, database + full RPC catalog,
-roles matrix, business/legal rules, testing, operations). **Standing rule: any
-commit that changes user-facing behavior, a route, a role's access, a business
-rule, or the schema updates the matching `docs/` page in the same commit.** On
-drift, the code is the truth — fix the doc. (`docs/README.md` also mentions an
-in-app `/help` staff manual that is **not written yet**.)
+`docs/` is the developer reference: `architecture.md`, `database.md` (full RPC
+catalog), `roles-and-permissions.md`, `business-rules-legal.md`, `testing.md`,
+`operations.md`, plus five per-module pages in `docs/modules/`
+(`collections`, `commissions-leads`, `contracts-payments`,
+`deliveries-inventory-products`, `payroll-dtr`). **Standing rule: any commit
+that changes user-facing behavior, a route, a role's access, a business rule,
+or the schema updates the matching `docs/` page in the same commit.** On
+drift, the code is the truth — fix the doc.
+
+`README.md` is the *setup* doc (new machine, fresh Supabase project, Sheet
+import, Vercel) — not a second architecture reference. The standing rule above
+does not cover it, which is how it rotted once already; if a commit changes
+setup steps or the feature list, fix README too.
+
+**`/help`, the in-app staff manual, is written but unmerged** — see the branch
+note under Status. `docs/README.md` still describes it as missing.
 
 ## E2E suite (Playwright) — runs against PRODUCTION
 
@@ -222,24 +242,19 @@ prove via `audit_log` that read-only runs wrote nothing.
   in `src/lib/supabase/server.ts` (`Role` union, `canPostPayments`). Nav
   visibility is a per-link `roles[]` allowlist in `nav-links.tsx` — UI hiding
   is convenience only. Payments are never deleted — void/restore.
-- **Business modules** (each = a migration + a colocated `src/app/(app)/<x>/`
-  page module; all writes via SECURITY DEFINER RPCs + RLS): **collector ops**
-  (0012 — assign collectors, `log_collection` → admin `post_collection_entry`,
-  cash advances; `/collections` + `/collections/report`); **sales commission**
-  (0013 — `v_contract_dp` DP-paid signal, `commissions` = 10% of cash_price
-  earned when DP fully paid, `leads`; `/commissions`, `/leads`,
-  `/print/commission-statement`); **deliveries + suppliers** (0014 — one
-  `deliveries` row per contract via after-insert trigger, supplier cost +
-  invoice-lag; the legacy `contracts.delivery_status` text is now a
-  trigger-synced label, not edited by hand); **inventory** (0015 — `products`
-  + `stock_movements`; stock decrements on in-stock delivery); **cash sales**
-  (0016 — `contracts.sale_type='cash'` modelled as `term=0, dp=total,
-  monthly=0` so the frozen views need NO change; no-agent sale → `sales_agent
-  = 'Office Sales'`); **team tasks** (0017 — `tasks`/`task_comments`, assign to
-  a person or a role, comment thread, nav badge); **product catalog** (0018 —
-  `products.price` (selling price, pre-fills the new-sale form) +
-  `products.description` (0019) + uploaded `product_photos` in the **public
-  Supabase Storage bucket `product-photos`**, managed on `/products`).
+- **Business modules follow one shape**: a migration + a colocated
+  `src/app/(app)/<x>/` page module (mutations in an `actions.ts` beside the
+  page) + writes only via SECURITY DEFINER RPCs guarded by RLS. Each module has
+  its own bullet below and a page in `docs/modules/`.
+- **Four Supabase modules in `src/lib/supabase/` — picking the wrong one is a
+  security bug, not a style choice**: `client.ts` (browser, anon key),
+  `server.ts` (RSC + server actions, cookie session; also home of the `Role`
+  union, `canPostPayments` and the role helpers), `admin.ts` (service-role key
+  — **bypasses RLS entirely**; scripts and a small number of admin server
+  actions only, never anything reachable from a user request without its own
+  role check), and `filters.ts` (escapes user input for the three `.or()`
+  searches — PostgREST filter syntax is injectable otherwise). Anything the
+  browser touches gets the anon key and lets RLS do the work.
 - **Payroll** (0009): semi-monthly payslips (1–15, 16–end) SNAPSHOT all
   amounts at create/refresh/finalize (like contracts) — income = period sum
   of `v_dtr_days.day_pay` + jsonb extra lines; gov contributions (EE/ER on
@@ -317,6 +332,11 @@ prove via `audit_log` that read-only runs wrote nothing.
   stock. Product picker on the new-contract form. Stock counts are managed on
   `/products` alongside the catalog (0018 moved them there; `/deliveries` only
   links across).
+- **Product catalog** (0018–0019): `products.price` is the selling price and
+  pre-fills the new-sale form; `products.description` (0019) is free text.
+  Photos are uploaded to the **public Supabase Storage bucket
+  `product-photos`** and tracked in `product_photos`. Managed on `/products`,
+  which is also where stock counts live.
 - **Cash sales** (0016): a cash/outright sale is a `contracts` row with
   `sale_type='cash'`, `term_months=0`, downpayment = total = `cash_price`,
   monthly = 0 — that shape makes the frozen views
@@ -404,7 +424,14 @@ prove via `audit_log` that read-only runs wrote nothing.
   `src/middleware.ts`); mutations are server actions in colocated `actions.ts`
   files. `src/app/print/*` renders print pages (browser print CSS, A4, no
   chrome) outside the app shell.
-- CSV exports: `/api/export/[dataset]` (owner-only); keep-alive: `/api/health`.
+- **`/admin`** (owner-only) is user administration — `createUser` (which must
+  set `active: true`, see 0029), the role select and the active/inactive
+  toggle, plus the audit log and the CSV export links. **`/account`** is the
+  one page every role gets: change your own password. Neither is a business
+  module and neither has a migration of its own.
+- CSV exports: `/api/export/[dataset]` (owner-only) — exactly four datasets:
+  `contracts` (from `v_contract_financials`), `payments`, `aging`,
+  `customers`. Keep-alive: `/api/health`.
 
 ## Design system
 
