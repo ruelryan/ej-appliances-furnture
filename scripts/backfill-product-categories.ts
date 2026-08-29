@@ -23,6 +23,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import { categoryForName, itemTypeForCategory } from "@/lib/product-categories";
 
 dotenv.config({ path: ".env.local" });
 
@@ -36,48 +37,13 @@ if (!url || !key) {
 }
 const db = createClient(url, key);
 
-/**
- * Ordered — FIRST MATCH WINS, so the specific rule must precede the general.
- * "Chest Freezer" has to beat "Chest" (a cabinet), and "Upright Chiller/
- * Refrigerator" has to land somewhere deliberate rather than by accident.
- *
- * `group` is what the Messenger ice breakers split on ("What appliances do you
- * have?" / "What furniture do you have?"). It is not stored — the table has one
- * category column — but it lives here so the menu and this script cannot
- * disagree about which side of that split a category falls on.
- */
+// The name -> category rules and the category -> item-type map both live in
+// src/lib/product-categories.ts, so this script and the app cannot disagree
+// about what a category is. They are unit-tested there; this file is only the
+// runner. That split exists because the first version duplicated the mapping
+// and the copies drifted immediately.
 type Group = "Appliances" | "Furniture" | "Other";
-const RULES: { category: string; group: Group; match: RegExp }[] = [
-  // ── Appliances ──────────────────────────────────────────────────────────
-  // Chillers first: one product reads "Upright Chiller/Refrigerator" and would
-  // otherwise be filed as a household fridge, which is not what it is. These
-  // are display chillers — a sari-sari store buys one, a family does not.
-  { category: "Chiller", group: "Appliances", match: /chiller/i },
-  { category: "Freezer", group: "Appliances", match: /freezer/i },
-  { category: "Refrigerator", group: "Appliances", match: /refrigerator|fridge/i },
-  { category: "Washing Machine", group: "Appliances", match: /washing machine/i },
-  { category: "Television", group: "Appliances", match: /\bTV\b|television/i },
-  { category: "Aircon", group: "Appliances", match: /aircon|air ?conditioner/i },
-  { category: "Gas Range", group: "Appliances", match: /gas burner|gas range|cooking|stove|oven/i },
-  { category: "Water Dispenser", group: "Appliances", match: /dispenser/i },
-  { category: "Sewing Machine", group: "Appliances", match: /sewing/i },
-  { category: "Laptop", group: "Appliances", match: /laptop|aspire|vivobook/i },
-  { category: "Printer", group: "Appliances", match: /printer/i },
 
-  // ── Furniture ───────────────────────────────────────────────────────────
-  // Sala Set before Sofa: several sala sets have "Sofa" in the name and are
-  // sold as the whole set, not as a sofa.
-  { category: "Sala Set", group: "Furniture", match: /sala set/i },
-  { category: "Dining Set", group: "Furniture", match: /dining/i },
-  // Dew Foam is a mattress; it belongs with beds, which is how it is bought.
-  { category: "Bed", group: "Furniture", match: /\bbed\b|mattress|dew foam/i },
-  { category: "Sofa", group: "Furniture", match: /sofa|couch/i },
-  { category: "Cabinet", group: "Furniture", match: /cabinet|buffet|chinaware|wardrobe|cupboard/i },
-  { category: "Chair", group: "Furniture", match: /\bchair\b|stool/i },
-  { category: "Table", group: "Furniture", match: /\btable\b|\bdesk\b/i },
-  { category: "Door", group: "Furniture", match: /\bdoor\b/i },
-  { category: "Mirror", group: "Furniture", match: /mirror/i },
-];
 
 const GROUP_ORDER: Group[] = ["Appliances", "Furniture", "Other"];
 
@@ -98,8 +64,9 @@ async function main() {
   const products = (data ?? []) as Row[];
 
   const proposals = products.map((p) => {
-    const hit = RULES.find((r) => r.match.test(p.name));
-    return { ...p, proposed: hit?.category ?? null, group: hit?.group ?? ("Other" as Group) };
+    const proposed = categoryForName(p.name);
+    const group: Group = (proposed ? itemTypeForCategory(proposed) : null) ?? "Other";
+    return { ...p, proposed, group };
   });
 
   // ── Report, grouped the way a customer would be shown it ────────────────

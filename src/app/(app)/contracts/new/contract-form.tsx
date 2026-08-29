@@ -6,6 +6,7 @@ import { searchCustomers } from "./customer-actions";
 import { computeTerms, TERM_OPTIONS, termLabel } from "@/lib/amortization";
 import { peso, phTodayISO } from "@/lib/format";
 import { ITEM_TYPES } from "@/lib/messages";
+import { itemTypeForCategory } from "@/lib/product-categories";
 import { btnPrimaryHero, input, label } from "@/components/ui";
 import { AddressFields, type LocationTree } from "@/components/address-fields";
 import { ProductPicker, type PickedProduct } from "./product-picker";
@@ -277,7 +278,12 @@ export function ContractForm({
             // about the field's value.
             if (p) {
               setItemDescription(p.name);
-              if (p.category) setItemType(p.category);
+              // Map, never assign across: product.category is the fine
+              // browse taxonomy ("Refrigerator"), item_type is the two-value
+              // column the DB constrains. Assigning directly makes the
+              // contract insert fail the check constraint.
+              const t = itemTypeForCategory(p.category);
+              if (t) setItemType(t);
               if (p.price != null) setCashPrice(String(p.price));
             }
           }}
