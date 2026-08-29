@@ -170,6 +170,23 @@ this section is the volatile half of the file and drifts fastest.
   still uncapped (overspend-and-reimburse is legitimate, and it is now
   audited); and collectors/delivery still read the whole customer book, which
   `0013:462-463` chose on purpose.
+- **The floor staff sell terms the app cannot express, and the app wins by
+  default.** Contract **2026190** (Salan, Ryan, 2026-08-26) was agreed by
+  Elvira at the **cash price, ₱23,900, payable over 6 months**. There is no
+  6-month good-as-cash term — 4/5 months are good-as-cash, 6 months is +30% —
+  so it was entered as 6 months and the app computed **₱29,277.50**, ₱5,377.50
+  more than the customer was told, and the customer queried it. Corrected
+  2026-08-29 on Ryan's decision to the **5-month** good-as-cash schedule:
+  the agreed total ₱23,900 is honoured, over 5 months at ₱3,585.00 instead of
+  the 6 months promised (`scripts/fix-contract-2026190-term.ts`). Corrected in
+  place, not voided and recreated, because a payment (PAY6074, ₱4,000, receipt
+  1839) and a completed delivery were already attached; `cash_price` and
+  `downpayment` were untouched, which is what keeps the commission basis and
+  `v_contract_dp` right. **This will recur** — the sales conversation has a
+  term the schedule does not. Either add a 6-month good-as-cash term (both
+  `compute_terms()` and `computeTerms()`, plus `GOLDEN_CASES`) or tell the
+  floor that 6 months always carries +30%. Until then, watch for a 6-month
+  contract whose customer expected the cash price.
 - **Roger Dasal** started as collector 2026-07-22 (Mon–Wed, 3-day week). Rate
   ₱56.25/hr and ₱100/day meal allowance are set; **24 Tomas Oppus accounts
   assigned**. His employment contract **was signed before he started**
@@ -202,6 +219,7 @@ npx tsx scripts/e2e/teardown-test-users.ts        # delete the test accounts (sa
 npx tsx scripts/backup-prod.ts            # full JSON dump of all tables → eandj-data\backup-*
 npx tsx scripts/migrate/import.ts --dir <csvs> [--load]  # Sheet re-import
 npx tsx scripts/sync-sheet-divergence.ts [--apply]  # fold Sheet drift back in
+npx tsx scripts/fix-contract-2026190-term.ts [--apply]  # one-off, done 2026-08-29
 npx tsx scripts/extract-tabs.ts <book.xlsx|drive.json> <dir>  # Sheet tabs → CSVs
 npx tsx scripts/import-locations.ts --file <book.xlsx> [--load]  # seed ph_locations
 npx tsx scripts/import-pricelist.ts [--apply]       # seed catalog + photos + dHashes
