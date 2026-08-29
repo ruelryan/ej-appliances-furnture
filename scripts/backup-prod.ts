@@ -36,8 +36,14 @@ const OUT_ROOT =
   process.env.EANDJ_DATA_DIR ??
   path.join(os.homedir(), "Documents", "eandj-data");
 
-// Every table in migrations 0001–0027, with a stable sort column so
+// Every table in migrations 0001–0032, with a stable sort column so
 // paginated reads can't overlap or drop rows (PostgREST caps at 1000).
+//
+// This list is hand-maintained and that has already cost us once: it was
+// written at 0027 and `remittances` (0030) was never added, so every backup
+// between 0030 and 2026-08-29 — including the one taken before the 0029/0031/
+// 0032 security audit — silently omitted the collector cash-custody ledger.
+// A MIGRATION THAT ADDS A TABLE MUST ADD IT HERE IN THE SAME COMMIT.
 const TABLES: Array<{ name: string; orderBy: string }> = [
   { name: "profiles", orderBy: "id" },
   { name: "customers", orderBy: "id" },
@@ -55,6 +61,7 @@ const TABLES: Array<{ name: string; orderBy: string }> = [
   { name: "collection_entries", orderBy: "id" },
   { name: "cash_advances", orderBy: "id" },
   { name: "cash_advance_expenses", orderBy: "id" },
+  { name: "remittances", orderBy: "id" },
   { name: "commissions", orderBy: "id" },
   { name: "leads", orderBy: "id" },
   { name: "suppliers", orderBy: "id" },
