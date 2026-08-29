@@ -104,3 +104,9 @@ h3 {
     color: #000000;
   }
 }
+
+/* Scroll lock for the native <dialog> primitive — no JS, no scroll-position
+   restore bug. Pairs with src/components/dialog.tsx. */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
