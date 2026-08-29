@@ -12,7 +12,7 @@ copy of the old script: `C:\Users\ryan\Downloads\eandjappscript.txt`). Owner:
 Ryan (ruelryanrosal@gmail.com) — not a professional developer; explain
 technical trade-offs plainly and confirm before destructive actions.
 
-## Status (last reviewed 2026-08-17)
+## Status (last reviewed 2026-08-29)
 
 Facts here carry their own date. Trust the per-entry date, not the heading —
 this section is the volatile half of the file and drifts fastest.
@@ -121,8 +121,11 @@ this section is the volatile half of the file and drifts fastest.
   `scripts/backup-prod.ts` are now committed (4f3bb78, 9e24f0b).
 - **Security + integrity audit (2026-08-05) — APPLIED to prod and deployed.**
   Backup taken first (`eandj-data\backup-2026-08-05-1825`, 28 tables, 20,843
-  rows). Migrations went in **before** the code deploy, not after as originally
-  planned: the new code calls `unlink_collection_payment` and passes `p_force`,
+  rows — **that backup was incomplete**: `remittances` was missing from
+  `backup-prod.ts` from 0030 until it was fixed 2026-08-29, so no dump taken in
+  that window holds the remittance ledger). Migrations went in **before** the
+  code deploy, not after as originally planned: the new code calls
+  `unlink_collection_payment` and passes `p_force`,
   neither of which exists until 0031, so deploying first would have broken
   collection posting. The old code kept working throughout because `p_force`
   has a default and PostgREST resolves the 3-arg call to it. Verified from
@@ -251,7 +254,10 @@ does not cover it, which is how it rotted once already; if a commit changes
 setup steps or the feature list, fix README too.
 
 **`/help`, the in-app staff manual, is written but unmerged** — see the branch
-note under Status. `docs/README.md` still describes it as missing.
+note under Status. `docs/README.md` describes it as *shipped* ("the staff-facing
+manual is inside the app itself at `/help`"), which is worse than describing it
+as missing: it sends a reader to a route that does not exist in `main`. Fix that
+line when `/help` is either merged or dropped.
 
 ## E2E suite (Playwright) — runs against PRODUCTION
 
@@ -634,3 +640,9 @@ These shaped real code. Do not "simplify" them away.
   already made two risky operations recoverable — the delivery statuses after
   the cutover were restored from one. The `product-photos` bucket is not
   backed up (re-derivable from the pricelist import).
+  **Its table list is hand-maintained and the row-count check cannot catch an
+  omission** — the manifest verifies the tables it dumped, so a table missing
+  from `TABLES` is missing from the verification too. That is how `remittances`
+  (0030) went unbacked-up until 2026-08-29. **A migration that adds a table adds
+  it to `backup-prod.ts` in the same commit** — the same hardcoded-list trap as
+  `id_counters` above, and it has now bitten twice.
