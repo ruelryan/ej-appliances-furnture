@@ -25,12 +25,16 @@ export function ViewAs({
   const back = `&back=${encodeURIComponent(path)}`;
 
   if (previewing) {
+    // Naming the role here, not just in the banner: the header is sticky and
+    // the banner is not, so once you scroll this is the only thing still
+    // saying that what you are looking at is not your own account.
     return (
       <a
         href={`/api/preview?exit=1${back}`}
-        className="inline-flex min-h-10 items-center rounded-card border border-warning/40 bg-warning-bg px-2.5 text-micro font-semibold text-warning hover:bg-warning/10"
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-card border border-warning/40 bg-warning-bg px-2.5 text-micro font-semibold text-warning hover:bg-warning/10"
       >
-        Exit preview
+        <span className="max-sm:hidden">Viewing as {ROLE_LABEL(role)} —</span>
+        <span className="sm:hidden">{ROLE_LABEL(role)} —</span> Exit
       </a>
     );
   }
