@@ -254,10 +254,9 @@ does not cover it, which is how it rotted once already; if a commit changes
 setup steps or the feature list, fix README too.
 
 **`/help`, the in-app staff manual, is written but unmerged** — see the branch
-note under Status. `docs/README.md` describes it as *shipped* ("the staff-facing
-manual is inside the app itself at `/help`"), which is worse than describing it
-as missing: it sends a reader to a route that does not exist in `main`. Fix that
-line when `/help` is either merged or dropped.
+note under Status. `docs/README.md` used to describe it as *shipped*, sending a
+reader to a route that does not exist in `main`; corrected 2026-08-29 to say it
+is written but unmerged. When `/help` is merged or dropped, fix that line too.
 
 ## E2E suite (Playwright) — runs against PRODUCTION
 

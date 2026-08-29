@@ -8,7 +8,7 @@ Day-to-day operational procedures. The app is deployed on Vercel and backed by a
 |---|---|
 | Production URL | https://eandj-chi.vercel.app |
 | Supabase project | `trjlqcvhrgggcvsxxaml`, region ap-south-1 (pooler `aws-1-ap-south-1.pooler.supabase.com`) |
-| GitHub | `ruelryan/ej-appliances-furnture`; active branch `redesign/fintech-light`, `main` lags — merge deliberately |
+| GitHub | `ruelryan/ej-appliances-furnture`; **work from `main`** — it is current and is what production runs (`redesign/fintech-light` was folded in at 3415c47, 2026-08-17). Two branches survive on purpose: `redesign/fintech-light`, which still holds the one unmerged `/help` commit, and the parked `old-vite-app` |
 | Local dev | `npm run dev` on localhost:3000 — **points at the production database** |
 
 `.env.local` (gitignored) holds `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_DB_PASSWORD` (quote it — it contains `#`). Sanity-check with `npx tsx scripts/check-connection.ts`.
@@ -34,20 +34,20 @@ To verify how a given deployment was triggered, run `vercel inspect <url>`. A Gi
 npx tsx scripts/backup-prod.ts
 ```
 
-- Dumps **all 28 tables** plus the auth user list to `C:\Users\ryan\Documents\eandj-data\backup-<date>\`, one JSON file per table, with a `manifest.json` of row counts verified against server-side exact counts (the script fails loudly on any mismatch).
+- Dumps **all 29 tables** plus the auth user list to `<home>\Documents\eandj-data\backup-<date>\` (resolved from `os.homedir()`; set `EANDJ_DATA_DIR` to override — the path was once hardcoded to a `ryan` profile and the script failed outright on any other machine), one JSON file per table, with a `manifest.json` of row counts verified against server-side exact counts (the script fails loudly on any mismatch).
 - Reads are paginated past PostgREST's 1000-row cap with a stable `.order()` — never remove that (unordered pagination silently drops rows).
 - The `product-photos` Storage bucket is **not** included — photos are re-derivable from the pricelist import.
-- **When a new table is added in a migration, add it to the script's `TABLES` list in the same commit.**
+- **When a new table is added in a migration, add it to the script's `TABLES` list in the same commit.** This rule was already written here and was still missed: `remittances` (0030) went unlisted until 2026-08-29, so every backup in that window — including the one taken before the 0029/0031/0032 security audit — omitted the collector cash-custody ledger. **The manifest cannot catch this**: it verifies row counts for the tables it dumped, so a table absent from `TABLES` is absent from its own check.
 - The `eandj-data` folder is outside the repo because the dumps contain customer PII. Never commit anything from it.
 
 The owner also keeps the weekly CSV-export habit (`/api/export/*`) as a second, human-readable layer.
 
 ## Migrations
 
-Migration files live in `supabase/migrations/`, numbered `0001`–`0027` (all applied to prod). Apply a single new one with:
+Migration files live in `supabase/migrations/`, numbered `0001`–`0032` (all applied to prod). Apply a single new one with:
 
 ```
-npx tsx scripts/apply-migrations.ts 0028
+npx tsx scripts/apply-migrations.ts 0033
 ```
 
 Before writing a migration, read the gotchas in CLAUDE.md — the most dangerous are:
@@ -60,7 +60,24 @@ Before writing a migration, read the gotchas in CLAUDE.md — the most dangerous
 
 - `npx tsx scripts/migrate/import.ts --dir <csvs> [--load]` — re-import from Sheet CSVs (the 2026-07-20 cutover). **A re-import wipes `id_counters`** and the importer now reseeds them; if a future import misbehaves, re-run migration 0025 (idempotent).
 - `npx tsx scripts/extract-tabs.ts`, `import-locations.ts`, `backfill-addresses.ts`, `backfill-photo-hashes.ts`, `import-pricelist.ts` — see each script's header.
+- `npx tsx scripts/sync-sheet-divergence.ts [--apply]` — folds the Google Sheet's post-cutover drift back into the app. The Sheet kept being used after the 2026-07-20 cutover, so both systems minted IDs independently; the first reconciliation (2026-08-20) brought in 26 sales and ₱146,985 of payments, renumbered one collided contract, and left prod at 1,539 contracts / 1,149 customers / 6,022 payments. It is **idempotent** and re-derives the whole diff from the workbook each run, so it is also the tool for the next month's drift — but the fix is to stop entering sales in the Sheet, not to keep re-syncing. Two things it establishes permanently: **`PAY####` numbers diverged from PAY5939** (the same number means a different payment in each system, so the Sheet's payment number is not a lookup key for anything after PAY5938 — join on contract + date + amount), and a contract number the Sheet has already spent is invisible to `id_counters`.
 - House pattern for all one-off data scripts: **dry-run by default, `--apply` to write**, report printed first, service-role key (bypasses RLS — scripts cannot call RPCs guarded by `can_post_payments()` because those read `auth.uid()`).
+
+### Writing money data from a script
+
+The service-role key bypasses RLS, which means a script that uses it has to write tables directly and therefore **reimplements** whatever `compute_terms`, `id_counters`, the delivery trigger and the 0032 payment caps would have done. For anything money-shaped that is the wrong tool — every one of those is a chance to get the arithmetic subtly wrong.
+
+Connect with `pg` instead (`SUPABASE_DB_PASSWORD`, and the connect helper in `apply-migrations.ts`), open a transaction, and impersonate a real user:
+
+```sql
+select set_config('request.jwt.claims',
+                  json_build_object('sub', '<user uuid>', 'role', 'authenticated')::text,
+                  true);
+```
+
+Every guarded RPC then behaves exactly as it does in the browser. `set_config(..., true)` is transaction-local, so the impersonation and the calls must share one transaction — which also gives a genuine dry run for free: do the entire run and `rollback` instead of `commit`, and the rehearsal exercises the same code path as the real thing rather than a separate untested one. `sync-sheet-divergence.ts` is the worked example.
+
+**Trap when a script compares dates through `pg`:** node-postgres parses a `date` column into a JS `Date` built in the machine's local zone, which both shifts the day and silently breaks every string comparison against a CSV or Sheet value. Set `pg.types.setTypeParser(1082, (v) => v)` first to get the raw `'YYYY-MM-DD'` back. This made the first reconciliation run believe all 6,009 payments were missing. `@supabase/supabase-js` goes through PostgREST/JSON and does **not** have this problem — only `pg` does.
 
 ## Keep-alive
 

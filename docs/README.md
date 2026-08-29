@@ -1,13 +1,13 @@
 # E & J App — Developer Documentation
 
-Technical reference for the E & J Appliances Furniture installment-sales app. The staff-facing manual is inside the app itself at `/help` (and the collector field manual at `/collections/sop`); these pages are for developers.
+Technical reference for the E & J Appliances Furniture installment-sales app. The collector field manual is in the app at `/collections/sop`; these pages are for developers. (A general staff manual at `/help` is written but lives on an unmerged branch — it is **not** in `main` and not deployed.)
 
 ## Contents
 
 | Page | What it covers |
 |---|---|
 | [architecture.md](architecture.md) | Stack, repo layout, auth gate, the server-action → RPC → RLS write path, the two-places business-math rule, design system, deploys |
-| [database.md](database.md) | All 28 tables, every view (and the frozen-view rules), the full RPC catalog, triggers, RLS philosophy |
+| [database.md](database.md) | All 29 tables, every view (and the frozen-view rules), the full RPC catalog, triggers, RLS philosophy |
 | [roles-and-permissions.md](roles-and-permissions.md) | The 5 roles, per-route access matrix, SQL guard helpers, user lifecycle |
 | [modules/contracts-payments.md](modules/contracts-payments.md) | Contract lifecycle, terms math, cash sales, payments/void, repricing, repossession, status signals |
 | [modules/collections.md](modules/collections.md) | Worklist, log → post pipeline, promises and receipt numbers, cash advances, GPS tagging, the two Messenger links |
