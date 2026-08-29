@@ -18,9 +18,49 @@ Facts here carry their own date. Trust the per-entry date, not the heading —
 this section is the volatile half of the file and drifts fastest.
 
 - **Deployed to Vercel**: https://eandj-chi.vercel.app. **Cutover is done** —
-  the Sheet was re-imported on 2026-07-20: **1,511 contracts, 1,127 customers,
-  5,901 payments (₱24,256,852.39, reconciled to the centavo)**. The Sheet is no
+  the Sheet was re-imported on 2026-07-20: 1,511 contracts, 1,127 customers,
+  5,901 payments (₱24,256,852.39, reconciled to the centavo). The Sheet is no
   longer the source of truth; anything recorded there now is a divergence.
+- **The Sheet kept being used anyway, and was reconciled back in on
+  2026-08-20** (`scripts/sync-sheet-divergence.ts`). Prod now holds **1,539
+  contracts, 1,149 customers, 6,022 payments**, and **every contract number in
+  the app matches the Sheet, in both directions, with nothing missing either
+  way**. The script is **idempotent** — it recognises its own earlier work (the
+  renumber is done once `2026163` exists; a conflict is skipped once the row
+  already reads the corrected value) and re-derives everything from the workbook,
+  so re-running it is safe and is the way to fold in the next month's drift.
+  What had drifted in one month:
+  - **26 sales** (2026160–2026162, 2026164–2026186, every sale from 07-21 to
+    08-19) were written only in the Sheet. **₱146,985 of payments** with them.
+  - **One number collision.** Only one contract was ever created in the app
+    post-cutover, and it took `2026160` — a number the Sheet had already spent.
+    That sale is the Sheet's **2026163** (Mate, Clara) and was renumbered.
+    Root cause: `id_counters` knows nothing about numbers issued outside it.
+  - **Payment numbers diverged permanently from PAY5939.** Both systems minted
+    `PAY####` independently, so the same number denotes a different payment in
+    each. `payments.payment_no` is unique, so imported payments took **fresh**
+    numbers — **app payment numbers no longer match the Sheet's, and the Sheet's
+    PAY#### is not a lookup key for anything after PAY5938.** The only reliable
+    join is contract + date + amount, which is what the script uses.
+  - Two records genuinely disagreed and the Sheet was taken as right (Ryan,
+    2026-08-20): PAY5967 re-dated to 07-27, PAY6017 corrected to ₱1,800.
+  - Contract **30120** (Nyve, Amilita, 2024-01-31) had **no cash price** in the
+    Sheet and was skipped at both the cutover and the first pass of this
+    reconciliation. Ryan supplied **₱14,900** on 2026-08-20 and it is now in
+    (`PRICE_OVERRIDES` in the script). It is also the one **legacy-numbered**
+    import: `create_contract` can only mint `<year of contract_date><3 digits>`,
+    so a 5-digit number like `30120` is created, renamed, and that year's counter
+    put back — which is why no stray `contract:2024` scope exists.
+  - **Still open (judgement, not code)**: **2026172/2026173 look like the same
+    sale entered twice** (both ₱29,800 Panasonic, 2026-08-04, "Sanico, Elvira
+    Escoro" vs "Escoro, Sanico"); 2026172 is cancelled+closed, which is how the
+    Sheet has it. Also **a closed contract reads as "Fully paid" whatever the
+    balance** — 2026167 (₱5,679 left) and 2026182 (₱3,900 left) were closed in
+    the Sheet and now show that way. That is `v_contract_financials` behaving as
+    designed (`payment_status` wins the cascade), not an import artefact.
+  - **This will recur** while sales are still written in the Sheet. The script
+    is re-runnable and re-derives the diff from the workbook each run, but the
+    fix is to stop dual entry, not to keep re-syncing.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
   `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0032 all applied
   to prod** (0029/0031/0032 applied and verified 2026-08-05, code deployed the
@@ -158,6 +198,7 @@ npx tsx scripts/e2e/cleanup-test-data.ts          # remove rows the write suite 
 npx tsx scripts/e2e/teardown-test-users.ts        # delete the test accounts (same day)
 npx tsx scripts/backup-prod.ts            # full JSON dump of all tables → eandj-data\backup-*
 npx tsx scripts/migrate/import.ts --dir <csvs> [--load]  # Sheet re-import
+npx tsx scripts/sync-sheet-divergence.ts [--apply]  # fold Sheet drift back in
 npx tsx scripts/extract-tabs.ts <book.xlsx|drive.json> <dir>  # Sheet tabs → CSVs
 npx tsx scripts/import-locations.ts --file <book.xlsx> [--load]  # seed ph_locations
 npx tsx scripts/import-pricelist.ts [--apply]       # seed catalog + photos + dHashes
@@ -177,6 +218,18 @@ with the service-role key, which **bypasses RLS** — so they write tables
 directly where the app would have to use an RPC (an RPC guarded by
 `can_post_payments()` will always refuse a script, because that reads
 `auth.uid()` and a script has no JWT user).
+
+**There is a second way, and for anything money-shaped it is the better one**:
+connect with `pg` instead (`SUPABASE_DB_PASSWORD`, the connect helper in
+`apply-migrations.ts`), open a transaction, and impersonate a real user with
+`set_config('request.jwt.claims', json_build_object('sub', <uuid>, 'role',
+'authenticated')::text, true)`. Every guarded RPC then works exactly as it does
+in the browser, so `compute_terms`, `id_counters`, the delivery trigger and the
+0032 payment caps all still hold — you are not reimplementing them by hand and
+getting them subtly wrong. `set_config(..., true)` is transaction-local, so the
+impersonation and the calls must share one transaction. `sync-sheet-divergence.ts`
+does this, and gets a genuine dry run out of it for free: run the whole thing and
+`rollback` instead of `commit`.
 
 `.env.local` (gitignored) holds Supabase URL/keys and `SUPABASE_DB_PASSWORD`
 (quote it — it contains `#`).
@@ -506,6 +559,13 @@ These shaped real code. Do not "simplify" them away.
   verified against live data without writing any.
 - PowerShell 5.1 host: no `&&`; git messages with inner double quotes break —
   use single-quoted here-strings without embedded `"`.
+- **`pg` returns `date` columns as JS `Date`, not `'YYYY-MM-DD'`** — built in the
+  machine's local zone, so it both shifts the day and silently loses every string
+  comparison against a CSV/Sheet date. In `sync-sheet-divergence.ts` this made
+  the reconciliation believe all 6,009 payments were missing. Any script that
+  compares dates through `pg` wants
+  `pg.types.setTypeParser(1082, (v) => v)` first. `@supabase/supabase-js` goes
+  through PostgREST/JSON and does **not** have this problem — only `pg` does.
 - PostgREST caps reads at 1000 rows — paginate with `.range()` for full scans,
   **and always `.order()` when you do**. Without a stable sort the pages
   overlap and drop rows; this silently produced a phantom ₱32k discrepancy in a
