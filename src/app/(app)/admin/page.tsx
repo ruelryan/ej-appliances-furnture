@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { CreateUserForm } from "./create-user-form";
 import { ToggleActiveButton } from "./toggle-active-button";
-import { RoleSelect, ROLE_LABELS } from "./role-select";
+import { RoleSelect } from "./role-select";
+import { ROLE_LABELS } from "./roles";
 import { SectionCard } from "@/components/section-card";
 import { btnSecondary, theadRow } from "@/components/ui";
 

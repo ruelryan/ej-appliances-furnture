@@ -6,7 +6,7 @@ import { SectionCard } from "@/components/section-card";
 import { BackLink } from "@/components/back-link";
 import { TaskActions } from "./task-actions";
 import { AddCommentForm } from "./add-comment-form";
-import { TEAM_OPTIONS } from "../new-task-dialog";
+import { teamLabel } from "../teams";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,6 @@ const STATUS_STYLE: Record<string, string> = {
   done: "bg-positive/10 text-positive",
   cancelled: "bg-danger-bg text-danger",
 };
-const teamLabel = (r: string) => TEAM_OPTIONS.find((t) => t.value === r)?.label ?? r;
 
 export default async function TaskDetailPage({
   params,

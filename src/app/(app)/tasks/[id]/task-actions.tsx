@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { setTaskStatus, reassignTask } from "../actions";
-import { TEAM_OPTIONS } from "../new-task-dialog";
+import { TEAM_OPTIONS } from "../teams";
 import { input, label } from "@/components/ui";
 
 type Person = { id: string; full_name: string; role: string };

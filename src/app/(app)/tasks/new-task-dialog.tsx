@@ -4,17 +4,10 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { createTask } from "./actions";
 import { searchContracts } from "@/app/(app)/payments/actions";
 import { btnPrimary, input, label } from "@/components/ui";
+import { TEAM_OPTIONS } from "./teams";
 
 type Person = { id: string; full_name: string; role: string };
 type ContractHit = { id: string; contract_no: string; display_name: string };
-
-export const TEAM_OPTIONS: { value: string; label: string }[] = [
-  { value: "collector", label: "Collectors" },
-  { value: "admin", label: "Admin" },
-  { value: "delivery", label: "Delivery" },
-  { value: "sales_agent", label: "Sales agents" },
-  { value: "owner", label: "Owner" },
-];
 
 export function NewTaskDialog({ people }: { people: Person[] }) {
   const [open, setOpen] = useState(false);

@@ -3,16 +3,7 @@
 import { useState, useTransition } from "react";
 import { setUserRole } from "./actions";
 import { input } from "@/components/ui";
-
-// Label map shared with the badge in page.tsx via ROLE_LABELS.
-export const ROLE_LABELS: Record<string, string> = {
-  owner: "Owner",
-  admin: "Admin assistant",
-  collector: "Collector",
-  sales_agent: "Sales agent",
-  delivery: "Delivery",
-  staff: "Staff (legacy)",
-};
+import { ROLE_LABELS } from "./roles";
 
 const OPTIONS = [
   "collector",

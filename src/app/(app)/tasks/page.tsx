@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { fmtDateShort } from "@/lib/format";
 import { SectionCard } from "@/components/section-card";
-import { NewTaskDialog, TEAM_OPTIONS } from "./new-task-dialog";
+import { NewTaskDialog } from "./new-task-dialog";
+import { teamLabel } from "./teams";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +21,6 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Cancelled",
 };
 const PRIORITY_RANK: Record<string, number> = { high: 0, normal: 1, low: 2 };
-const teamLabel = (r: string) =>
-  TEAM_OPTIONS.find((t) => t.value === r)?.label ?? r;
 
 export default async function TasksPage({
   searchParams,
