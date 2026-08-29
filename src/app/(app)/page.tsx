@@ -1,87 +1,40 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient, getProfile } from "@/lib/supabase/server";
-import { peso } from "@/lib/format";
-import { StatTile } from "@/components/stat-tile";
+import { getProfile } from "@/lib/supabase/server";
+import { OwnerBoard } from "./dashboard/owner-board";
+import { AdminBoard } from "./dashboard/admin-board";
 
+// Every figure on this page is time-dependent, so it must never be cached.
+// The old dashboard was missing this while every comparable page had it.
+export const dynamic = "force-dynamic";
+
+/**
+ * The dashboard is a role router.
+ *
+ * Three roles already had a focused landing elsewhere; `collector` now joins
+ * them. Roger's home is /collections, which ALREADY shows assigned accounts,
+ * cash today, online today and cash on hand. A collector board here would have
+ * been a second copy of those four tiles to keep in step, and sent him one tap
+ * further from the worklist he actually works.
+ */
 export default async function DashboardPage() {
   const profile = await getProfile();
-  // Sales agents and delivery staff get a focused landing.
-  if (profile?.role === "sales_agent") redirect("/commissions");
-  if (profile?.role === "delivery") redirect("/deliveries");
-  const supabase = await createClient();
+  if (!profile) redirect("/login");
 
-  const { data: stats } = await supabase
-    .from("v_dashboard_stats")
-    .select("*")
-    .single();
+  if (profile.role === "sales_agent") redirect("/commissions");
+  if (profile.role === "delivery") redirect("/deliveries");
+  if (profile.role === "collector") redirect("/collections");
 
-  const tiles = [
-    { label: "Open contracts", value: String(stats?.open_contracts ?? 0) },
-    { label: "Outstanding balance", value: peso(stats?.outstanding_balance) },
-    { label: "Overdue", value: peso(stats?.total_overdue), alert: Number(stats?.total_overdue) > 0 },
-    { label: "Collected this month", value: peso(stats?.collected_this_month) },
-  ];
+  const greeting = profile.full_name.split(" ")[0];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <h1 className="text-xl font-semibold text-ink">
-        Dashboard
+        {profile.role === "owner" ? `Good day, ${greeting}` : "Today"}
       </h1>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {tiles.map((t) => (
-          <StatTile key={t.label} label={t.label} value={t.value} alert={t.alert} />
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Link
-          href="/payments/new"
-          className="rounded-card bg-brand p-4 text-center font-semibold text-white shadow-cta hover:bg-brand-dark"
-        >
-          Record payment
-        </Link>
-        <Link
-          href="/contracts/new"
-          className="rounded-card border border-line bg-white p-4 text-center font-semibold text-ink hover:bg-surface"
-        >
-          New contract
-        </Link>
-        <Link
-          href="/collections"
-          className="rounded-card border border-line bg-white p-4 text-center font-semibold text-ink hover:bg-surface"
-        >
-          Collections worklist
-          {(stats?.demand_tier_count ?? 0) + (stats?.overdue_tier_count ?? 0) > 0 && (
-            <span className="ml-2 rounded-full bg-danger-bg px-2 py-0.5 text-xs font-semibold text-danger">
-              {(stats?.demand_tier_count ?? 0) + (stats?.overdue_tier_count ?? 0)}
-            </span>
-          )}
-        </Link>
-        <Link
-          href="/contracts"
-          className="rounded-card border border-line bg-white p-4 text-center font-semibold text-ink hover:bg-surface"
-        >
-          Find a contract
-        </Link>
-      </div>
-
-      {profile?.role === "owner" && (
-        <div className="flex gap-3">
-          <Link
-            href="/analytics"
-            className="text-sm font-medium text-brand hover:underline"
-          >
-            Analytics →
-          </Link>
-          <Link
-            href="/admin"
-            className="text-sm font-medium text-brand hover:underline"
-          >
-            Admin →
-          </Link>
-        </div>
+      {profile.role === "owner" ? (
+        <OwnerBoard />
+      ) : (
+        <AdminBoard profileId={profile.id} />
       )}
     </div>
   );
