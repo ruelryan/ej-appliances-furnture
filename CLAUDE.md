@@ -227,6 +227,7 @@ npx tsx scripts/import-products.ts [--apply]        # products from a plain list
 npx tsx scripts/create-owner.ts                     # bootstrap the first owner account
 npx tsx scripts/backfill-addresses.ts [--apply]     # free text → barangay/municipality
 npx tsx scripts/backfill-photo-hashes.ts [--apply]  # dHash existing product photos
+npx tsx scripts/backfill-product-categories.ts [--apply]  # derive products.category from names
 ```
 
 `npm run e2e` (bare) runs **both** suites — it writes to prod. Use the
