@@ -62,8 +62,8 @@ this section is the volatile half of the file and drifts fastest.
     is re-runnable and re-derives the diff from the workbook each run, but the
     fix is to stop dual entry, not to keep re-syncing.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
-  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0032 all applied
-  to prod** (0029/0031/0032 applied and verified 2026-08-05, code deployed the
+  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0033 all applied
+  to prod** (0033 `v_cashflow_daily` applied and verified 2026-08-29) (0029/0031/0032 applied and verified 2026-08-05, code deployed the
   same day). Catalog: **136 products**, all with photos and perceptual hashes
   (seeded by `scripts/import-pricelist.ts`; 12 duplicates merged out).
 - GitHub: `ruelryan/ej-appliances-furnture`. Branch state (2026-08-17):
@@ -496,6 +496,30 @@ prove via `audit_log` that read-only runs wrote nothing.
 - **Analytics** (owner-only route `/analytics`): dashboards (monthly sales,
   collections-vs-expected, by-agent, aging, cashflow) built on the financial
   views; Recharts in `charts.tsx`. Consult the dataviz skill before changing.
+- **Dashboard** (`/`, rebuilt 2026-08-29): a role router, not a page.
+  `sales_agent`→`/commissions`, `delivery`→`/deliveries`, and now
+  `collector`→`/collections` (that page already shows assigned accounts, cash
+  today, online today and cash on hand — a second copy would be four tiles to
+  keep in step). Owner and admin get different boards from
+  `(app)/dashboard/`. **The rule: this page answers *what changed and what
+  needs me*; `/analytics` answers *how are we doing over time*.** They must not
+  duplicate — the four tiles used to be byte-identical. Every figure links to
+  the list that resolves it. The 30-day chart is **plain divs, not Recharts**:
+  it is the first screen after login on rural mobile data and Recharts is
+  ~100KB of client bundle for a chart nobody interacts with. Keep Recharts on
+  `/analytics`. **`v_cashflow_daily` has no row for a day with no payments**,
+  so the axis is filled in TS — calendar arithmetic, not business math.
+- **Every dashboard query must branch on `error` before `data`.** The old page
+  dropped the error and rendered `peso(undefined)`, so a dropped connection
+  produced a confident "Collected this month ₱0.00". A zero that means "we
+  could not ask" is worse than no number: show a dash.
+- **"View as"** (owner-only): `getProfile()` returns the *previewed* role so
+  every existing role check reacts untouched; `getRealProfile()` is for code
+  that must know who you really are. It reproduces the UI layer only — **RLS
+  still sees the owner, so the rows are yours** — which is why `/admin/access`
+  ships beside it. Read-only is enforced in `middleware.ts` by refusing every
+  non-GET while the cookie is set, not by hiding buttons; that is also why
+  entering/leaving is a GET route. Full notes in `docs/roles-and-permissions.md`.
 - Routes: `src/app/(app)/*` is the authenticated shell (auth gate =
   `src/middleware.ts`); mutations are server actions in colocated `actions.ts`
   files. `src/app/print/*` renders print pages (browser print CSS, A4, no
@@ -522,6 +546,36 @@ Follow the project skills in `.claude/skills/`:
   `section-card.tsx`, `stat-tile.tsx`; no emoji in UI).
 - `claude-design` — process: surface-first (customer card > collections >
   lists), anti-slop audit before shipping, variants for new designs.
+
+**The token and primitive layer was rebuilt 2026-08-29.** Colour discipline was
+already near-perfect (zero Tailwind palette classes, one stray hex); everything
+else was missing:
+- **One custom type size, `text-micro` (11px)**, replacing 72 one-off
+  `text-[Npx]` values across 43 files; everything else uses Tailwind
+  xs/sm/base/lg/xl. `src/app/print/` is excluded from that sweep on purpose —
+  those sizes were chosen against A4 and carry legal text.
+- `font-display` is **deleted** (it aliased to the body font, so it rendered as
+  nothing while looking like a decision). `font-mono` has a real stack now and
+  is for identifiers only.
+- **One global `:focus-visible` ring**, at `:where()` specificity so components
+  can still override it.
+- `src/components/ui.ts` carries every button in two sizes (**both `min-h-10`**
+  — the hand-rolled small variant was ~30px, under the touch floor), plus
+  `select`, `textarea`, table cells and the `pageStack`/`cardStack` rhythm.
+- **`src/components/dialog.tsx` is the only modal.** Native `<dialog>` +
+  `showModal()` brings the focus trap, Escape, top-layer stacking and
+  `::backdrop` that all 16 hand-rolled `fixed inset-0 z-50` versions lacked —
+  and the scrollable middle only one of them had, without which the
+  log-collection panel cannot be submitted on a phone with the keyboard up.
+- `Alert`, `EmptyState`, and `StatTile` (now takes `sub`, `tone`, `href`: a
+  figure with no baseline supports no decision, one that leads nowhere is a
+  dead end).
+- **Restyling many files goes through `scripts/sweep-classes.ts`** with an
+  explicit old→new mapping table. Never hand-edit 30 files.
+- **Mobile nav is 4 role-chosen tabs + More** (`nav-config.ts`, asserted by
+  `nav-coverage.test.ts`). The old `slice(0, 6)` left seven sections with no
+  mobile route at all for the owner, and rendered 5 tabs into `grid-cols-6`
+  for three of five roles.
 - `sketch` — disposable HTML mockups in scratchpad before big new screens.
 
 Light theme only. Charts use the separate validated palette in `globals.css`
