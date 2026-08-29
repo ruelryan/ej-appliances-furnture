@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { Dialog } from "@/components/dialog";
 import type { Role } from "@/lib/supabase/server";
+import { LINKS, TAB_HREFS, visibleTo, type NavLink } from "./nav-config";
 
 // Inline stroke icons (24×24 viewBox, currentColor) — no icon library.
 const ICONS: Record<string, React.ReactNode> = {
@@ -45,6 +48,9 @@ const ICONS: Record<string, React.ReactNode> = {
   products: (
     <path d="M3.5 7 12 3l8.5 4-8.5 4zM3.5 7v10l8.5 4M20.5 7v10l-8.5 4M12 11v10" />
   ),
+  more: (
+    <path d="M5 12h.01M12 12h.01M19 12h.01" />
+  ),
 };
 
 function NavIcon({ name, className }: { name: string; className?: string }) {
@@ -64,36 +70,6 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
   );
 }
 
-// `roles` omitted = visible to every authenticated role.
-// RLS scopes the *content* of shared pages (a collector's Contracts list
-// shows only assigned contracts); this list only controls nav visibility.
-type NavLink = {
-  href: string;
-  label: string;
-  icon: string;
-  roles?: Role[];
-};
-
-const LINKS: NavLink[] = [
-  { href: "/", label: "Home", icon: "home" },
-  { href: "/tasks", label: "Tasks", icon: "tasks" },
-  { href: "/dtr", label: "DTR", icon: "dtr", roles: ["owner", "admin", "collector", "delivery", "staff"] },
-  { href: "/contracts", label: "Contracts", icon: "contracts", roles: ["owner", "admin", "collector", "sales_agent", "delivery", "staff"] },
-  { href: "/payments", label: "Payments", icon: "payments", roles: ["owner", "admin", "staff"] },
-  { href: "/collections", label: "Collect", icon: "collect", roles: ["owner", "admin", "collector", "staff"] },
-  { href: "/deliveries", label: "Deliveries", icon: "deliveries", roles: ["owner", "admin", "delivery", "staff"] },
-  { href: "/products", label: "Products", icon: "products", roles: ["owner", "admin", "staff"] },
-  { href: "/customers", label: "Customers", icon: "customers", roles: ["owner", "admin", "staff"] },
-  { href: "/commissions", label: "Commissions", icon: "commissions", roles: ["owner", "admin", "staff", "sales_agent"] },
-  { href: "/leads", label: "Leads", icon: "leads", roles: ["owner", "admin", "staff", "sales_agent"] },
-  { href: "/analytics", label: "Analytics", icon: "analytics", roles: ["owner"] },
-  { href: "/admin", label: "Admin", icon: "admin", roles: ["owner"] },
-];
-
-function visibleTo(role: Role) {
-  return (l: NavLink) => !l.roles || l.roles.includes(role);
-}
-
 export function NavLinks({
   role,
   taskCount = 0,
@@ -104,6 +80,7 @@ export function NavLinks({
   variant: "sidebar" | "tabs";
 }) {
   const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
   const links = LINKS.filter(visibleTo(role));
   const badgeFor = (href: string) => (href === "/tasks" ? taskCount : 0);
 
@@ -138,30 +115,89 @@ export function NavLinks({
     );
   }
 
-  // Mobile tabs: cap at 6 (DTR clock-in must be one tap on a phone);
-  // pages beyond the cap remain reachable from the dashboard. `links` is
-  // already role-filtered above.
-  const tabLinks = links.slice(0, 6);
+  // Mobile: four destinations chosen for the role, then More.
+  //
+  // This replaced `links.slice(0, 6)`, which had two faults. It stranded
+  // whatever fell past the sixth entry with NO mobile route at all — for the
+  // owner that was Deliveries, Products, Customers, Commissions, Leads,
+  // Analytics and Admin, seven sections unreachable on a phone. And the grid
+  // was hardcoded to six columns while collector, delivery and sales_agent
+  // each have five links, so the majority of field users saw the tabs bunched
+  // left against an empty sixth cell.
+  //
+  // A per-role table also expresses something slice never could: the old
+  // comment said "DTR clock-in must be one tap", which is true for the people
+  // who clock in and irrelevant for the owner, who does not. Now DTR is
+  // primary exactly where it is used, and that slot is free elsewhere.
+  const tabHrefs = TAB_HREFS[role] ?? TAB_HREFS.admin;
+  const tabLinks = tabHrefs
+    .map((href) => links.find((l) => l.href === href))
+    .filter((l): l is NavLink => !!l);
+  const overflow = links.filter((l) => !tabHrefs.includes(l.href));
+  // Without this the user standing on /products sees no tab lit at all, which
+  // reads as the app having lost its place.
+  const moreActive = overflow.some((l) => isActive(l.href));
+
+  const tabClass = (active: boolean) =>
+    `relative flex min-h-[52px] flex-col items-center justify-center gap-1 py-1.5 text-micro ${
+      active ? "font-semibold text-brand" : "text-muted"
+    }`;
 
   return (
-    <div className="grid grid-cols-6">
-      {tabLinks.map((l) => (
-        <Link
-          key={l.href}
-          href={l.href}
-          className={`relative flex flex-col items-center gap-1 py-2 text-micro ${
-            isActive(l.href) ? "font-semibold text-brand" : "text-muted"
-          }`}
-        >
-          <NavIcon name={l.icon} className="h-[22px] w-[22px]" />
-          {badgeFor(l.href) > 0 && (
-            <span className="absolute right-1/2 top-1 -mr-3 rounded-full bg-danger px-1.5 text-micro font-semibold text-white">
-              {badgeFor(l.href)}
-            </span>
-          )}
-          {l.label}
-        </Link>
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-5">
+        {tabLinks.map((l) => (
+          <Link
+            key={l.href}
+            href={l.href}
+            aria-current={isActive(l.href) ? "page" : undefined}
+            className={tabClass(isActive(l.href))}
+          >
+            <NavIcon name={l.icon} className="h-[22px] w-[22px]" />
+            {badgeFor(l.href) > 0 && (
+              <span className="absolute right-1/2 top-0.5 -mr-3 rounded-full bg-danger px-1.5 text-micro font-semibold text-white">
+                {badgeFor(l.href)}
+              </span>
+            )}
+            <span className="max-w-full truncate px-0.5">{l.label}</span>
+          </Link>
+        ))}
+
+        <button type="button" onClick={() => setMoreOpen(true)} className={tabClass(moreActive)}>
+          <NavIcon name="more" className="h-[22px] w-[22px]" />
+          <span>More</span>
+        </button>
+      </div>
+
+      <Dialog open={moreOpen} onClose={() => setMoreOpen(false)} title="More">
+        <div className="-mx-2">
+          {overflow.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              onClick={() => setMoreOpen(false)}
+              className={`flex min-h-12 items-center gap-3 rounded-card px-2 text-sm ${
+                isActive(l.href) ? "font-semibold text-brand" : "text-ink"
+              } hover:bg-surface`}
+            >
+              <NavIcon name={l.icon} className="h-5 w-5 shrink-0" />
+              {l.label}
+              {badgeFor(l.href) > 0 && (
+                <span className="ml-auto rounded-full bg-danger px-1.5 text-micro font-semibold text-white">
+                  {badgeFor(l.href)}
+                </span>
+              )}
+            </Link>
+          ))}
+          <Link
+            href="/account"
+            onClick={() => setMoreOpen(false)}
+            className="flex min-h-12 items-center gap-3 rounded-card border-t border-line px-2 text-sm text-ink hover:bg-surface"
+          >
+            My account
+          </Link>
+        </div>
+      </Dialog>
+    </>
   );
 }
