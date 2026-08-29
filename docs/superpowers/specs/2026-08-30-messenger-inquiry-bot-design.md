@@ -17,6 +17,22 @@ Answers product inquiries on the Page automatically, in the language the custome
 - **A photo** — 135 of 140 products have one.
 - **Installment options** — computed with the existing `computeTerms()`, so a ₱23,900 fridge is also "₱5,975 down, then ₱3,585/month for 5 months." This is the conversion lever: the price alone can read as unaffordable, the monthly does not.
 - **Store basics** — location, hours, GCash details, how the installment system works.
+- **Whether you deliver there** — see below. A real buying question, and answerable from history.
+
+### Delivery area
+
+Confirmed automatically for:
+
+- **All of Southern Leyte.** All 19 of 19 municipalities in `ph_locations` have customers, so this needs no qualification.
+- **The 24 Leyte municipalities that have ever received a delivery**: Hilongos, Mahaplag, Matalom, Abuyog, Bato, Inopacan, MacArthur, Javier, Baybay City, Hindang, Ormoc City, Albuera, Isabel, Palo, Leyte, San Miguel, Burauen, Dulag, Tacloban City, Kananga, Matag-ob, Santa Fe, Palompon, Calubian.
+
+Anywhere else is a handoff, not a refusal — *"let me check with the store"*.
+
+**Do not derive this list from `ph_locations`.** That table lists 43 Leyte municipalities, 19 of which have never received a delivery (Villaba, Carigara, Tanauan, Babatngon and others). It is the address-picker's vocabulary, not a service-area promise, and using it would commit the business to trips it does not make.
+
+Ryan chose the full 24 over the 10 with real presence (2026-08-30), knowing that ten of them were reached only once or twice and some are on the far side of the island. The risk is contained by the rule that **the bot confirms the area, never the schedule or the fee** — a person always confirms those before anything is loaded onto a van.
+
+The list lives as an explicit constant in code, in the shape of `COMPANY` in `src/lib/messages.ts`. It is a business decision, so it should be readable and editable in one obvious place rather than inferred from customer rows at runtime — otherwise a single exceptional delivery silently widens the service area forever.
 
 ## What it deliberately does not do
 
@@ -58,9 +74,17 @@ The bot stops replying to a thread and flags it when:
 - the customer asks about anything the bot is not allowed to answer (discounts, delivery dates)
 - the customer sends an image or a voice note
 
-A flagged thread appears in the app as a queue. **Nobody being on the other end is the main way this fails** — a customer who gets "let me get someone to help you" and then silence is worse off than one who got no reply at all. At 10–50 inquiries a day, expect a handful of handoffs daily.
+**Staff reply inside Messenger, exactly as they do today** (Ryan, 2026-08-30). The app does not become a second inbox — Analyn keeps using the tool she already knows, on the phone she already has, and this build does not have to reproduce Messenger badly.
 
-Once flagged, the bot does not resume on that thread unless a person clears the flag.
+That decision removes a whole subsystem and changes what the app owes:
+
+- **Notify, don't collect.** A handoff raises a notification and shows in a small queue — thread, customer's question, why the bot stopped, and a deep link into Messenger. It is a to-do list, not a mailbox.
+- **Detect the human reply automatically.** Subscribing to the `message_echoes` webhook field means a Page-authored message arrives as an event, so the bot can see that a person has taken over and mark the handoff handled without anyone ticking anything off. Nothing to remember, nothing to go stale.
+- **Meta's Handover Protocol is the proper mechanism** for passing thread control to the Page Inbox, and is worth using rather than only tracking state locally — it makes the takeover real on Facebook's side rather than a convention this app invents.
+
+**Nobody being on the other end is the main way this fails** — a customer told "let me get someone to help you" and then met with silence is worse off than one who got no reply at all. At 10–50 inquiries a day, expect a handful of handoffs daily.
+
+Once flagged, the bot does not resume on that thread. A human replied; the conversation is theirs.
 
 ## Data model — migration 0034
 
@@ -111,9 +135,11 @@ Only after those pass does it point at the real Page.
 
 ## Open questions
 
-- **What happens to a thread after a handoff?** A flag in the app is the minimum. Whether Analyn replies inside Messenger or inside the app is a real workflow question, and the answer decides whether this needs a full inbox or just a notification.
-- **Should it answer "do you deliver to X?"** The `ph_locations` table knows the delivery area — 2,141 barangays across Southern Leyte, Leyte and Tacloban. That is answerable from data and it is a genuine buying question, but it is scope beyond price and specs.
-- **The 5 products with no description and the 1 with no price** should be filled in before launch, or excluded from search.
+Both original questions were settled on 2026-08-30 — staff reply inside Messenger, and the delivery list is the 24 Leyte municipalities plus all of Southern Leyte. What remains:
+
+- **The 5 products with no description and the 1 with no price** should be filled in before launch, or excluded from search. A product the bot can find but cannot describe is worse than one it cannot find.
+- **How long before a handed-off thread is chased?** If Analyn does not reply in Messenger within some period, nothing currently notices. A simple age on the queue would catch it; whether that is worth building depends on how often it actually happens.
+- **Delivery fees.** The bot confirms the area but says nothing about cost, because the app does not model delivery fees at all. If there is a standard fee by distance, saying it up front would remove a step; if it is negotiated per trip, staying quiet is right.
 
 ## Out of scope
 
