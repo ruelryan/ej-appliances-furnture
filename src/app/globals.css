@@ -6,8 +6,6 @@
 :root {
   --background: #ffffff;
   --foreground: #111827;
-  /* Single-font direction: headings share the body font (Inter). */
-  --font-heading: var(--font-body);
 
   /* Chart tokens (validated palette — see dataviz reference) */
   --chart-1: #2a78d6;
@@ -24,7 +22,20 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-body);
-  --font-display: var(--font-heading);
+
+  /* Chart and status colors were only reachable as var() inside charts.tsx.
+     Aliasing them here also generates classes (bg-status-critical,
+     text-status-good) so a non-chart surface can carry the same reserved
+     meanings without redefining the hexes. The values still live in :root,
+     so charts.tsx keeps working unchanged. */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-axis: var(--chart-axis);
+  --color-status-good: var(--status-good);
+  --color-status-warning: var(--status-warning);
+  --color-status-serious: var(--status-serious);
+  --color-status-critical: var(--status-critical);
 }
 
 @theme {
@@ -42,6 +53,20 @@
   --color-danger-bg: #fef2f2;
   --radius-card: 12px;
   --shadow-cta: 0 1px 2px 0 rgb(37 99 235 / 0.35);
+
+  /* One step below text-xs, for pills, badges and table meta. The app carried
+     72 one-off `text-[Npx]` values; 10px was the most common and 9px appeared
+     in the mobile nav badge — both below a comfortable floor on a phone held
+     at arm's length in daylight. Everything above this uses Tailwind's own
+     xs / sm / base / lg / xl, so there is exactly one custom size. */
+  --text-micro: 0.6875rem; /* 11px */
+  --text-micro--line-height: 1rem;
+
+  /* `font-mono` previously resolved to nothing, so it fell through to the OS
+     default — the same contract number rendered in Consolas on /payments and
+     in Inter on /contracts. Identifiers (contract no, payment no, receipt no)
+     are the only thing that should use it. */
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 }
 
 body {
@@ -51,12 +76,26 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Headings deliberately share the body font (Inter). There used to be a
+   `font-display` utility for this, but it aliased straight back to the body
+   font, so it rendered identically to nothing and was applied to about half
+   the page titles in the app — noise that read as a decision. */
 h1,
 h2,
 h3 {
-  font-family: var(--font-heading), system-ui, sans-serif;
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+
+/* One visible focus ring for everything interactive. Focus states were
+   previously per-component and several controls had none at all — the select
+   on /contracts sat beside a token input and only the input lit up. :where()
+   keeps specificity at zero, so any component can still override it, and
+   :focus-visible means a mouse click does not draw a ring. */
+:where(a, button, [role="button"], input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-card);
 }
 
 @media print {

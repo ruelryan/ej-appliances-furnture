@@ -75,10 +75,10 @@ export default async function PaymentsPage({
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="font-display font-semibold text-ink">
+                  <div className="font-semibold text-ink">
                     {contract?.customers?.display_name ?? "—"}
                     {p.voided_at && (
-                      <span className="ml-2 rounded-full bg-danger-bg px-2 py-0.5 text-[10px] font-semibold text-danger">
+                      <span className="ml-2 rounded-full bg-danger-bg px-2 py-0.5 text-micro font-semibold text-danger">
                         VOIDED
                       </span>
                     )}

@@ -140,7 +140,7 @@ export function ProductPicker({
                     />
                   </button>
                 ) : (
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-card border border-dashed border-line text-[10px] text-muted">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-card border border-dashed border-line text-micro text-muted">
                     no photo
                   </div>
                 )}

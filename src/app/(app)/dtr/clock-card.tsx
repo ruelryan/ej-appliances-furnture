@@ -59,7 +59,7 @@ export function ClockCard({
 
   return (
     <div className="rounded-card border border-line bg-white p-4">
-      <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted">
+      <div className="mb-3 text-micro font-semibold uppercase tracking-wider text-muted">
         Today
       </div>
 

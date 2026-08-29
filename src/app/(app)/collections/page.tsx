@@ -66,7 +66,7 @@ function WorklistCard({
         <div className="min-w-0">
           <Link
             href={`/contracts/${c.id}`}
-            className="font-display font-semibold text-ink hover:underline"
+            className="font-semibold text-ink hover:underline"
           >
             {c.display_name}
           </Link>
@@ -86,7 +86,7 @@ function WorklistCard({
             </div>
           )}
           {promisedDue && (
-            <div className="mt-1.5 inline-block rounded-card bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">
+            <div className="mt-1.5 inline-block rounded-card bg-brand px-2 py-0.5 text-micro font-semibold text-white">
               Promised {fmtDateShort(promisedDue)}
               {promisedDue < today ? " — overdue promise" : ""}
             </div>
@@ -97,7 +97,7 @@ function WorklistCard({
           <div className="mt-1 text-sm font-semibold text-danger">
             {peso(c.overdue_amount)}
           </div>
-          <div className="text-[11px] text-muted">past due</div>
+          <div className="text-micro text-muted">past due</div>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -258,7 +258,7 @@ async function CollectorBoard() {
         <div className="space-y-4">
           {duePromises.length > 0 && (
             <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-brand">
+              <p className="mb-2 text-micro font-semibold uppercase tracking-wider text-brand">
                 Promised today or overdue ({duePromises.length})
               </p>
               <div className="space-y-3">
@@ -276,7 +276,7 @@ async function CollectorBoard() {
 
           {areaGroups.map(([area, rows]) => (
             <div key={area}>
-              <p className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted">
+              <p className="mb-2 flex items-center justify-between text-micro font-semibold uppercase tracking-wider text-muted">
                 <span>{area}</span>
                 <span className="font-normal normal-case">{rows.length} account{rows.length === 1 ? "" : "s"}</span>
               </p>
@@ -716,7 +716,7 @@ function AdvanceList({
               <div className="text-sm font-semibold text-ink">
                 {peso(a.amount)}
                 <span
-                  className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  className={`ml-2 rounded-full px-2 py-0.5 text-micro font-semibold ${
                     a.status === "requested"
                       ? "bg-warning-bg text-warning"
                       : "border border-line bg-white text-muted"

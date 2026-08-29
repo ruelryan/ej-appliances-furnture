@@ -52,7 +52,7 @@ export default async function PayslipPage({
             {employee?.full_name ?? "—"}
           </h1>
           <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            className={`rounded-full px-2 py-0.5 text-micro font-semibold ${
               slip.status === "final"
                 ? "bg-positive/10 text-positive-dark"
                 : "bg-warning-bg text-warning"

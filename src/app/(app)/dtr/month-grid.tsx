@@ -35,7 +35,7 @@ function HolidayPill({
 }) {
   return (
     <span
-      className={`inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+      className={`inline-block max-w-full truncate rounded-full px-2 py-0.5 text-micro font-semibold ${
         type === "regular"
           ? "bg-warning-bg text-warning"
           : "bg-brand/10 text-brand"
@@ -130,7 +130,7 @@ export function MonthGrid({
                     <HolidayPill name={holiday.name} type={holiday.type} />
                   )}
                   {row?.note && (
-                    <div className="max-w-40 truncate text-[10px] text-muted">
+                    <div className="max-w-40 truncate text-micro text-muted">
                       {row.note}
                     </div>
                   )}
@@ -140,11 +140,11 @@ export function MonthGrid({
                 </td>
                 <td className="px-2 py-2 whitespace-nowrap tabular-nums text-ink">
                   {working ? (
-                    <span className="rounded-full bg-positive/10 px-2 py-0.5 text-[10px] font-semibold text-positive-dark">
+                    <span className="rounded-full bg-positive/10 px-2 py-0.5 text-micro font-semibold text-positive-dark">
                       Working
                     </span>
                   ) : missingOut ? (
-                    <span className="rounded-full bg-danger-bg px-2 py-0.5 text-[10px] font-semibold text-danger">
+                    <span className="rounded-full bg-danger-bg px-2 py-0.5 text-micro font-semibold text-danger">
                       Missing out
                     </span>
                   ) : row?.time_out ? (
@@ -174,7 +174,7 @@ export function MonthGrid({
                   <td className="px-2 py-2 text-right">
                     <div className="flex items-center justify-end gap-1">
                       {pendingSet.has(iso) && (
-                        <span className="rounded-full bg-warning-bg px-2 py-0.5 text-[10px] font-semibold text-warning">
+                        <span className="rounded-full bg-warning-bg px-2 py-0.5 text-micro font-semibold text-warning">
                           Requested
                         </span>
                       )}

@@ -107,7 +107,7 @@ export default async function TasksPage({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       {t.priority === "high" && (
-                        <span className="rounded-full bg-danger-bg px-1.5 py-0.5 text-[9px] font-semibold text-danger">
+                        <span className="rounded-full bg-danger-bg px-1.5 py-0.5 text-micro font-semibold text-danger">
                           HIGH
                         </span>
                       )}
@@ -121,7 +121,7 @@ export default async function TasksPage({
                       {t.due_date ? ` · due ${fmtDateShort(t.due_date)}` : ""}
                     </div>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[t.status]}`}>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-micro font-semibold ${STATUS_STYLE[t.status]}`}>
                     {STATUS_LABEL[t.status]}
                   </span>
                 </div>

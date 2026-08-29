@@ -157,7 +157,7 @@ export default async function DtrSettingsPage({
                 <div className="font-semibold text-ink">
                   {l.name}{" "}
                   <span
-                    className={`ml-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    className={`ml-1 rounded-full px-2 py-0.5 text-micro font-semibold ${
                       l.active
                         ? "bg-positive/10 text-positive-dark"
                         : "bg-line text-muted"
@@ -228,7 +228,7 @@ export default async function DtrSettingsPage({
                 <td className="py-2 pr-3 text-ink">{h.name}</td>
                 <td className="py-2 pr-3">
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    className={`rounded-full px-2 py-0.5 text-micro font-semibold ${
                       h.type === "regular"
                         ? "bg-warning-bg text-warning"
                         : "bg-brand/10 text-brand"

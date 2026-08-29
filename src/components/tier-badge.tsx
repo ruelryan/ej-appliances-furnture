@@ -22,7 +22,7 @@ export function TierBadge({ tier }: { tier: string }) {
   const s = STYLES[tier] ?? STYLES.on_track;
   return (
     <span
-      className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${s.cls}`}
+      className={`inline-block rounded-full px-2.5 py-0.5 text-micro font-semibold ${s.cls}`}
     >
       {s.label}
     </span>

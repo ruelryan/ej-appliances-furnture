@@ -27,7 +27,7 @@ export function RejectButton({ leadId }: { leadId: string }) {
       >
         {pending ? "…" : "Reject"}
       </button>
-      {error && <span className="text-[10px] text-danger">{error}</span>}
+      {error && <span className="text-micro text-danger">{error}</span>}
     </span>
   );
 }

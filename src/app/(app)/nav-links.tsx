@@ -128,7 +128,7 @@ export function NavLinks({
             <NavIcon name={l.icon} className="h-[18px] w-[18px]" />
             {l.label}
             {badgeFor(l.href) > 0 && (
-              <span className="ml-auto rounded-full bg-danger px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              <span className="ml-auto rounded-full bg-danger px-1.5 py-0.5 text-micro font-semibold text-white">
                 {badgeFor(l.href)}
               </span>
             )}
@@ -149,13 +149,13 @@ export function NavLinks({
         <Link
           key={l.href}
           href={l.href}
-          className={`relative flex flex-col items-center gap-1 py-2 text-[10px] ${
+          className={`relative flex flex-col items-center gap-1 py-2 text-micro ${
             isActive(l.href) ? "font-semibold text-brand" : "text-muted"
           }`}
         >
           <NavIcon name={l.icon} className="h-[22px] w-[22px]" />
           {badgeFor(l.href) > 0 && (
-            <span className="absolute right-1/2 top-1 -mr-3 rounded-full bg-danger px-1.5 text-[9px] font-semibold text-white">
+            <span className="absolute right-1/2 top-1 -mr-3 rounded-full bg-danger px-1.5 text-micro font-semibold text-white">
               {badgeFor(l.href)}
             </span>
           )}

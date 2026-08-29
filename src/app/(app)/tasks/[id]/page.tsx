@@ -52,7 +52,7 @@ export default async function TaskDetailPage({
       <SectionCard
         title={task.title}
         action={
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[task.status]}`}>
+          <span className={`rounded-full px-2 py-0.5 text-micro font-semibold ${STATUS_STYLE[task.status]}`}>
             {task.status.replace("_", " ").toUpperCase()}
           </span>
         }
@@ -107,7 +107,7 @@ export default async function TaskDetailPage({
         <div className="space-y-2">
           {(comments ?? []).map((cm) => (
             <div key={cm.id} className="rounded-card bg-surface p-3 text-sm">
-              <div className="mb-0.5 text-[11px] text-muted">
+              <div className="mb-0.5 text-micro text-muted">
                 {nameOf(cm.created_by)} ·{" "}
                 {new Date(cm.created_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
               </div>

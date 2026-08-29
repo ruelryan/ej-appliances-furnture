@@ -82,9 +82,9 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-display font-semibold text-ink">{product.name}</span>
+            <span className="font-semibold text-ink">{product.name}</span>
             {!product.active && (
-              <span className="rounded-full bg-danger-bg px-2 py-0.5 text-[10px] font-semibold text-danger">
+              <span className="rounded-full bg-danger-bg px-2 py-0.5 text-micro font-semibold text-danger">
                 INACTIVE
               </span>
             )}
@@ -101,7 +101,7 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            className={`rounded-full px-2 py-0.5 text-micro font-semibold ${
               product.on_hand > 0 ? "bg-brand/10 text-brand" : "border border-line bg-white text-muted"
             }`}
           >
@@ -124,7 +124,7 @@ export function ProductCard({ product }: { product: Product }) {
               type="button"
               disabled={pending}
               onClick={() => run(() => deleteProductPhoto(ph.id))}
-              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-[11px] font-bold text-white disabled:opacity-40"
+              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-micro font-bold text-white disabled:opacity-40"
               title="Delete photo"
             >
               ×

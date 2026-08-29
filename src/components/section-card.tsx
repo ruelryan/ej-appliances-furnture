@@ -20,7 +20,7 @@ export function SectionCard({
       <div
         className={`${sub ? "mb-1" : "mb-3"} flex items-center justify-between gap-2`}
       >
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+        <h2 className="text-micro font-semibold uppercase tracking-wider text-muted">
           {title}
         </h2>
         {action}

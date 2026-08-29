@@ -14,7 +14,7 @@ export default function LoginPage() {
           <span className="mx-auto mb-3 block w-fit text-brand">
             <LogoMark className="h-12 w-12" />
           </span>
-          <div className="font-display text-2xl font-semibold text-ink">
+          <div className="text-2xl font-semibold text-ink">
             E &amp; J
           </div>
           <div className="text-sm text-muted">

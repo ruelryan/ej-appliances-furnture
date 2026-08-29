@@ -25,7 +25,7 @@ export function AddCommentForm({ taskId }: { taskId: string }) {
       <button type="submit" disabled={pending} className={btnPrimary}>
         {pending ? "…" : "Send"}
       </button>
-      {error && <span className="self-center text-[10px] text-danger">{error}</span>}
+      {error && <span className="self-center text-micro text-danger">{error}</span>}
     </form>
   );
 }

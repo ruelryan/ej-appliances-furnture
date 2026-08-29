@@ -287,14 +287,14 @@ export default async function DtrPage({
                 <RequestSummary req={r} />
                 {r.status === "pending" ? (
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-warning-bg px-2 py-0.5 text-[10px] font-semibold text-warning">
+                    <span className="rounded-full bg-warning-bg px-2 py-0.5 text-micro font-semibold text-warning">
                       Pending
                     </span>
                     <CancelRequestButton requestId={r.id} />
                   </div>
                 ) : (
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    className={`rounded-full px-2 py-0.5 text-micro font-semibold ${
                       r.status === "approved"
                         ? "bg-positive/10 text-positive-dark"
                         : "bg-danger-bg text-danger"

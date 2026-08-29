@@ -220,7 +220,7 @@ export default async function ContractPage({
           <div className="mt-1 flex items-center gap-2">
             <TierBadge tier={c.followup_tier} />
             {isCash && (
-              <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
+              <span className="rounded-full bg-brand/10 px-2 py-0.5 text-micro font-semibold text-brand">
                 CASH SALE
               </span>
             )}
@@ -532,7 +532,7 @@ export default async function ContractPage({
               key={n.id}
               className="rounded-card bg-surface p-3 text-sm"
             >
-              <div className="mb-1 text-[11px] text-muted">
+              <div className="mb-1 text-micro text-muted">
                 {new Date(n.created_at).toLocaleString("en-PH", {
                   dateStyle: "medium",
                   timeStyle: "short",

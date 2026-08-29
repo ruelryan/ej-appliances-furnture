@@ -109,7 +109,7 @@ export function AgentCommissionPanel({
               <dt className="text-muted">Status</dt>
               <dd>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  className={`rounded-full px-2 py-0.5 text-micro font-semibold ${
                     STATUS_STYLE[commission.status]
                   }`}
                 >

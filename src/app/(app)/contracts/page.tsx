@@ -89,11 +89,11 @@ export default async function ContractsPage({
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-display font-semibold text-ink">
+                  <span className="font-semibold text-ink">
                     {c.display_name}
                   </span>
                   {Number(c.term_months) === 0 && (
-                    <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
+                    <span className="rounded-full bg-brand/10 px-2 py-0.5 text-micro font-semibold text-brand">
                       CASH
                     </span>
                   )}
@@ -116,7 +116,7 @@ export default async function ContractsPage({
                 <div className="mt-1 text-sm font-semibold text-ink">
                   {peso(c.remaining_balance)}
                 </div>
-                <div className="text-[11px] text-muted">balance</div>
+                <div className="text-micro text-muted">balance</div>
               </div>
             </div>
             {c.payment_status === "open" && (

@@ -109,7 +109,7 @@ export default async function CustomersPage({
               className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-surface"
             >
               <div className="min-w-0">
-                <div className="font-display font-semibold text-ink">
+                <div className="font-semibold text-ink">
                   {c.display_name}
                 </div>
                 <div className="mt-0.5 truncate text-sm text-muted">{meta}</div>

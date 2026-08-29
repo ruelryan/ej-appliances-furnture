@@ -31,7 +31,7 @@ export default async function AppLayout({
           <span className="text-brand">
             <LogoMark className="h-6 w-6" />
           </span>
-          <span className="font-display text-lg font-semibold text-ink">
+          <span className="text-lg font-semibold text-ink">
             E &amp; J
           </span>
         </Link>
@@ -39,7 +39,7 @@ export default async function AppLayout({
           <Link href="/account" className="text-xs text-muted hover:text-ink hover:underline">
             {profile.full_name}
             {isOwner && (
-              <span className="ml-1 rounded-full bg-warning-bg px-2 py-0.5 text-[10px] font-semibold text-warning">
+              <span className="ml-1 rounded-full bg-warning-bg px-2 py-0.5 text-micro font-semibold text-warning">
                 OWNER
               </span>
             )}

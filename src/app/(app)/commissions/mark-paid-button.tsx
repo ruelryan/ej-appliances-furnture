@@ -27,7 +27,7 @@ export function MarkPaidButton({ commissionId }: { commissionId: string }) {
       >
         {pending ? "…" : "Mark paid"}
       </button>
-      {error && <span className="text-[10px] text-danger">{error}</span>}
+      {error && <span className="text-micro text-danger">{error}</span>}
     </span>
   );
 }

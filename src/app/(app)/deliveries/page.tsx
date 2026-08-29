@@ -106,14 +106,14 @@ export default async function DeliveriesPage({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Link href={`/contracts/${d.contract_id}`} className="font-display font-semibold text-ink hover:underline">
+                        <Link href={`/contracts/${d.contract_id}`} className="font-semibold text-ink hover:underline">
                           {d.customer_name}
                         </Link>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[d.status]}`}>
+                        <span className={`rounded-full px-2 py-0.5 text-micro font-semibold ${STATUS_STYLE[d.status]}`}>
                           {(DELIVERY_STATUS_LABEL[d.status] ?? d.status).toUpperCase()}
                         </span>
                         {late && (
-                          <span className="rounded-full bg-danger-bg px-2 py-0.5 text-[10px] font-semibold text-danger">
+                          <span className="rounded-full bg-danger-bg px-2 py-0.5 text-micro font-semibold text-danger">
                             INVOICE {d.days_awaiting_invoice}d LATE
                           </span>
                         )}

@@ -156,7 +156,7 @@ export function ReviewItem({
         </div>
       </div>
 
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+      <p className="mb-2 text-micro font-semibold uppercase tracking-wider text-muted">
         Closest existing items
       </p>
 

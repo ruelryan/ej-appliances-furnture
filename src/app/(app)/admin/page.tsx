@@ -53,7 +53,7 @@ export default async function AdminPage() {
                   {u.full_name}
                 </span>
                 <span
-                  className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  className={`ml-2 rounded-full px-2 py-0.5 text-micro font-semibold ${
                     u.role === "owner"
                       ? "bg-warning-bg text-warning"
                       : "border border-line bg-white text-muted"
@@ -62,7 +62,7 @@ export default async function AdminPage() {
                   {(ROLE_LABELS[u.role] ?? u.role).toUpperCase()}
                 </span>
                 {!u.active && (
-                  <span className="ml-2 rounded-full bg-danger-bg px-2 py-0.5 text-[10px] font-semibold text-danger">
+                  <span className="ml-2 rounded-full bg-danger-bg px-2 py-0.5 text-micro font-semibold text-danger">
                     DEACTIVATED
                   </span>
                 )}

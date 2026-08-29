@@ -107,7 +107,7 @@ export default async function CustomerPage({
       </div>
 
       <section>
-        <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+        <h2 className="mb-2 text-micro font-semibold uppercase tracking-wider text-muted">
           Contracts ({contracts?.length ?? 0})
         </h2>
         <div className="divide-y divide-line overflow-hidden rounded-card border border-line bg-white">

@@ -61,7 +61,7 @@ export default async function LeadsPage() {
                       {l.customer_name}
                     </span>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      className={`rounded-full px-2 py-0.5 text-micro font-semibold ${
                         STATUS_STYLE[l.status]
                       }`}
                     >
@@ -115,7 +115,7 @@ export default async function LeadsPage() {
                   </span>
                 </div>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  className={`rounded-full px-2 py-0.5 text-micro font-semibold ${
                     STATUS_STYLE[l.status]
                   }`}
                 >

@@ -81,7 +81,7 @@ export default async function PayrollPage() {
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                className={`rounded-full px-2 py-0.5 text-micro font-semibold ${
                   s.status === "final"
                     ? "bg-positive/10 text-positive-dark"
                     : "bg-warning-bg text-warning"
