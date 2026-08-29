@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { PREVIEW_COOKIE } from "@/lib/preview";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -43,6 +44,28 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
+  }
+
+  // "View as" is read-only, and THIS is what enforces it.
+  //
+  // A preview only changes the role the UI renders against; the database still
+  // sees the owner, so RLS would happily accept a write. Hiding the buttons is
+  // not enough — the owner could still reach an action that the previewed role
+  // is allowed to perform, and it would go through for real. Server actions
+  // and route handlers are all non-GET, so refusing those here covers every
+  // write path in the app at one point instead of ~30 individual guards.
+  //
+  // /api/preview is a GET for exactly this reason: the way out must not be a
+  // write, or starting a preview would lock the owner inside it.
+  if (
+    request.cookies.get(PREVIEW_COOKIE) &&
+    request.method !== "GET" &&
+    request.method !== "HEAD"
+  ) {
+    return NextResponse.json(
+      { error: "Read-only while viewing as another role. Exit the preview to make changes." },
+      { status: 403 }
+    );
   }
 
   return response;

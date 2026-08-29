@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { PREVIEW_COOKIE, isPreviewable } from "@/lib/preview";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -44,6 +45,11 @@ export interface Profile {
   full_name: string;
   role: Role;
   active: boolean;
+  /** Set only while an owner is previewing another role. `role` above is then
+   *  the PREVIEWED role — that is the point, so every existing role check in
+   *  the app reacts without being touched. `realRole` is who you actually are. */
+  previewing?: boolean;
+  realRole?: Role;
 }
 
 // Capability helpers — mirror the SQL guards so UI gating matches RLS.
@@ -61,8 +67,10 @@ export function isOwnerRole(role: Role): boolean {
   return role === "owner";
 }
 
-// Returns the signed-in user's profile, or null if not authenticated/active.
-export async function getProfile(): Promise<Profile | null> {
+// The signed-in user's TRUE profile, ignoring any "view as" preview. Use this
+// anywhere the answer must be about who the person really is — starting the
+// preview itself, and deciding whether to offer it at all.
+export async function getRealProfile(): Promise<Profile | null> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -77,4 +85,24 @@ export async function getProfile(): Promise<Profile | null> {
 
   if (!data || !data.active) return null;
   return data as Profile;
+}
+
+// Returns the signed-in user's profile, or null if not authenticated/active.
+//
+// If a real owner has a "view as" preview running, the returned `role` is the
+// PREVIEWED one. That is deliberate: every role check already written in this
+// app — nav filtering, the /analytics and /admin redirects, canPostPayments —
+// then reacts correctly with no change at any call site. The preview can only
+// ever downgrade, because only an owner may start one and owner is the top
+// role. Writes are refused in middleware.ts while it is running.
+export async function getProfile(): Promise<Profile | null> {
+  const profile = await getRealProfile();
+  if (!profile) return null;
+  if (profile.role !== "owner") return profile;
+
+  const cookieStore = await cookies();
+  const as = cookieStore.get(PREVIEW_COOKIE)?.value;
+  if (!isPreviewable(as)) return profile;
+
+  return { ...profile, role: as, previewing: true, realRole: profile.role };
 }

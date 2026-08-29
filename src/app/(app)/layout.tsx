@@ -4,6 +4,7 @@ import { createClient, getProfile } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
 import { LogoMark } from "@/components/logo";
 import { NavLinks } from "./nav-links";
+import { ViewAs, PreviewBanner } from "./view-as";
 
 export default async function AppLayout({
   children,
@@ -35,7 +36,7 @@ export default async function AppLayout({
             E &amp; J
           </span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Link href="/account" className="text-xs text-muted hover:text-ink hover:underline">
             {profile.full_name}
             {isOwner && (
@@ -44,16 +45,28 @@ export default async function AppLayout({
               </span>
             )}
           </Link>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="rounded-card border border-line px-2.5 py-1 text-xs text-ink hover:bg-surface"
-            >
-              Sign out
-            </button>
-          </form>
+          {/* Offered to a real owner only, and shown as "Exit" once running. */}
+          {profile.realRole === "owner" || isOwner ? (
+            <ViewAs previewing={!!profile.previewing} role={profile.role} />
+          ) : null}
+          {/* Sign-out is a POST, and middleware refuses those while a preview
+              is running. Rather than let the owner click a dead button, the
+              control becomes Exit preview above until they are back to
+              themselves. */}
+          {!profile.previewing && (
+            <form action={logout}>
+              <button
+                type="submit"
+                className="min-h-10 rounded-card border border-line px-2.5 text-xs text-ink hover:bg-surface"
+              >
+                Sign out
+              </button>
+            </form>
+          )}
         </div>
       </header>
+
+      {profile.previewing && <PreviewBanner role={profile.role} />}
 
       <div className="mx-auto flex w-full max-w-6xl">
         {/* Desktop sidebar */}
