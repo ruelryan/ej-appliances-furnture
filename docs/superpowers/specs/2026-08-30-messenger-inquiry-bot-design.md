@@ -44,6 +44,29 @@ The list lives as an explicit constant in code, in the shape of `COMPANY` in `sr
 
 **It never sends outbound messages.** Meta only permits messaging within 24 hours of the customer's last message; the remaining message tags cover order and account updates, not collections or marketing. Payment reminders through this channel would violate platform policy and risk the Page. It replies; it does not initiate.
 
+## Guided buttons, not just typing
+
+Messenger supports structured messages, and they fit this catalogue unusually well — 135 of 140 products have a photo, and the longest product name is exactly 80 characters against a card-title limit of 80, so nothing needs truncating.
+
+| Surface | Use |
+|---|---|
+| **Ice Breakers** (max 4, shown before the first message) | "What appliances do you have?" · "What furniture do you have?" · "How does hulugan work?" · "Where is your store?" |
+| **Persistent menu** (always in the composer) | Browse products · How installment works · Location & hours · Talk to someone |
+| **Quick replies** (max 13, ≤20 chars each) | The category chips — Refrigerator, Washing Machine, Television, Aircon, Sala Set, Bed, Dining Set … |
+| **Generic template carousel** (max 10 cards, 3 buttons each) | Product cards: photo, name, price, monthly, and `[Details]` `[Ask about this]` |
+
+**This is a cost and reliability win, not only a UX one.** A tapped button arrives as a postback with a payload this app defined, so the response is a deterministic lookup — **no model call at all**. Claude is reserved for free text and for anything the buttons did not anticipate. Since most prospects will tap rather than type, the common path becomes both cheaper and incapable of getting the product wrong.
+
+The carousel is also the strongest sales surface available: it shows the photo and the monthly figure together, and the monthly is what converts. ₱23,900 reads as expensive; ₱3,585 a month does not, and it is the same refrigerator.
+
+### Prerequisite: `products.category` is empty
+
+135 of 140 products have no category — the column exists but was never populated, so a browse menu cannot be built from it today. Product *names* are well structured, so a one-off script can propose a category for each from its name, print all 140 for review, and write only under `--apply`, in the same shape as the other data scripts. Matching on names alone reaches ~108 of 140; the rest are mostly **Sala Sets** (Francha L-Type, Alexa, Lovely, Pan-U and others — a major furniture line), plus Doors, Chinaware, a Mirror Stand and a printer.
+
+This fixes `/products` in the app as well, not only the bot.
+
+**One data defect to clear first:** there is a product named simply `washing`. Whatever it is, the bot must not offer it to a customer, and neither should the products page.
+
 ## Architecture
 
 ```
@@ -137,7 +160,8 @@ Only after those pass does it point at the real Page.
 
 Both original questions were settled on 2026-08-30 — staff reply inside Messenger, and the delivery list is the 24 Leyte municipalities plus all of Southern Leyte. What remains:
 
-- **The 5 products with no description and the 1 with no price** should be filled in before launch, or excluded from search. A product the bot can find but cannot describe is worse than one it cannot find.
+- **Catalogue hygiene before launch.** The 5 products with no description and the 1 with no price should be filled in or excluded from search — a product the bot can find but cannot describe is worse than one it cannot find. The product named `washing` needs a real name or removing. And the category backfill needs Ryan's review before it is applied, since the menu customers see is built from it.
+- **How many categories on the first screen?** Quick replies cap at 13 and the derived list is around 15 including Sala Set, Door and Printer. Either the long tail folds into "Others", or appliances and furniture are asked first and each shows its own shorter list. The second reads better and matches the two ice breakers.
 - **How long before a handed-off thread is chased?** If Analyn does not reply in Messenger within some period, nothing currently notices. A simple age on the queue would catch it; whether that is worth building depends on how often it actually happens.
 - **Delivery fees.** The bot confirms the area but says nothing about cost, because the app does not model delivery fees at all. If there is a standard fee by distance, saying it up front would remove a step; if it is negotiated per trip, staying quiet is right.
 
