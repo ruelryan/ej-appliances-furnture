@@ -694,6 +694,30 @@ These shaped real code. Do not "simplify" them away.
   Undecided.
 - `followup_tier` keys on time since last payment, so an account that has
   **never paid can never reach `demand`**. Review those by hand.
+- **Where things physically are, and why the app felt slow.** Staff are in
+  Southern Leyte; Supabase is in **ap-south-1 (Mumbai)**; Vercel functions
+  defaulted to **iad1 (Washington DC)**, so every request went Philippines →
+  Washington → Mumbai → Washington → Philippines. Fixed 2026-08-30 by pinning
+  `regions: ["sin1"]` (Singapore) in `vercel.json`. Measured, warm:
+  `/login` (no DB) **0.76s → 0.33s**; `/api/health` (one query) **~0.9s →
+  ~0.64s**. So reaching the server costs ~0.33s and **each Mumbai round trip
+  costs a further ~0.3s**.
+  - **`preferredRegion` is NOT the mechanism.** On Vercel that route-segment
+    config only applies when `runtime = "edge"`, which this app cannot use
+    (Supabase SSR needs Node APIs). The project-level `regions` key moves Node
+    functions; per-route overrides go under `functions` in the same file.
+  - **What is left is the number of SEQUENTIAL round trips**, not the number of
+    queries. Pages already batch into 1–2 `Promise.all` waves, but each request
+    still pays: middleware `auth.getUser()` → layout `getProfile()` → layout
+    task-count → the page's waves. That is 4–5 trips × ~0.3s before anything
+    renders, and auth is resolved two or three times per request. Collapsing the
+    layout's two calls, and reusing the middleware's auth result, is the next
+    lever.
+  - **`/api/health` DOES hit the database** — it runs an `exact` count over
+    `customers` as the keep-alive. I described it as touching no database while
+    diagnosing this, including in the commit message for the region change; that
+    was wrong, and it matters because the endpoint is a poor latency probe.
+    `/login` is the one that renders without a query.
 - Supabase free tier pauses after ~7 idle days — `.github/workflows/keepalive.yml`
   pings `https://eandj-chi.vercel.app/api/health` daily.
 - `middleware.ts` is deprecated in Next 16 (works; rename to proxy.ts only
