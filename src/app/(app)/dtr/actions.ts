@@ -231,3 +231,19 @@ export async function deleteDtrLocation(id: string) {
   revalidatePath("/dtr/settings");
   return {};
 }
+
+// The employee's last day. Bounds the synthetic unworked-holiday rows in
+// dtr_days(), so a departed employee stops accruing holiday pay — Roger Dasal
+// would otherwise have earned 8 hours at every regular holiday forever.
+// Passing null clears it (someone rehired, or a date entered by mistake).
+export async function setSeparationDate(profileId: string, date: string | null) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_separation_date", {
+    p_profile_id: profileId,
+    p_date: date || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/dtr/settings");
+  revalidatePath("/payroll");
+  return {};
+}

@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setHourlyRate, setMealAllowance } from "../actions";
+import { setHourlyRate, setMealAllowance, setSeparationDate } from "../actions";
 
 export function RateForm({
   profileId,
   currentRate,
   currentMeal,
+  currentSeparatedOn,
 }: {
   profileId: string;
   currentRate: string | number | null;
   currentMeal?: string | number | null;
+  /** Last day of employment, or null while still employed. */
+  currentSeparatedOn?: string | null;
 }) {
   const [value, setValue] = useState(
     currentRate == null ? "" : String(Number(currentRate))
@@ -18,6 +21,7 @@ export function RateForm({
   const [meal, setMeal] = useState(
     currentMeal == null ? "" : String(Number(currentMeal))
   );
+  const [separated, setSeparated] = useState(currentSeparatedOn ?? "");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -28,7 +32,13 @@ export function RateForm({
       if (res.error) return setError(res.error);
       // The allowance RPC requires the rate row to exist, so it always runs second.
       const m = await setMealAllowance(profileId, Number(meal) || 0);
-      if (m.error) setError(m.error);
+      if (m.error) return setError(m.error);
+      // Last, and only when it changed: it is the one field here that stops
+      // pay accruing, so it should not ride along silently with a rate edit.
+      if ((separated || null) !== (currentSeparatedOn ?? null)) {
+        const sp = await setSeparationDate(profileId, separated || null);
+        if (sp.error) setError(sp.error);
+      }
     });
   }
 
@@ -68,6 +78,14 @@ export function RateForm({
           />
         </div>
         <span className="text-xs text-muted">meal / day</span>
+        <input
+          type="date"
+          value={separated}
+          onChange={(e) => setSeparated(e.target.value)}
+          title="Last day of employment. Leave blank while still employed — once set, they stop earning holiday pay after this date."
+          className="w-40 rounded-card border border-line px-3 py-2 text-base"
+        />
+        <span className="text-xs text-muted">last day</span>
         <button
           type="button"
           onClick={save}
