@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { PREVIEW_COOKIE, isPreviewable } from "@/lib/preview";
+import { VERIFIED_UID_HEADER } from "@/lib/auth-headers";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -72,15 +73,25 @@ export function isOwnerRole(role: Role): boolean {
 // preview itself, and deciding whether to offer it at all.
 export async function getRealProfile(): Promise<Profile | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+
+  // The middleware already verified this request's token and forwarded the
+  // user id. Re-calling auth.getUser() here is a second network round trip to
+  // Supabase for an answer we were just handed — about 0.3s from Singapore,
+  // paid two or three times on every page load.
+  //
+  // The header is trustworthy ONLY because middleware writes it
+  // unconditionally, setting it for a verified user and deleting it otherwise;
+  // see src/lib/auth-headers.ts. Anything outside the middleware matcher falls
+  // through to the original path.
+  const uid =
+    (await headers()).get(VERIFIED_UID_HEADER) ??
+    (await supabase.auth.getUser()).data.user?.id;
+  if (!uid) return null;
 
   const { data } = await supabase
     .from("profiles")
     .select("id, full_name, role, active")
-    .eq("id", user.id)
+    .eq("id", uid)
     .single();
 
   if (!data || !data.active) return null;

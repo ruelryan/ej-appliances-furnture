@@ -17,6 +17,11 @@ export default async function AppLayout({
   const isOwner = profile.role === "owner";
 
   // Badge: open/in-progress tasks assigned to me or my team.
+  //
+  // It has to wait on the profile, since it filters by id and role. That is a
+  // second round trip, but it is NOT worth streaming around: Next renders this
+  // layout and the page concurrently, so it already overlaps the page's own
+  // queries rather than adding to them.
   const supabase = await createClient();
   const { count: taskCount } = await supabase
     .from("tasks")
