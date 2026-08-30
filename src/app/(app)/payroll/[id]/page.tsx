@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
-import { fmtHours, monthLabel, periodLabel, peso, phTodayISO } from "@/lib/format";
+import { fmtDateShort, fmtHours, monthLabel, periodLabel, peso, phTodayISO } from "@/lib/format";
+import { holidayLinesOf } from "@/lib/payslip-lines";
 import { SectionCard } from "@/components/section-card";
 import { BackLink } from "@/components/back-link";
 import { btnSecondary } from "@/components/ui";
@@ -43,6 +44,8 @@ export default async function PayslipPage({
   ].filter((c) => Number(c.ee) > 0 || Number(c.er) > 0);
   const negative = Number(slip.net_pay) < 0;
 
+  const holidayLines = holidayLinesOf(slip.holiday_lines);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -71,16 +74,34 @@ export default async function PayslipPage({
 
       <SectionCard title="Income">
         <div className="divide-y divide-line text-sm">
+          {/* Regular time and holidays are separate lines: a lump "DTR pay"
+              hid the fact that ₱600 of Analyn's August was National Heroes
+              Day. basic_pay + the holiday amounts reconcile to dtr_pay
+              exactly — see 0036. */}
           <div className="flex items-center justify-between py-2">
             <span className="text-ink">
-              DTR pay — {fmtHours(slip.dtr_hours)} hrs ×{" "}
+              Regular pay — {fmtHours(slip.dtr_hours)} hrs ×{" "}
               {peso(slip.hourly_rate)}/hr
               <span className="block text-xs text-muted">
-                {slip.days_worked} day(s) · holiday premiums included
+                {slip.days_worked} day(s) worked
               </span>
             </span>
-            <span className="tabular-nums text-ink">{peso(slip.dtr_pay)}</span>
+            <span className="tabular-nums text-ink">{peso(slip.basic_pay)}</span>
           </div>
+          {holidayLines.map((h, i) => (
+            <div key={i} className="flex items-center justify-between py-2">
+              <span className="text-ink">
+                {h.worked ? "Holiday premium" : "Holiday pay"} — {h.name}
+                <span className="block text-xs text-muted">
+                  {fmtDateShort(h.date)} · {h.type === "regular" ? "regular" : "special"} holiday
+                  {h.worked
+                    ? ` · ${fmtHours(h.hours)} hrs worked, above the plain rate`
+                    : " · not worked, 8 hrs"}
+                </span>
+              </span>
+              <span className="tabular-nums text-ink">{peso(h.amount)}</span>
+            </div>
+          ))}
           {Number(slip.meal_allowance) > 0 && (
             <div className="flex items-center justify-between py-2">
               <span className="text-ink">

@@ -1,3 +1,4 @@
+import type { HolidayLine } from "@/lib/payslip-lines";
 export type PayslipLine = { label: string; amount: number };
 
 // Row shape of the payslips table (all money fields snapshotted by SQL).
@@ -10,6 +11,8 @@ export type Payslip = {
   dtr_hours: string | number;
   dtr_pay: string | number;
   basic_pay: string | number;
+  /** Itemised holiday portion, snapshotted by 0036. [] on older slips. */
+  holiday_lines: HolidayLine[];
   meal_allowance: string | number;
   days_worked: number;
   hourly_rate: string | number;

@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
-import { fmtHours, monthLabel, periodLabel, peso } from "@/lib/format";
+import { fmtDateShort, fmtHours, monthLabel, periodLabel, peso } from "@/lib/format";
+import { holidayLinesOf } from "@/lib/payslip-lines";
 import { Letterhead, SignatureBlocks } from "../../letterhead";
 import { PrintControls } from "../../print-controls";
 
@@ -36,6 +37,7 @@ export default async function PrintPayslipPage({
   const employeeName =
     (slip.profiles as unknown as { full_name: string })?.full_name ?? "—";
   const extraIncome = slip.extra_income as PayslipLine[];
+  const holidayLines = holidayLinesOf(slip.holiday_lines);
   const extraDeductions = slip.extra_deductions as PayslipLine[];
   const contributions = [
     { name: "PhilHealth", ee: slip.philhealth_ee, er: slip.philhealth_er },
@@ -68,15 +70,33 @@ export default async function PrintPayslipPage({
               INCOME
             </td>
           </tr>
+          {/* Regular time and holidays are itemised separately — on the copy
+              the employee keeps, "why is this month different" should be
+              readable off the page. basic_pay + the holiday amounts reconcile
+              to dtr_pay exactly (0036). */}
           <tr className="border-b border-line">
             <td className="py-1.5 pr-4">
-              DTR pay — {fmtHours(slip.dtr_hours)} hrs ×{" "}
+              Regular pay — {fmtHours(slip.dtr_hours)} hrs ×{" "}
               {peso(slip.hourly_rate)}/hr ({slip.days_worked} days)
             </td>
             <td className="py-1.5 text-right tabular-nums">
-              {peso(slip.dtr_pay)}
+              {peso(slip.basic_pay)}
             </td>
           </tr>
+          {holidayLines.map((h, i) => (
+            <tr key={i} className="border-b border-line">
+              <td className="py-1.5 pr-4">
+                {h.worked ? "Holiday premium" : "Holiday pay"} — {h.name}
+                {" ("}
+                {fmtDateShort(h.date)}
+                {h.worked ? `, ${fmtHours(h.hours)} hrs worked` : ", not worked"}
+                {")"}
+              </td>
+              <td className="py-1.5 text-right tabular-nums">
+                {peso(h.amount)}
+              </td>
+            </tr>
+          ))}
           {Number(slip.meal_allowance) > 0 && (
             <tr className="border-b border-line">
               <td className="py-1.5 pr-4">
@@ -149,11 +169,13 @@ export default async function PrintPayslipPage({
       </table>
 
       <p className="mt-2 text-[10px] text-muted">
-        DTR pay includes holiday premiums and unworked regular-holiday pay.
-        Meal allowance is paid per day actually worked and, like the holiday
-        premium, is not part of basic salary for 13th-month purposes.
-        ER amounts are the employer&apos;s contribution shares, shown for
-        record purposes only.
+        Regular pay is hours worked at the plain hourly rate. Holiday lines are
+        the extra above that rate — an unworked regular holiday pays 8 hours,
+        and a worked one adds its premium on top of the hours already counted
+        as regular pay. Holiday pay and meal allowance are not part of basic
+        salary for 13th-month purposes; meal allowance is paid per day actually
+        worked. ER amounts are the employer&apos;s contribution shares, shown
+        for record purposes only.
       </p>
 
       <SignatureBlocks left={employeeName} right="Owner / Manager" />
