@@ -334,6 +334,8 @@ async function AdminBoard() {
     { data: worklist },
     { data: positions },
     { data: candidates },
+    { data: promises },
+    { count: worklistTotal },
   ] = await Promise.all([
     supabase
       .from("collection_entries")
@@ -366,7 +368,30 @@ async function AdminBoard() {
     // Payments that already exist for a pending entry — the admin records most
     // payments on the Contracts tab, which leaves the entry stranded here.
     supabase.from("v_entry_payment_candidates").select("*"),
+    // A customer who named a date is the highest-yield contact of the day.
+    // The collector board has floated these to the top since 0021; the admin
+    // board never showed them at all, so with no collector on staff nobody
+    // could see who had promised to pay today.
+    supabase.from("v_open_promises").select("*"),
+    // The list below is capped. Without the true count the cap is invisible,
+    // and it reads as "these are all the accounts" when it is the first 60.
+    supabase
+      .from("v_contract_collections")
+      .select("id", { count: "exact", head: true })
+      .eq("payment_status", "open")
+      .in("followup_tier", ["overdue", "demand"]),
   ]);
+
+  // A promise whose date has arrived outranks a bigger overdue balance: the
+  // customer named a day, and that is the contact most likely to produce money.
+  // The collector board has ordered this way since 0021 — the admin board did
+  // not, which stopped mattering only while a collector was working the list.
+  const dueByContract = new Map(
+    (promises ?? []).map((p) => [p.contract_id as string, p.promised_date as string])
+  );
+  const sortedWorklist = [...(worklist ?? [])].sort(
+    (a, b) => (dueByContract.has(a.id) ? 0 : 1) - (dueByContract.has(b.id) ? 0 : 1)
+  );
 
   const collectorList = collectors ?? [];
   const collectorName = (id: string | null) =>
@@ -555,24 +580,39 @@ async function AdminBoard() {
         )}
       </SectionCard>
 
-      {/* Assignment worklist */}
+      {/* The accounts to chase. Also where a collector gets assigned, but with
+          no collector on staff this is the working list: who is behind, and
+          who said they would pay today. */}
       <SectionCard
-        title="Assign collectors"
-        sub="Overdue and demand accounts — assign a collector and priority."
+        title="Accounts to chase"
+        sub={
+          worklistTotal && worklistTotal > (worklist ?? []).length
+            ? `Overdue and demand accounts, most owed first. Showing ${(worklist ?? []).length} of ${worklistTotal} — open Contracts to see the rest.`
+            : "Overdue and demand accounts, most owed first."
+        }
       >
         <div className="space-y-2">
-          {(worklist ?? []).map((c) => (
+          {sortedWorklist.map((c) => (
             <div
               key={c.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-surface px-3 py-2"
             >
               <div className="min-w-0">
-                <Link
-                  href={`/contracts/${c.id}`}
-                  className="text-sm font-semibold text-ink hover:underline"
-                >
-                  {c.display_name}
-                </Link>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Link
+                    href={`/contracts/${c.id}`}
+                    className="text-sm font-semibold text-ink hover:underline"
+                  >
+                    {c.display_name}
+                  </Link>
+                  {/* Says WHY this one is at the top — a sorted list with no
+                      visible reason reads as an arbitrary order. */}
+                  {dueByContract.has(c.id) && (
+                    <span className="rounded-full bg-warning-bg px-2 py-0.5 text-micro font-semibold text-warning">
+                      Promised {fmtDateShort(dueByContract.get(c.id)!)}
+                    </span>
+                  )}
+                </div>
                 <div className="truncate text-xs text-muted">
                   #{c.contract_no} · {peso(c.overdue_amount)} past due ·{" "}
                   {c.collector_id
