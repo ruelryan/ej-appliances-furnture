@@ -2,7 +2,14 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { logCollection } from "./actions";
-import { input, label } from "@/components/ui";
+import {
+  btnPrimary,
+  btnPrimarySm,
+  btnSecondary,
+  input,
+  label,
+} from "@/components/ui";
+import { Dialog } from "@/components/dialog";
 
 const DISPOSITIONS = [
   { key: "collected", label: "Collected" },
@@ -108,25 +115,36 @@ export function LogCollectionDialog({
           reset();
           setOpen(true);
         }}
-        className="rounded-card bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
+        className={btnPrimarySm}
       >
         Log
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="mb-1 text-base font-semibold text-ink">
-              Log collection
-            </h3>
-            <p className="mb-3 truncate text-xs text-muted">{customerName}</p>
-
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Log collection"
+        subtitle={customerName}
+        footer={
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className={`${btnSecondary} flex-1`}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={disabled}
+              className={`${btnPrimary} flex-1`}
+            >
+              {pending ? "Saving…" : "Save entry"}
+            </button>
+          </div>
+        }
+      >
             <label className={label}>Outcome</label>
             <div className="mb-3 grid grid-cols-2 gap-2">
               {DISPOSITIONS.map((d) => (
@@ -237,26 +255,7 @@ export function LogCollectionDialog({
               </p>
             )}
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="flex-1 rounded-card border border-line py-2 text-sm font-semibold text-ink hover:bg-surface"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={submit}
-                disabled={disabled}
-                className="flex-1 rounded-card bg-brand py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-40"
-              >
-                {pending ? "Saving…" : "Save entry"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Dialog>
     </>
   );
 }
