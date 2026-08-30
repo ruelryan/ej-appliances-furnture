@@ -5,17 +5,25 @@ import { useRouter } from "next/navigation";
 import { createPayslip } from "./actions";
 import { btnPrimary } from "@/components/ui";
 
-// Completed semi-monthly periods, most recent first (display list only —
-// SQL validates and derives the real period bounds).
+// Semi-monthly periods that can be paid, most recent first (display list only
+// — SQL validates and derives the real period bounds).
+//
+// The period IN PROGRESS is offered too, marked as such. It used to be hidden
+// because create_payslip refused it, but the common case is a last duty that
+// falls before the month end — Analyn works Mon–Thu, so her August ended on
+// the 27th — and waiting until the 31st to hand her a payslip helped nobody.
+// 0034 allows any period that has STARTED; the warning at finalize explains
+// what an in-progress slip does and does not capture.
 function completedPeriods(todayISO: string, count: number) {
-  const out: Array<{ start: string; label: string }> = [];
+  const out: Array<{ start: string; label: string; inProgress?: boolean }> = [];
   let y = Number(todayISO.slice(0, 4));
   let m = Number(todayISO.slice(5, 7));
   const day = Number(todayISO.slice(8, 10));
-  // which halves are complete this month?
-  let half = day >= 31 ? 2 : day >= 15 ? 1 : 0; // 2nd half only complete at month end
   const lastDay = (yy: number, mm: number) => new Date(yy, mm, 0).getDate();
-  if (day >= lastDay(y, m)) half = 2;
+  // The current half counts as offerable: 1st–15th is half 1, 16th on is half 2.
+  let half = day >= 16 ? 2 : 1;
+  // Which half is still running right now — that one gets the label.
+  const liveY = y, liveM = m, liveHalf = half;
 
   while (out.length < count) {
     if (half === 0) {
@@ -36,7 +44,9 @@ function completedPeriods(todayISO: string, count: number) {
       half === 2
         ? `${month} 16–${lastDay(y, m)}, ${y}`
         : `${month} 1–15, ${y}`;
-    out.push({ start, label });
+    const inProgress = y === liveY && m === liveM && half === liveHalf
+      && !(half === 2 ? day >= lastDay(y, m) : day >= 15);
+    out.push({ start, label: inProgress ? `${label} (in progress)` : label, inProgress });
     half--;
   }
   return out;

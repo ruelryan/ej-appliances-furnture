@@ -13,11 +13,32 @@ import { btnPositive, btnSecondary } from "@/components/ui";
 export function SlipActions({
   slipId,
   status,
+  periodEnd,
+  todayISO,
 }: {
   slipId: string;
   status: "draft" | "final";
+  /** The slip period end, YYYY-MM-DD. */
+  periodEnd?: string;
+  /** Asia/Manila today, from phTodayISO(). */
+  todayISO?: string;
 }) {
   const router = useRouter();
+  // 0034 lets a period be paid before it closes. That is usually exact -- the
+  // last duty often falls days before the month end -- but it is a forecast,
+  // so say plainly what it does not capture rather than reusing the generic
+  // confirm.
+  const inProgress = !!periodEnd && !!todayISO && periodEnd > todayISO;
+  const finalizeMsg = inProgress
+    ? [
+        `This period has not ended yet — it runs to ${periodEnd}.`,
+        "",
+        "Any hours worked between now and then will NOT be included. If that",
+        "happens, reopen the payslip and refresh it from DTR before paying.",
+        "",
+        "Finalize anyway?",
+      ].join("\n")
+    : "Finalize this payslip? The employee will be able to see it.";
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -40,7 +61,7 @@ export function SlipActions({
               onClick={() =>
                 run(
                   () => finalizePayslip(slipId),
-                  "Finalize this payslip? The employee will be able to see it."
+                  finalizeMsg
                 )
               }
               disabled={pending}

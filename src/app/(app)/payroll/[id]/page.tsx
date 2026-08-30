@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
-import { fmtHours, monthLabel, periodLabel, peso } from "@/lib/format";
+import { fmtHours, monthLabel, periodLabel, peso, phTodayISO } from "@/lib/format";
 import { SectionCard } from "@/components/section-card";
 import { BackLink } from "@/components/back-link";
 import { btnSecondary } from "@/components/ui";
@@ -172,7 +172,14 @@ export default async function PayslipPage({
         </SectionCard>
       )}
 
-      {isOwner && <SlipActions slipId={slip.id} status={slip.status} />}
+      {isOwner && (
+        <SlipActions
+          slipId={slip.id}
+          status={slip.status}
+          periodEnd={slip.period_end}
+          todayISO={phTodayISO()}
+        />
+      )}
     </div>
   );
 }
