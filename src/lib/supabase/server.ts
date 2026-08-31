@@ -34,6 +34,11 @@ export type Role =
   | "collector"
   | "sales_agent"
   | "delivery"
+  // Reads the BIR books and NOTHING else. The confinement is not in this
+  // union but in SQL: 0039 redefined is_active_user() to exclude this role,
+  // because that one role-blind function backs ~60 policies and would have
+  // handed a bookkeeper the whole customer book on day one.
+  | "bookkeeper"
   // Legacy. 0011 migrated every staff row to admin and /admin will not assign
   // it, but the value stays in the profiles CHECK constraint, so it stays in
   // the union. It now carries NO capabilities — canPostPayments excludes it,
@@ -66,6 +71,14 @@ export function canPostPayments(role: Role): boolean {
 }
 export function isOwnerRole(role: Role): boolean {
   return role === "owner";
+}
+// Mirrors can_see_bir() in 0039 (read). Writing is owner/admin only and
+// uses canPostPayments(), which matches can_manage_bir().
+export function canSeeBir(role: Role): boolean {
+  return role === "owner" || role === "admin" || role === "bookkeeper";
+}
+export function isBookkeeperRole(role: Role): boolean {
+  return role === "bookkeeper";
 }
 
 // The signed-in user's TRUE profile, ignoring any "view as" preview. Use this

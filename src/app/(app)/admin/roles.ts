@@ -8,5 +8,6 @@ export const ROLE_LABELS: Record<string, string> = {
   collector: "Collector",
   sales_agent: "Sales agent",
   delivery: "Delivery",
+  bookkeeper: "Bookkeeper",
   staff: "Staff (legacy)",
 };

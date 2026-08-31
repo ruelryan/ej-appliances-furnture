@@ -1,10 +1,10 @@
 # Roles and Permissions
 
-The app has five business roles plus one legacy value, enforced in three layers that must not be confused: **Postgres RLS and RPC guards are the enforcement** (a request that shouldn't succeed fails in SQL no matter what the UI shows), **page-level redirects** keep people off screens that aren't for them, and **nav-link allowlists** merely tidy the menu. This document describes each role, the actual per-route gates as implemented in the `page.tsx` files, the SQL helpers and their TypeScript mirror, and the user lifecycle. The SQL side (policies and RPC guards table-by-table) is detailed in [database.md](database.md); the auth flow itself is in [architecture.md](architecture.md).
+The app has six business roles plus one legacy value, enforced in three layers that must not be confused: **Postgres RLS and RPC guards are the enforcement** (a request that shouldn't succeed fails in SQL no matter what the UI shows), **page-level redirects** keep people off screens that aren't for them, and **nav-link allowlists** merely tidy the menu. This document describes each role, the actual per-route gates as implemented in the `page.tsx` files, the SQL helpers and their TypeScript mirror, and the user lifecycle. The SQL side (policies and RPC guards table-by-table) is detailed in [database.md](database.md); the auth flow itself is in [architecture.md](architecture.md).
 
 ## The roles
 
-Defined by the CHECK constraint on `profiles.role` (migration 0011) and the `Role` union in `src/lib/supabase/server.ts`:
+Defined by the CHECK constraint on `profiles.role` (migration 0011, extended by 0039) and the `Role` union in `src/lib/supabase/server.ts`:
 
 | Role | Person (2026-08) | What it is for |
 |---|---|---|
@@ -13,6 +13,7 @@ Defined by the CHECK constraint on `profiles.role` (migration 0011) and the `Rol
 | `collector` | Roger Dasal | Works an assigned, priority-ordered worklist; logs collection visits (`log_collection`) which are NOT payments until an owner/admin posts them; requests cash advances; may tag GPS/landmarks for customers on their own worklist. Sees their own remittance balance but **cannot record or cancel one** — the office receives the cash, so the office records it. **Never posts payments** — that is enforced in `record_payment` itself. Sees only contracts assigned to them. |
 | `sales_agent` | (none currently) | Restricted read-only: their own contracts, commissions, and the customers tied to their own deals. May submit leads. Cannot see other customers' PII (RLS on `customers` narrows for this role specifically). |
 | `delivery` | (none currently) | The delivery queue: sees all contracts (needed for fulfilment), marks availability and delivery, links products. |
+| `bookkeeper` | (the external bookkeeper) | Reads the BIR books and **nothing else** — no contracts, customers, payments, payroll or tasks. Added 0039. The confinement is not a set of page redirects: `is_active_user()` was **redefined to exclude this role**, which walls it out of ~60 policies at once. Cannot write: recording expenses is the office's job (`can_manage_bir()` is owner/admin). See [modules/bir.md](modules/bir.md). |
 | `staff` | legacy | The pre-0011 catch-all, migrated to `admin`; still permitted by the CHECK constraint, but **no longer treated as a payment-poster** — `canPostPayments` dropped it in the 2026-08-05 cleanup to match `can_post_payments()` in SQL, which never included it. No account holds this role. Not offered in the /admin role picker. |
 
 ## Per-route access

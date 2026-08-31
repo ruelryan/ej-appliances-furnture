@@ -28,6 +28,7 @@ export function CreateUserForm() {
           <option value="admin">Admin assistant</option>
           <option value="sales_agent">Sales agent</option>
           <option value="delivery">Delivery</option>
+          <option value="bookkeeper">Bookkeeper</option>
           <option value="owner">Owner</option>
         </select>
       </div>

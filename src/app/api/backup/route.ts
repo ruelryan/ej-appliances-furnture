@@ -35,6 +35,7 @@ function timingSafeEqual(a: string, b: string): boolean {
 // same tables every week — additions go in via a migration + one line here.
 const TABLES = [
   "audit_log",
+  "bir_expenses",
   "cash_advance_expenses",
   "cash_advances",
   "collection_entries",

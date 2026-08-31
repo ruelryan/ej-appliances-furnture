@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient, getProfile } from "@/lib/supabase/server";
+import { canSeeBir, createClient, getProfile } from "@/lib/supabase/server";
+import {
+  BIR_BRANCHES,
+  BIR_REGISTERED_ADDRESS,
+  branchInfo,
+  resolvePeriod,
+} from "@/lib/bir";
+import { phTodayISO } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -130,11 +137,24 @@ export async function GET(
   { params }: { params: Promise<{ dataset: string }> }
 ) {
   const profile = await getProfile();
+  const { dataset } = await params;
+
+  // The purchase journal is the one export a bookkeeper may take, so it is
+  // gated on can_see_bir() rather than the owner-only rule the other four use.
+  // It also needs a period filter and a supplier join, which the generic
+  // DATASETS shape has no room for — hence its own path rather than a fifth
+  // entry bent out of shape.
+  if (dataset === "bir-expenses") {
+    if (!profile || !canSeeBir(profile.role)) {
+      return NextResponse.json({ error: "BIR access required" }, { status: 403 });
+    }
+    return exportBirExpenses(_req);
+  }
+
   if (profile?.role !== "owner") {
     return NextResponse.json({ error: "Owner access required" }, { status: 403 });
   }
 
-  const { dataset } = await params;
   // hasOwn, not a bare index: "constructor" and "toString" reach Object's
   // prototype and would sail past a truthiness check.
   if (!Object.hasOwn(DATASETS, dataset)) {
@@ -167,6 +187,107 @@ export async function GET(
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="eandj-${dataset}-${today}.csv"`,
+    },
+  });
+}
+
+/**
+ * The bookkeeper's monthly purchase journal, in the column order of the sheet
+ * they already receive — DATE, NAME & ADDRESS OF SUPPLIERS, INVOICE #, VAT REG
+ * NO./TIN, then the money columns, TOTAL, CATEGORY — so it pastes straight
+ * into the workbook.
+ *
+ * Voided rows are excluded: a void means the document should never have been in
+ * the book at all. The struck-through row on screen is an audit affordance, not
+ * something to hand a bookkeeper.
+ */
+async function exportBirExpenses(req: Request): Promise<NextResponse> {
+  const url = new URL(req.url);
+  const range = resolvePeriod(
+    url.searchParams.get("period") ?? undefined,
+    phTodayISO()
+  );
+  // E & J files two VAT registrations separately, so a book has to say which
+  // one it is. "all" is for the office's own review, not for filing.
+  const branch = url.searchParams.get("branch") ?? "all";
+  const scoped = BIR_BRANCHES.some((b) => b.value === branch);
+
+  const supabase = await createClient();
+  const rows: Row[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let q = supabase
+      .from("bir_expenses")
+      .select(
+        "id, expense_date, supplier_name_snapshot, doc_no, doc_type, gross_vat, gross_non_vat, vatable_purchases, vat_input_tax, total, category, branch, period_key, note, suppliers(address, tin)"
+      )
+      .is("voided_at", null)
+      .gte("expense_date", range.start)
+      .lte("expense_date", range.end);
+
+    if (scoped) q = q.eq("branch", branch);
+
+    const { data, error } = await q
+      // Stable sort, as everywhere else that paginates here: without one the
+      // pages overlap and silently drop rows.
+      .order("expense_date")
+      .order("id")
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    const page = (data ?? []) as Row[];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+
+  type Joined = { address?: string | null; tin?: string | null } | null;
+  const columns: Array<[string, (r: Row) => unknown]> = [
+    ["DATE", (r) => r.expense_date],
+    ["NAME & ADDRESS OF SUPPLIERS", (r) => r.supplier_name_snapshot],
+    ["ADDRESS", (r) => (r.suppliers as Joined)?.address ?? ""],
+    ["INVOICE #", (r) => r.doc_no],
+    ["VAT REG NO./TIN", (r) => (r.suppliers as Joined)?.tin ?? ""],
+    ["VATABLE PURCHASES", (r) => r.vatable_purchases],
+    ["VAT INPUT TAX", (r) => r.vat_input_tax],
+    ["TOTAL AMOUNT PAID (VAT)", (r) => (Number(r.gross_vat) > 0 ? r.gross_vat : "")],
+    [
+      "TOTAL AMOUNT PAID (NON VAT)",
+      (r) => (Number(r.gross_non_vat) > 0 ? r.gross_non_vat : ""),
+    ],
+    ["TOTAL", (r) => r.total],
+    ["CATEGORY", (r) => r.category],
+    ["BOOK", (r) => branchInfo(String(r.branch)).label],
+    ["PERIOD", (r) => r.period_key],
+    ["DOCUMENT", (r) => r.doc_type],
+    ["NOTE", (r) => r.note],
+  ];
+
+  // A book has to identify its own registration — there are two, and a journal
+  // that does not say which TIN it belongs to cannot be filed against either.
+  const info = scoped ? branchInfo(branch) : null;
+  const preamble = [
+    [info ? info.registeredName : "E & J APPLIANCES FURNITURE"],
+    [info ? `TIN ${info.tin}` : "ALL BOOKS — for review, not for filing"],
+    [BIR_REGISTERED_ADDRESS],
+    ["SUBSIDIARY PURCHASE JOURNAL"],
+    [`${range.start} to ${range.end}`],
+    [],
+  ].map((cells) => cells.map(csvCell).join(","));
+
+  const header = columns.map(([h]) => csvCell(h)).join(",");
+  const lines = rows.map((r) =>
+    columns.map(([, get]) => csvCell(get(r))).join(",")
+  );
+
+  // Same BOM as the four owner exports, so Excel renders ₱ and accented names.
+  const csv = "﻿" + [...preamble, header, ...lines].join("\r\n");
+  const suffix = scoped ? branch : "all";
+
+  return new NextResponse(csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="eandj-bir-expenses-${suffix}-${range.start}-to-${range.end}.csv"`,
     },
   });
 }

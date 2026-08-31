@@ -10,6 +10,7 @@ const OPTIONS = [
   "admin",
   "sales_agent",
   "delivery",
+  "bookkeeper",
   "owner",
 ] as const;
 

@@ -21,7 +21,10 @@ export type NavLink = {
 
 export const LINKS: NavLink[] = [
   { href: "/", label: "Home", icon: "home" },
-  { href: "/tasks", label: "Tasks", icon: "tasks" },
+  // Every role except bookkeeper: tasks_select (0017:227) goes through
+  // is_active_user(), which 0039 excludes the bookkeeper from, so the page
+  // would be permanently empty for them. A dead link is worse than none.
+  { href: "/tasks", label: "Tasks", icon: "tasks", roles: ["owner", "admin", "collector", "sales_agent", "delivery", "staff"] },
   { href: "/dtr", label: "DTR", icon: "dtr", roles: ["owner", "admin", "collector", "delivery", "staff"] },
   { href: "/contracts", label: "Contracts", icon: "contracts", roles: ["owner", "admin", "collector", "sales_agent", "delivery", "staff"] },
   { href: "/payments", label: "Payments", icon: "payments", roles: ["owner", "admin", "staff"] },
@@ -31,6 +34,12 @@ export const LINKS: NavLink[] = [
   { href: "/customers", label: "Customers", icon: "customers", roles: ["owner", "admin", "staff"] },
   { href: "/commissions", label: "Commissions", icon: "commissions", roles: ["owner", "admin", "staff", "sales_agent"] },
   { href: "/leads", label: "Leads", icon: "leads", roles: ["owner", "admin", "staff", "sales_agent"] },
+  { href: "/bir", label: "BIR", icon: "bir", roles: ["owner", "admin", "bookkeeper"] },
+  // The bookkeeper's whole app is these three pages, so the sub-routes are
+  // nav entries for them alone. Owner and admin reach them from /bir and do
+  // not need three sidebar rows for one module.
+  { href: "/bir/expenses", label: "Expenses", icon: "payments", roles: ["bookkeeper"] },
+  { href: "/bir/suppliers", label: "Suppliers", icon: "deliveries", roles: ["bookkeeper"] },
   { href: "/analytics", label: "Analytics", icon: "analytics", roles: ["owner"] },
   { href: "/admin", label: "Admin", icon: "admin", roles: ["owner"] },
 ];
@@ -60,6 +69,9 @@ export const TAB_HREFS: Record<Role, string[]> = {
   collector: ["/", "/collections", "/contracts", "/dtr"],
   sales_agent: ["/", "/leads", "/commissions", "/contracts"],
   delivery: ["/", "/deliveries", "/contracts", "/dtr"],
+  // The bookkeeper can reach exactly one section, so the tab row is that
+  // section. "/" immediately redirects to /bir for them.
+  bookkeeper: ["/", "/bir", "/bir/expenses", "/bir/suppliers"],
 };
 
 export const ALL_ROLES: Role[] = [
@@ -69,4 +81,5 @@ export const ALL_ROLES: Role[] = [
   "sales_agent",
   "delivery",
   "staff",
+  "bookkeeper",
 ];

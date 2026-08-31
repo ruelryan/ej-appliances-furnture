@@ -13,6 +13,7 @@ Technical reference for the E & J Appliances Furniture installment-sales app. Th
 | [modules/collections.md](modules/collections.md) | Worklist, log → post pipeline, promises and receipt numbers, cash advances, GPS tagging, the two Messenger links |
 | [modules/commissions-leads.md](modules/commissions-leads.md) | Commission lifecycle, DP-paid trigger, lead pipeline, agent restrictions |
 | [modules/deliveries-inventory-products.md](modules/deliveries-inventory-products.md) | Delivery queue, suppliers, stock ledger, catalog, typeahead and duplicate review |
+| [modules/bir.md](modules/bir.md) | BIR books: the bookkeeper role and how it is confined, purchase journal, VAT split, suppliers, export |
 | [modules/payroll-dtr.md](modules/payroll-dtr.md) | Clock rules, geofence, holiday math, payslip snapshots, meal allowance, 13th month |
 | [business-rules-legal.md](business-rules-legal.md) | Recto Law, mutuality, demand, Truth in Lending, Data Privacy, collection conduct, labor rules |
 | [testing.md](testing.md) | Vitest, SQL verification scripts, and the Playwright e2e suite with its production-safety procedure |

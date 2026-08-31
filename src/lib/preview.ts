@@ -31,6 +31,7 @@ export const PREVIEWABLE: { value: Role; label: string }[] = [
   { value: "collector", label: "Collector" },
   { value: "sales_agent", label: "Sales agent" },
   { value: "delivery", label: "Delivery" },
+  { value: "bookkeeper", label: "Bookkeeper" },
 ];
 
 export function isPreviewable(v: string | undefined | null): v is Role {

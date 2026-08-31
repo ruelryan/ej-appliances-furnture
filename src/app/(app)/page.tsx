@@ -23,6 +23,7 @@ export default async function DashboardPage() {
   if (profile.role === "sales_agent") redirect("/commissions");
   if (profile.role === "delivery") redirect("/deliveries");
   if (profile.role === "collector") redirect("/collections");
+  if (profile.role === "bookkeeper") redirect("/bir");
 
   const greeting = profile.full_name.split(" ")[0];
 

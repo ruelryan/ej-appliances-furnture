@@ -11,6 +11,7 @@ const ASSIGNABLE_ROLES: Role[] = [
   "collector",
   "sales_agent",
   "delivery",
+  "bookkeeper",
 ];
 
 function normalizeRole(value: string): Role {

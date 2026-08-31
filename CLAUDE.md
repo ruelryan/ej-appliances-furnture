@@ -260,8 +260,8 @@ does this, and gets a genuine dry run out of it for free: run the whole thing an
 
 `docs/` is the developer reference: `architecture.md`, `database.md` (full RPC
 catalog), `roles-and-permissions.md`, `business-rules-legal.md`, `testing.md`,
-`operations.md`, plus five per-module pages in `docs/modules/`
-(`collections`, `commissions-leads`, `contracts-payments`,
+`operations.md`, plus six per-module pages in `docs/modules/`
+(`bir`, `collections`, `commissions-leads`, `contracts-payments`,
 `deliveries-inventory-products`, `payroll-dtr`). **Standing rule: any commit
 that changes user-facing behavior, a route, a role's access, a business rule,
 or the schema updates the matching `docs/` page in the same commit.** On
@@ -510,6 +510,24 @@ prove via `audit_log` that read-only runs wrote nothing.
 - **Analytics** (owner-only route `/analytics`): dashboards (monthly sales,
   collections-vs-expected, by-agent, aging, cashflow) built on the financial
   views; Recharts in `charts.tsx`. Consult the dataviz skill before changing.
+- **BIR books + the `bookkeeper` role** (0039, Phase 1): `/bir`,
+  `/bir/expenses`, `/bir/suppliers` and `/api/export/bir-expenses` hold the
+  Subsidiary Purchase Journal that used to live in a Google Sheet. Owner and
+  admin write (`can_manage_bir()`); owner, admin and **bookkeeper** read
+  (`can_see_bir()`). Expenses are **voided, never deleted**. The VAT split is
+  SQL-only (`bir_split()`), with `birSplit()` in `src/lib/bir.ts` as a tested
+  mirror for the form preview — golden cases are real rows from the sheet.
+  `suppliers` was **extended** (`tin`, `vat_registered`, `bir_name`), not
+  duplicated. **E & J is TWO VAT registrations on one base TIN** —
+  `437-961-107-00000` E & J Appliances Store and `-00001` E & J Furniture
+  Store, at Bogo, Tomas Oppus, Southern Leyte 6605 — which file separately.
+  That is why the Sheet's Sales Journal always split Appliances/Furniture,
+  and why `bir_expenses.branch` exists; `shared` is overhead belonging to
+  neither, and the app deliberately invents no allocation. Constants in
+  `src/lib/bir.ts`, TINs asserted in `bir.test.ts`. Phase 2 (sales register + the declared-vs-actual gap, 2550Q) is
+  designed in `docs/modules/bir.md` and NOT built. **A sale is booked at
+  `cash_price`, not `total_price`** — identical on 4/5-month Good-as-Cash terms,
+  and it is what stops a reprice restating a filed month.
 - **Dashboard** (`/`, rebuilt 2026-08-29): a role router, not a page.
   `sales_agent`→`/commissions`, `delivery`→`/deliveries`, and now
   `collector`→`/collections` (that page already shows assigned accounts, cash
@@ -633,6 +651,17 @@ These shaped real code. Do not "simplify" them away.
   a pre-check cannot hold it: use a constraint. Also: **EXECUTE is granted to
   `PUBLIC` by default**, so a new SECURITY DEFINER function is callable by
   `anon` unless you `revoke` it or check the caller inside.
+- **Adding a role silently widens ~60 policies.** `is_active_user()` (`0001:46`)
+  was role-blind — active profile, any role — and backs about sixty policies, so
+  a new `bookkeeper` profile would have been handed contracts, customers and
+  payments the moment it was activated. 0039 redefines that ONE function to
+  exclude the role rather than editing sixty policies. Two policies then need
+  widening by hand and both are load-bearing: **`profiles_select`** (without
+  `or id = auth.uid()` the bookkeeper cannot read their own profile, so
+  `getProfile()` returns null and they can never log in) and
+  **`suppliers_select`**. `tasks_select` runs through it too, which is why the
+  bookkeeper has no Tasks link and is not an assignable task team. Wall off
+  another role and you must re-check exactly these.
 - `audit_row_changes()` is `after update` only — **inserts are never audited**,
   on any table. A row that is created and then cancelled leaves one audit
   trail entry (the cancel), not two.
@@ -752,6 +781,7 @@ These shaped real code. Do not "simplify" them away.
   **Its table list is hand-maintained and the row-count check cannot catch an
   omission** — the manifest verifies the tables it dumped, so a table missing
   from `TABLES` is missing from the verification too. That is how `remittances`
-  (0030) went unbacked-up until 2026-08-29. **A migration that adds a table adds
-  it to `backup-prod.ts` in the same commit** — the same hardcoded-list trap as
+  (0030) went unbacked-up until 2026-08-29. **A migration that adds a table adds it to
+  `scripts/backup-prod.ts` AND to `TABLES` in `src/app/api/backup/route.ts` in
+  the same commit** (0039 does this for `bir_expenses`) — the same hardcoded-list trap as
   `id_counters` above, and it has now bitten twice.
