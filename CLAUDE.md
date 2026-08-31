@@ -530,7 +530,12 @@ prove via `audit_log` that read-only runs wrote nothing.
   the default. Constants in `src/lib/bir.ts`, TINs asserted in `bir.test.ts`.
   **The sales book shipped in 0041** (`/bir/sales`): `v_bir_sales_register` is
   every contract with its booking if it has one, so an undeclared sale is
-  visible rather than absent. **A sale is booked at `cash_price`, not
+  visible rather than absent — but **only for owner and admin**: the unbooked
+  figure is internal, so a bookkeeper's `/bir/sales` reads
+  `bir_sales_entries` instead. RLS already forces that (the register is
+  `security_invoker` over `contracts`, so it returns a bookkeeper nothing),
+  which is why their page was blank until 0042's follow-up.
+  **A sale is booked at `cash_price`, not
   `total_price`** — identical on 4/5-month Good-as-Cash terms, and it is what
   stops a reprice restating a filed month. Each registration has its OWN
   invoice booklet, so numbers are TYPED, never minted; two partial unique

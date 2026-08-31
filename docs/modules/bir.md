@@ -174,6 +174,19 @@ a pre-check cannot: one live booking per contract, and one use of an invoice
 number **per branch** (the same number in the other book is legal, because it is
 a different booklet).
 
+**What the bookkeeper sees is the book, and only the book.** The unbooked
+figure is internal — it is the office's working queue, not something the
+bookkeeper is given (Ryan, 2026-08-31). Their `/bir/sales` reads
+`bir_sales_entries` directly; owner and admin read `v_bir_sales_register`.
+
+That is not UI hiding. RLS already enforces it: the register is
+`security_invoker` and joins `contracts`, which `is_active_user()` walls the
+bookkeeper out of, so **the view returns them zero rows whatever the page
+asks**. That was in fact a bug — their sales page rendered empty — and
+reading the entries table fixes it and meets the requirement in one change.
+It works only because every column the book needs is snapshotted at booking:
+customer, address, item, amount. The bookkeeper never needs `contracts`.
+
 **The register is the point.** `v_bir_sales_register` is every contract with its
 booking if it has one, so an undeclared sale is *visible* rather than absent.
 `/bir/sales` shows, for the period: sold, booked, not yet booked, and the output
