@@ -28,24 +28,42 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-async function listTables(): Promise<string[]> {
-  // PostgREST exposes the schema descriptor at GET /rest/v1/. Parse the
-  // paths (one per table/view) so the backup list never drifts from the
-  // migrations. Filter out parameterized routes like /{table}.
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  const res = await fetch(`${base}/rest/v1/`, {
-    headers: { apikey: key, Authorization: `Bearer ${key}` },
-  });
-  if (!res.ok) throw new Error(`schema discovery failed: ${res.status}`);
-  const spec = (await res.json()) as {
-    paths?: Record<string, { get?: { summary?: string } }>;
-  };
-  return Object.keys(spec.paths ?? {})
-    .map((p) => p.replace(/^\//, ""))
-    .filter((name) => !name.includes("{")) // skip parameterized routes
-    .sort();
-}
+// The full table inventory, straight from supabase/migrations (the source of
+// truth — the same list a pg_dump would name). Hardcoded deliberately: the
+// PostgREST OpenAPI root is unreliable across versions (it returned an empty
+// relation name in production), and a fixed list means the backup covers the
+// same tables every week — additions go in via a migration + one line here.
+const TABLES = [
+  "audit_log",
+  "cash_advance_expenses",
+  "cash_advances",
+  "collection_entries",
+  "commissions",
+  "contract_notes",
+  "contract_repricings",
+  "contracts",
+  "customers",
+  "deliveries",
+  "dtr_locations",
+  "employee_rates",
+  "holidays",
+  "id_counters",
+  "leads",
+  "payments",
+  "payslips",
+  "ph_locations",
+  "product_photos",
+  "products",
+  "profiles",
+  "remittances",
+  "stock_movements",
+  "suppliers",
+  "task_comments",
+  "tasks",
+  "thirteenth_month_payments",
+  "time_correction_requests",
+  "time_records",
+] as const;
 
 async function fetchAll(
   admin: SupabaseClient,
@@ -89,7 +107,7 @@ export async function GET(req: Request) {
   });
 
   try {
-    const tables = await listTables();
+    const tables = TABLES as readonly string[];
     const dump: Record<string, unknown> = {
       backed_up_at: new Date().toISOString(),
       tables: {},
