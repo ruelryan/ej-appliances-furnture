@@ -18,6 +18,7 @@ import { Alert } from "@/components/alert";
 import { EmptyState } from "@/components/empty-state";
 import { btnSecondary, pageStack, theadRow, td, tdNum } from "@/components/ui";
 import { PeriodPicker } from "../period-picker";
+import { latestPeriodWithData } from "../latest-period";
 import { ExpenseManager, type ExpenseRow, type SupplierOption } from "./expense-manager";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,9 @@ export default async function BirExpensesPage({
 
   const canManage = canPostPayments(profile.role); // mirrors can_manage_bir()
   const supabase = await createClient();
-  const range = resolvePeriod(period, phTodayISO());
+  const autoPeriod = period ? null : await latestPeriodWithData(supabase, "expenses");
+  const range = resolvePeriod(period ?? autoPeriod ?? undefined, phTodayISO());
+  const shownPeriod = period ?? autoPeriod ?? range.label;
 
   let query = supabase
     .from("bir_expenses")
@@ -94,8 +97,8 @@ export default async function BirExpensesPage({
     <div className={pageStack}>
       <Header period={range.label} />
       <div className="flex flex-wrap items-center gap-3">
-        <PeriodPicker value={period ?? range.label} />
-        <BranchTabs period={period ?? range.label} active={branch ?? "all"} />
+        <PeriodPicker value={shownPeriod} />
+        <BranchTabs period={shownPeriod} active={branch ?? "all"} />
         {canManage && (
           <ExpenseManager
             mode="create"
@@ -120,7 +123,7 @@ export default async function BirExpensesPage({
         sub={`${range.start} to ${range.end} · ${live.length} document${live.length === 1 ? "" : "s"}`}
         action={
           <Link
-            href={`/api/export/bir-expenses?period=${encodeURIComponent(period ?? range.label)}&branch=${branch ?? "all"}`}
+            href={`/api/export/bir-expenses?period=${encodeURIComponent(shownPeriod)}&branch=${branch ?? "all"}`}
             className={btnSecondary}
             prefetch={false}
           >

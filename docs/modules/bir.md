@@ -288,6 +288,52 @@ Consequence for the UI: **the "In the book" list reads `bir_sales_entries`, not
 show an entry that has none. The register is still what produces the
 not-yet-booked queue and the sold figure, which are owner/admin only.
 
+## The purchase journal was imported from the bookkeeper's workbook
+
+`scripts/import-bir-expenses.ts --file <bir.xlsx>`. **915 rows, ₱5,687,417.90,
+input tax ₱446,008.32**, 2024 onwards, and 109 suppliers created from the sheet.
+
+Only the 28 tabs named `Q<n> <year> Exp APPLIANCES` / `… FURNITURE` are the
+declared journal, and they already carry the branch. The other 29 were excluded
+on evidence rather than judgement:
+
+| tab group | why not |
+|---|---|
+| `Cost of Sales APP/FUR` (11) | ~1,000 rows each but **no purchase-journal header** — a different layout |
+| `Detail2-COST OF SALES` | 46 rows, **all 46 already in an Exp tab** — a breakdown, not extra rows |
+| `Q1`–`Q4 EXPENSES` (4) | every row dated **2022**, pre-VAT, and no branch on the tab name |
+| `Inv …`, `Detail3/4-TAXES …` | not expense layouts |
+
+It starts at **2024** for the same reason the sales book does: a purchase
+journal supports input-tax credits, and before registration there was no credit
+to claim.
+
+**Document type is read, not assumed.** The 2024+ tabs carry `Official Receipt`
+and `Sales Invoice` columns which are *not* per-row flags — they hold supplier
+NAMES, a side list of who issues which. Read as sets they classify 98 of the 109
+suppliers (902 of 915 rows); the remaining 13 are recorded as `none` rather than
+guessed at.
+
+**The import validated the VAT arithmetic.** The script checks each row's own
+`VATABLE PURCHASES` / `VAT INPUT TAX` against what `bir_split()` derives from
+the gross: **791 of 791 rows carrying input tax agree exactly.** The SQL formula
+and the bookkeeper's have now been checked against each other across four years.
+
+Re-running is guarded: it refuses to import when rows already exist from 2024
+onward, since there is no natural key to deduplicate a purchase-journal row on.
+
+## Landing on a period that has records
+
+`/bir`, `/bir/sales` and `/bir/expenses` with no `?period=` land on the **newest
+period that holds records**, not the calendar month, and say so in a line under
+the picker.
+
+The calendar month was the obvious default and the wrong one. On 2026-08-31 the
+newest expense was 2026-06-30 — the workbook has no Q3 tab yet — so clicking BIR
+showed a page of zeroes, which reads as a broken module rather than an empty
+month; picking any other month made the figures appear, which made it look
+stranger still. `latest-period.ts` holds the query.
+
 ## Still to come
 
 - `/bir/vat` — a proper 2550Q worksheet. `/bir` already shows output less input

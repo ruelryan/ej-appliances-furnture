@@ -227,6 +227,7 @@ npx tsx scripts/import-products.ts [--apply]        # products from a plain list
 npx tsx scripts/import-bir-sales.ts --file <contracts-db.csv> [--apply]  # sales book from Sheet cols R-T
 npx tsx scripts/fix-bir-sales-2024-start.ts [--apply]   # drop pre-VAT (2023) sales entries
 npx tsx scripts/verify-bir-sales.ts --file <journal.xlsx>  # app vs the filed journal (read-only)
+npx tsx scripts/import-bir-expenses.ts --file <bir.xlsx> [--apply]  # purchase journal, 2024+
 npx tsx scripts/create-owner.ts                     # bootstrap the first owner account
 npx tsx scripts/backfill-addresses.ts [--apply]     # free text → barangay/municipality
 npx tsx scripts/backfill-photo-hashes.ts [--apply]  # dHash existing product photos
@@ -560,7 +561,14 @@ prove via `audit_log` that read-only runs wrote nothing.
   would double-count the sale and raise a receivable that does not exist.
   Because of that, the "In the book" list reads `bir_sales_entries`, never
   `v_bir_sales_register` — the register is built from contracts and cannot
-  show an entry that has none.
+  show an entry that has none. **The purchase journal is imported too** —
+  915 rows, ₱5,687,418, input tax ₱446,008, 2024+, from the 28
+  `Q<n> <year> Exp` tabs only (the Cost of Sales tabs have no journal header,
+  and `Detail2` is 46 rows all of which already appear in an Exp tab). Its VAT
+  split agreed with `bir_split()` on 791 of 791 rows. **Every BIR page lands on
+  the newest period WITH records, not the calendar month** — expenses ran to
+  June while the clock said August, so the first click showed all zeroes and
+  read as a broken page (`(app)/bir/latest-period.ts`).
 - **Dashboard** (`/`, rebuilt 2026-08-29): a role router, not a page.
   `sales_agent`→`/commissions`, `delivery`→`/deliveries`, and now
   `collector`→`/collections` (that page already shows assigned accounts, cash

@@ -14,6 +14,7 @@ import { Alert } from "@/components/alert";
 import { EmptyState } from "@/components/empty-state";
 import { btnSecondary, pageStack, theadRow, td, tdNum } from "@/components/ui";
 import { PeriodPicker } from "../period-picker";
+import { latestPeriodWithData } from "../latest-period";
 import {
   BookSale,
   CancelBooking,
@@ -42,7 +43,9 @@ export default async function BirSalesPage({
 
   const canManage = canPostPayments(profile.role); // mirrors can_manage_bir()
   const supabase = await createClient();
-  const range = resolvePeriod(period, phTodayISO());
+  const autoPeriod = period ? null : await latestPeriodWithData(supabase, "sales");
+  const range = resolvePeriod(period ?? autoPeriod ?? undefined, phTodayISO());
+  const shownPeriod = period ?? autoPeriod ?? range.label;
   const scoped = BIR_BRANCHES.some((b) => b.value === branch);
   const today = phTodayISO();
 
@@ -109,14 +112,14 @@ export default async function BirSalesPage({
 
   const showAll = show === "all";
   const queue = showAll ? unbooked : unbooked.slice(0, 50);
-  const periodParam = encodeURIComponent(period ?? range.label);
+  const periodParam = encodeURIComponent(shownPeriod);
 
   return (
     <div className={pageStack}>
       <Header period={range.label} canManage={canManage} />
       <div className="flex flex-wrap items-center gap-3">
-        <PeriodPicker value={period ?? range.label} />
-        <BranchTabs period={period ?? range.label} active={branch ?? "all"} />
+        <PeriodPicker value={shownPeriod} />
+        <BranchTabs period={shownPeriod} active={branch ?? "all"} />
         {canManage && <StandaloneSale defaultDate={today} />}
       </div>
 

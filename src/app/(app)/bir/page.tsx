@@ -9,6 +9,7 @@ import { Alert } from "@/components/alert";
 import { EmptyState } from "@/components/empty-state";
 import { btnSecondary, pageStack, theadRow, td, tdNum } from "@/components/ui";
 import { PeriodPicker } from "./period-picker";
+import { latestPeriodWithData } from "./latest-period";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,11 @@ export default async function BirPage({
   if (!canSeeBir(profile.role)) redirect("/");
 
   const supabase = await createClient();
-  const range = resolvePeriod(period, phTodayISO());
+  // With no ?period= the landing month is the newest one that HAS records, not
+  // the calendar month — which was empty and read as a broken page.
+  const autoPeriod = period ? null : await latestPeriodWithData(supabase, "both");
+  const range = resolvePeriod(period ?? autoPeriod ?? undefined, phTodayISO());
+  const shownPeriod = period ?? autoPeriod ?? range.label;
 
   // Every query branches on `error` before `data`. A dropped connection here
   // would otherwise render a confident "input tax ₱0.00", and a zero that
@@ -79,7 +84,14 @@ export default async function BirPage({
   return (
     <div className={pageStack}>
       <Header period={range.label} />
-      <PeriodPicker value={period ?? range.label} />
+      <PeriodPicker value={shownPeriod} />
+      {autoPeriod && (
+        <p className="text-xs text-muted">
+          Showing {range.label}, the most recent period with records. Use the
+          picker for another month or quarter.
+        </p>
+      )}
+
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
@@ -97,13 +109,13 @@ export default async function BirPage({
           label="Sales booked"
           value={peso(salesTotal)}
           sub={`${sales.length} entr${sales.length === 1 ? "y" : "ies"} · ${peso(outputTax)} output tax`}
-          href={`/bir/sales?period=${encodeURIComponent(period ?? range.label)}`}
+          href={`/bir/sales?period=${encodeURIComponent(shownPeriod)}`}
         />
         <StatTile
           label="Total expenses"
           value={peso(total)}
           sub={`${list.length} document${list.length === 1 ? "" : "s"} · ${peso(nonVat)} non-VAT`}
-          href={`/bir/expenses?period=${encodeURIComponent(period ?? range.label)}`}
+          href={`/bir/expenses?period=${encodeURIComponent(shownPeriod)}`}
         />
       </div>
 
@@ -141,7 +153,7 @@ export default async function BirPage({
                   <td className={`${td} font-mono text-xs`}>{b.tin}</td>
                   <td className={tdNum}>
                     <Link
-                      href={`/bir/sales?period=${encodeURIComponent(period ?? range.label)}&branch=${b.value}`}
+                      href={`/bir/sales?period=${encodeURIComponent(shownPeriod)}&branch=${b.value}`}
                       className="hover:underline"
                     >
                       {peso(s)}
@@ -150,7 +162,7 @@ export default async function BirPage({
                   <td className={tdNum}>{peso(o)}</td>
                   <td className={tdNum}>
                     <Link
-                      href={`/bir/expenses?period=${encodeURIComponent(period ?? range.label)}&branch=${b.value}`}
+                      href={`/bir/expenses?period=${encodeURIComponent(shownPeriod)}&branch=${b.value}`}
                       className="hover:underline"
                     >
                       {peso(i)}
@@ -174,7 +186,7 @@ export default async function BirPage({
         sub={`${range.start} to ${range.end}`}
         action={
           <Link
-            href={`/api/export/bir-expenses?period=${encodeURIComponent(period ?? range.label)}`}
+            href={`/api/export/bir-expenses?period=${encodeURIComponent(shownPeriod)}`}
             className={btnSecondary}
             prefetch={false}
           >
