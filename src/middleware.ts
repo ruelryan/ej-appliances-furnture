@@ -59,7 +59,8 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isLogin = path.startsWith("/login");
-  const isPublic = path === "/api/health";
+  const isPublic =
+    path === "/api/health" || path.startsWith("/api/backup");
 
   if (!user && !isLogin && !isPublic) {
     const url = request.nextUrl.clone();
