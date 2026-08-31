@@ -13,6 +13,24 @@ The new-sale form (`src/app/(app)/contracts/new/`) shows a live terms preview co
 
 After that, `guard_contract_money` (a `before update` trigger from 0022) rejects any change to `cash_price`, `total_price`, `downpayment`, `monthly_amortization`, or `term_months` — including by the owner through PostgREST — unless the transaction-local setting `app.allow_terms_change` is on, which only `confirm_reprice` / `revert_reprice` set. The owner's edit page (`updateContract`) can change descriptive fields and `payment_status` via the owner's RLS UPDATE, but not the money.
 
+## Moving between contracts
+
+The contract page header carries its own navigation, because the job is
+usually "work through the book", not "open one contract".
+
+- **◀ ▶ walk the OPEN contracts** in the chosen order (A–Z, longest since
+  payment, most overdue). The list is one query capped at PostgREST's 1000
+  rows, and it is `.order()`ed so which rows come back is at least stable —
+  nothing could close a contract until 0038, so most of the book is still
+  `open` and that cap is a real ceiling, not a formality.
+- **The search box jumps anywhere in the book**, open or closed, and is the
+  way past that cap. It is a plain **GET** form that re-renders the same page
+  with `?find=`, not a typeahead calling a server action — a server action is a
+  POST, and `middleware.ts` refuses every non-GET while "View as" is active, so
+  a POST search would break for the owner previewing another role. It reuses
+  the escaped `.or()` grammar from `/contracts` (`quoteIlikePattern`), matching
+  contract number, customer name and item, newest first, 25 rows.
+
 ## Terms math
 
 The formulas and the two-places rule (TS `computeTerms` + SQL `compute_terms`, both asserted against `GOLDEN_CASES`) are covered in [architecture.md](../architecture.md#business-math-exactly-two-synced-places). The operational rule here: **a contract stores results, not formulas.** Changing a formula affects only future contracts; history never recomputes. `GOLDEN_CASES` in `src/lib/amortization.ts` is the shared fixture — change the math in both places, then run `npm test` and `npx tsx scripts/verify-sql-terms.ts`.
@@ -69,7 +87,7 @@ After 0027 a contract carries exactly four status signals, and only two are manu
 |---|---|---|
 | `followup_tier` | **Auto** (view) | Money + dates: closed / on_track / overdue / demand |
 | `collection_situation` | **Auto** (view) | Human-readable situation derived from the tier, the repossession stage (which dominates when set), and the latest non-cancelled collection entry — e.g. "Promised to pay Jul 26", "Not reached (last tried Jul 18)", "Overdue — no visit logged" |
-| `payment_status` | Manual, owner | `open` / `closed` — the owner closes a finished contract (`close_contract`, or the edit page). Since 0032 `close_contract` raises if the contract is missing or already closed rather than silently doing nothing, and a `closed` contract refuses new payments. There is no reopen RPC: the owner sets the status back on the edit page. Closing with a balance outstanding is still allowed — a write-off, a settlement, or a repossession all end a contract with money on the books. |
+| `payment_status` | Manual, owner + admin | `open` / `closed`. **Close account / Reopen account sit in the header of the contract page (0038).** Owner or admin closes (`close_contract`); **owner only** reopens (`reopen_contract`). A `closed` contract refuses new payments (0032), so the Record payment button is hidden on one. Closing with a balance outstanding is still allowed — a write-off, a settlement, or a repossession all end a contract with money on the books — and the confirmation names the exact amount, because `v_contract_financials` lets `payment_status` win the cascade and the contract will read "Fully paid" afterwards whatever is left. **The `payment_status` dropdown was removed from the Edit page in 0038**: it wrote the column directly, bypassing the RPC's role check and its already-closed guard, and it was the only way to close an account for a year because nothing ever called `close_contract`. |
 | `repossession_stage` | Manual, owner | The pipeline above |
 
 The old hand-typed `collection_status` text column, its `StatusForm`, the `update_contract_status` RPC, and the `COLLECTION_STATUSES` constant were **deleted** in 0027 — the column was blank on 95% of rows, nothing read it as logic, and collectors couldn't see it. Do not reintroduce a hand-typed status; if a new situation needs surfacing, extend the `collection_situation` derivation. (`delivery_status` still exists on contracts but is a trigger-synced legacy label owned by [deliveries-inventory-products.md](deliveries-inventory-products.md), never hand-edited.)

@@ -205,7 +205,6 @@ export async function updateContract(
     item_description: string;
     item_type: string | null;
     quantity: number;
-    payment_status: string;
   }
 ) {
   const supabase = await createClient();
@@ -218,4 +217,33 @@ export async function updateContract(
 
   revalidatePath(`/contracts/${contractId}`);
   redirect(`/contracts/${contractId}`);
+}
+
+// ── Closing an account ───────────────────────────────────────
+// Both go through the 0038 RPCs rather than an UPDATE on contracts, so the
+// role check and the "already in that state" guard live in one place. The
+// payment_status dropdown that used to sit on the edit form wrote the column
+// directly and bypassed both; it was removed when these were added.
+export async function closeContract(contractId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("close_contract", {
+    p_contract_id: contractId,
+  });
+  if (error) return { error: error.message };
+  revalidatePath(`/contracts/${contractId}`);
+  revalidatePath("/contracts");
+  revalidatePath("/collections");
+  return {};
+}
+
+export async function reopenContract(contractId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reopen_contract", {
+    p_contract_id: contractId,
+  });
+  if (error) return { error: error.message };
+  revalidatePath(`/contracts/${contractId}`);
+  revalidatePath("/contracts");
+  revalidatePath("/collections");
+  return {};
 }

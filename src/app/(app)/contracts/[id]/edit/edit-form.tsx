@@ -11,7 +11,6 @@ interface Contract {
   item_description: string;
   item_type: string | null;
   quantity: number;
-  payment_status: string;
 }
 
 export function EditForm({ contract }: { contract: Contract }) {
@@ -26,7 +25,6 @@ export function EditForm({ contract }: { contract: Contract }) {
         item_description: String(fd.get("item_description") ?? "").trim(),
         item_type: String(fd.get("item_type") ?? "").trim() || null,
         quantity: Number(fd.get("quantity")),
-        payment_status: String(fd.get("payment_status")),
       });
       if (res?.error) setError(res.error);
     });
@@ -74,13 +72,6 @@ export function EditForm({ contract }: { contract: Contract }) {
             required
             className={input}
           />
-        </div>
-        <div>
-          <label className={label}>Payment status</label>
-          <select name="payment_status" defaultValue={contract.payment_status} className={input}>
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
-          </select>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { canPostPayments, createClient, getProfile } from "@/lib/supabase/server";
+import { quoteIlikePattern } from "@/lib/supabase/filters";
 import { peso, fmtDateShort } from "@/lib/format";
 import { computeTerms, TERM_OPTIONS, termLabel } from "@/lib/amortization";
 import { buildFollowupMessage, type ContractFinancials } from "@/lib/messages";
@@ -12,6 +13,7 @@ import { btnPrimary, btnSecondary, theadRow } from "@/components/ui";
 import { NoteForm } from "./note-form";
 import { RepossessionControl } from "./repossession-control";
 import { ContractNavBar } from "./nav-bar";
+import { CloseControl } from "./close-control";
 import { AgentCommissionPanel, type CommissionRow } from "./agent-commission-panel";
 import { DeliveryPanel } from "./delivery-panel";
 import { RepricePanel, type Repricing } from "./reprice-panel";
@@ -24,6 +26,15 @@ interface NavRow {
   contract_no: string;
   last_payment_date: string | null;
   overdue_amount: number;
+}
+
+interface FindRow {
+  id: string;
+  contract_no: string;
+  display_name: string;
+  item_description: string;
+  payment_status: string;
+  remaining_balance: number;
 }
 
 function sortNavRows(rows: NavRow[], sort: string): NavRow[] {
@@ -52,10 +63,11 @@ export default async function ContractPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ nav?: string; leadWarn?: string }>;
+  searchParams: Promise<{ nav?: string; leadWarn?: string; find?: string }>;
 }) {
   const { id } = await params;
-  const { nav, leadWarn } = await searchParams;
+  const { nav, leadWarn, find } = await searchParams;
+  const findTerm = (find ?? "").trim();
   const sort = ["name", "lastpaid", "overdue"].includes(nav ?? "")
     ? (nav as string)
     : "name";
@@ -89,10 +101,35 @@ export default async function ContractPage({
         .from("v_contract_financials")
         .select("id, display_name, contract_no, last_payment_date, overdue_amount")
         .eq("payment_status", "open")
+        // Ordered because the 1000-row cap is a real ceiling here, not a
+        // formality: nothing could close a contract until 0038, so almost the
+        // whole book is still 'open'. Without a sort, WHICH 1000 come back is
+        // unspecified, and the prev/next walk silently changes membership
+        // between requests. The search box below is the way past the cap.
+        .order("contract_no")
         .limit(1000),
       supabase.from("v_commissions").select("*").eq("contract_id", id).maybeSingle(),
       supabase.from("v_deliveries").select("*").eq("contract_id", id).maybeSingle(),
     ]);
+
+  // Jump-to-contract search. Runs only when something was typed, and covers
+  // the WHOLE book — open and closed alike — which the prev/next arrows
+  // deliberately do not. Same escaped .or() grammar as /contracts: inside an
+  // .or() the string is PostgREST filter syntax, so an unquoted comma in the
+  // search term would start a condition of its own.
+  let findResults: FindRow[] = [];
+  if (findTerm) {
+    const pattern = quoteIlikePattern(findTerm);
+    const { data: found } = await supabase
+      .from("v_contract_financials")
+      .select("id, contract_no, display_name, item_description, payment_status, remaining_balance")
+      .or(
+        `contract_no.ilike.${pattern},display_name.ilike.${pattern},item_description.ilike.${pattern}`
+      )
+      .order("contract_date", { ascending: false })
+      .limit(25);
+    findResults = (found ?? []) as FindRow[];
+  }
 
   const { data: repricings } = await supabase
     .from("contract_repricings")
@@ -188,12 +225,69 @@ export default async function ContractPage({
   return (
     <div className="space-y-5">
       <ContractNavBar
+        contractId={c.id}
         prevId={prevId}
         nextId={nextId}
         sort={sort}
         position={navIndex === -1 ? null : navIndex + 1}
         total={ordered.length}
+        find={findTerm}
       />
+
+      {findTerm && (
+        <div className="rounded-card border border-line bg-white p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-ink">
+              {findResults.length === 0
+                ? `No contract matches “${findTerm}”`
+                : `${findResults.length}${findResults.length === 25 ? "+" : ""} match${findResults.length === 1 ? "" : "es"} for “${findTerm}”`}
+            </h2>
+            <Link
+              href={`/contracts/${c.id}?nav=${sort}`}
+              className="shrink-0 text-xs font-semibold text-brand hover:underline"
+            >
+              Clear
+            </Link>
+          </div>
+          {findResults.length === 0 ? (
+            <p className="text-xs text-muted">
+              Try part of the customer&apos;s surname, the contract number, or
+              the item.
+            </p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {findResults.map((r) => (
+                <li key={r.id}>
+                  <Link
+                    href={`/contracts/${r.id}?nav=${sort}`}
+                    className={`flex items-center justify-between gap-3 py-2 hover:bg-surface ${
+                      r.id === c.id ? "opacity-50" : ""
+                    }`}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-ink">
+                        {r.display_name}
+                      </span>
+                      <span className="block truncate text-xs text-muted">
+                        <span className="font-mono">{r.contract_no}</span> ·{" "}
+                        {r.item_description}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <span className="block text-sm tabular-nums text-ink">
+                        {peso(r.remaining_balance)}
+                      </span>
+                      <span className="block text-micro text-muted">
+                        {r.payment_status === "open" ? "Open" : "Closed"}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {leadWarn && (
         <div className="rounded-card border border-warning/40 bg-warning-bg px-4 py-3 text-sm text-warning">
@@ -234,14 +328,23 @@ export default async function ContractPage({
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/payments/new?contract=${c.id}`} className={btnPrimary}>
-            Record payment
-          </Link>
+          {c.payment_status === "open" && (
+            <Link href={`/payments/new?contract=${c.id}`} className={btnPrimary}>
+              Record payment
+            </Link>
+          )}
           {isOwner && (
             <Link href={`/contracts/${c.id}/edit`} className={btnSecondary}>
               Edit
             </Link>
           )}
+          <CloseControl
+            contractId={c.id}
+            paymentStatus={c.payment_status}
+            remainingBalance={Number(c.remaining_balance)}
+            canClose={canManage}
+            isOwner={isOwner}
+          />
         </div>
       </div>
 
