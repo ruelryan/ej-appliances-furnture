@@ -249,17 +249,44 @@ Two things will bite whoever edits it:
   and produced five false disagreements — Asialink invoice 26 is
   16,500 + 29,000 = 45,500, exactly what the journal says.
 
-**As of 2026-08-31, 357 of 363 declared sales agree.** The six that do not are
-judgement calls for the office, not code:
+**As of 2026-09-01 the app and the filed journal agree exactly**: 364 journal
+rows, 366 app entries, ₱7,226,819.65 on both sides, with nothing missing,
+nothing extra and no amount disagreeing. The counts differ because two invoices
+each cover two contracts and the app holds an entry per contract.
 
-| | |
+Getting there resolved six differences, and the mix is worth remembering:
+
+| | resolution |
 |---|---|
-| furniture inv 31 · Yosores, Rene · ₱7,900 | in the journal, not in the app — the contract is booked under a different number |
-| furniture inv 32 · LGU - San Ricardo · ₱312,333.65 | in the journal, not in the app. Two LGU contracts exist that day (₱284,040 and ₱64,380); neither matches, nor does their sum. Also `contract_id` is `not null`, so a sale mapping to no single contract cannot be entered at all |
-| furniture inv 58 · Malatag, Josephine · ₱39,999 | in the app, not in the journal — and exactly the amount by which 2025 exceeded the journal |
-| appliances inv 36 · Tambis, Lorenzo | journal ₱6,900, app ₱7,800 |
-| furniture inv 230140005558 · Nunez, Sanny | journal ₱29,900, app ₱26,900 |
-| furniture inv 67 · Baluran, Nonilona | journal ₱17,900, app ₱25,800 across 2 contracts |
+| Yosores inv 31 / Baluran inv 67 | **App wrong.** Yosores was booked under invoice 67, which belongs to Baluran alone. Cancelled and re-booked under 31 — the two resolved each other. |
+| Tambis, Nunez, Malatag | **Sheet wrong.** Corrected in the journal by Ryan. |
+| LGU - San Ricardo inv 32 | **Neither wrong.** One invoice over two contracts at an amount matching neither — see below. |
+
+## A declared sale with no contract
+
+`bir_sales_entries.contract_id` is **nullable since 0043**, and
+`book_standalone_sale` is how such a row is created.
+
+Furniture invoice 32 (2024-12-12, LGU - San Ricardo, ₱312,333.65) is the case
+that forced it. The app holds that transaction as contracts 30240 (₱284,040)
+and 30241 (₱64,380) — ₱348,420 together, matching neither the invoice nor each
+other. The obvious fix, inventing a third contract for ₱312,333.65, was
+rejected on purpose: it would have double-counted the sale, raised a phantom
+₱312k receivable for the collections screens to chase, and enqueued a delivery
+for furniture delivered two years earlier. **A tax record must not be able to
+conjure operational work.**
+
+`book_standalone_sale` is deliberately a separate function from `book_sale`
+rather than the same one with nullable arguments. `book_sale`'s whole value is
+that SQL derives the amount, the branch and the customer *from the contract*, so
+a caller cannot get them wrong; the standalone path must accept all three, and
+merging them would weaken the guarantee on the common path for the sake of the
+rare one.
+
+Consequence for the UI: **the "In the book" list reads `bir_sales_entries`, not
+`v_bir_sales_register`.** The register is built *from* contracts and so cannot
+show an entry that has none. The register is still what produces the
+not-yet-booked queue and the sold figure, which are owner/admin only.
 
 ## Still to come
 

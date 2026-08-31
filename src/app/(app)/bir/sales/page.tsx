@@ -7,19 +7,28 @@ import {
   getProfile,
 } from "@/lib/supabase/server";
 import { peso, fmtDateShort, phTodayISO } from "@/lib/format";
-import { BIR_BRANCHES, branchInfo, resolvePeriod } from "@/lib/bir";
+import { BIR_BRANCHES, birSplit, branchInfo, resolvePeriod } from "@/lib/bir";
 import { SectionCard } from "@/components/section-card";
 import { StatTile } from "@/components/stat-tile";
 import { Alert } from "@/components/alert";
 import { EmptyState } from "@/components/empty-state";
 import { btnSecondary, pageStack, theadRow, td, tdNum } from "@/components/ui";
 import { PeriodPicker } from "../period-picker";
-import { BookSale, CancelBooking, type RegisterRow } from "./book-sale";
+import {
+  BookSale,
+  CancelBooking,
+  StandaloneSale,
+  type BookedEntry,
+  type RegisterRow,
+} from "./book-sale";
 
 export const dynamic = "force-dynamic";
 
-const SELECT =
+const REGISTER_SELECT =
   "contract_id, contract_no, contract_date, customer_name, customer_address, item_description, item_type, cash_price, total_price, term_months, branch, booked, entry_id, invoice_no, sales_date, gross_snapshot";
+
+const ENTRY_SELECT =
+  "id, contract_id, invoice_no, sales_date, branch, gross_snapshot, customer_name_snapshot, item_snapshot";
 
 export default async function BirSalesPage({
   searchParams,
@@ -37,301 +46,207 @@ export default async function BirSalesPage({
   const scoped = BIR_BRANCHES.some((b) => b.value === branch);
   const today = phTodayISO();
 
-  // ── The bookkeeper sees the book, and only the book ────────
+  // ── What is IN the book comes from bir_sales_entries, for every role ──
   //
-  // What has NOT been declared is internal (Ryan, 2026-08-31): it is the
-  // office's working queue, not something the bookkeeper is given. So their
-  // page reads bir_sales_entries — the entries actually filed — and never the
-  // register, which is every contract booked or not.
-  //
-  // This is not UI hiding. RLS already enforces it: v_bir_sales_register is
-  // security_invoker and joins contracts, which 0039 walls the bookkeeper out
-  // of, so the view returns them zero rows no matter what this page asks for.
-  // That was in fact a bug — their page showed nothing at all — and reading the
-  // entries table fixes it and answers the requirement with one change.
-  //
-  // It works because every column the book needs was SNAPSHOTTED at booking:
-  // customer, address, item, amount. The bookkeeper never needs contracts.
-  if (!canManage) {
-    let q = supabase
-      .from("bir_sales_entries")
-      .select(
-        "id, sales_date, invoice_no, branch, gross_snapshot, vat_output_tax, customer_name_snapshot, item_snapshot"
-      )
-      .is("cancelled_at", null)
-      .gte("sales_date", range.start)
-      .lte("sales_date", range.end)
-      .order("sales_date")
-      .order("id");
-    if (scoped) q = q.eq("branch", branch!);
-
-    const { data, error } = await q;
-    if (error) {
-      return (
-        <div className={pageStack}>
-          <Header period={range.label} />
-          <Alert tone="danger" title="Could not load the sales book.">
-            {error.message}
-          </Alert>
-        </div>
-      );
-    }
-    const entries = (data ?? []) as {
-      id: string; sales_date: string; invoice_no: string; branch: string;
-      gross_snapshot: number; vat_output_tax: number;
-      customer_name_snapshot: string; item_snapshot: string | null;
-    }[];
-    const total = entries.reduce((t, r) => t + Number(r.gross_snapshot ?? 0), 0);
-    const output = entries.reduce((t, r) => t + Number(r.vat_output_tax ?? 0), 0);
-
-    return (
-      <div className={pageStack}>
-        <Header period={range.label} />
-        <div className="flex flex-wrap items-center gap-3">
-          <PeriodPicker value={period ?? range.label} />
-          <BranchTabs period={period ?? range.label} active={branch ?? "all"} />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <StatTile
-            label="Sales in the book"
-            value={peso(total)}
-            sub={`${entries.length} entr${entries.length === 1 ? "y" : "ies"}`}
-          />
-          <StatTile label="Output VAT" value={peso(output)} sub="12% of the invoiced amount" />
-        </div>
-
-        <SectionCard
-          title="In the book"
-          sub={`${range.start} to ${range.end}`}
-          action={
-            <Link
-              href={`/api/export/bir-sales?period=${encodeURIComponent(period ?? range.label)}&branch=${branch ?? "all"}`}
-              className={btnSecondary}
-              prefetch={false}
-            >
-              Export CSV
-            </Link>
-          }
-        >
-          {entries.length === 0 ? (
-            <EmptyState
-              title="No entries for this period"
-              hint="Nothing has been entered in the sales book for these dates."
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-150 text-sm">
-                <thead>
-                  <tr className={theadRow}>
-                    <th className={td}>Date</th>
-                    <th className={td}>Invoice no.</th>
-                    <th className={td}>Customer</th>
-                    <th className={td}>Item</th>
-                    <th className={td}>Book</th>
-                    <th className={tdNum}>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entries.map((r) => (
-                    <tr key={r.id} className="border-b border-line last:border-0">
-                      <td className={td}>{fmtDateShort(r.sales_date)}</td>
-                      <td className={`${td} font-mono text-xs`}>{r.invoice_no}</td>
-                      <td className={td}>{r.customer_name_snapshot}</td>
-                      <td className={`${td} text-xs text-muted`}>{r.item_snapshot}</td>
-                      <td className={`${td} text-xs`}>{branchInfo(r.branch).label}</td>
-                      <td className={tdNum}>{peso(r.gross_snapshot)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-line font-semibold">
-                    <td className={td} colSpan={5}>Total</td>
-                    <td className={tdNum}>{peso(total)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
-        </SectionCard>
-      </div>
-    );
-  }
-
-  // ── Owner and admin: the register, including what is not declared ──
-  //
-  // Two questions, two queries, because they are bounded differently.
-  //
-  // "What did we DECLARE this period" is bounded by sales_date — the date the
-  // entry was written in the book. "What did we SELL this period" is bounded by
-  // contract_date. They are not the same set: a sale made in July can be booked
-  // in August, which is precisely the drift that makes the gap worth showing.
+  // Not from v_bir_sales_register, which is built FROM contracts and therefore
+  // cannot show an entry that has none — and since 0043 an entry may stand
+  // alone (the LGU invoice covering two contracts at an amount matching
+  // neither). It is also what the bookkeeper is allowed to read: the register
+  // is security_invoker over contracts, which 0039 walls that role out of, so
+  // it returns them nothing.
   let bookedQ = supabase
-    .from("v_bir_sales_register")
-    .select(SELECT)
-    .eq("booked", true)
+    .from("bir_sales_entries")
+    .select(ENTRY_SELECT)
+    .is("cancelled_at", null)
     .gte("sales_date", range.start)
     .lte("sales_date", range.end)
     .order("sales_date")
-    .order("contract_no");
+    .order("id");
+  if (scoped) bookedQ = bookedQ.eq("branch", branch!);
 
-  let soldQ = supabase
-    .from("v_bir_sales_register")
-    .select(SELECT)
-    .gte("contract_date", range.start)
-    .lte("contract_date", range.end)
-    .order("contract_date")
-    .order("contract_no");
+  // ── What was SOLD but not declared is owner/admin only ──
+  //
+  // The unbooked figure is internal (Ryan, 2026-08-31): the office's working
+  // queue, not something the bookkeeper is given.
+  const soldQ = canManage
+    ? (() => {
+        let q = supabase
+          .from("v_bir_sales_register")
+          .select(REGISTER_SELECT)
+          .gte("contract_date", range.start)
+          .lte("contract_date", range.end)
+          .order("contract_date")
+          .order("contract_no");
+        if (scoped) q = q.eq("branch", branch!);
+        return q;
+      })()
+    : null;
 
-  if (scoped) {
-    bookedQ = bookedQ.eq("branch", branch!);
-    soldQ = soldQ.eq("branch", branch!);
-  }
+  const [bookedRes, soldRes] = await Promise.all([
+    bookedQ,
+    soldQ ?? Promise.resolve({ data: [], error: null }),
+  ]);
 
-  const [{ data: bookedData, error: bookedErr }, { data: soldData, error: soldErr }] =
-    await Promise.all([bookedQ, soldQ]);
-
-  if (bookedErr || soldErr) {
+  if (bookedRes.error || soldRes.error) {
     return (
       <div className={pageStack}>
-        <Header period={range.label} />
-        <Alert tone="danger" title="Could not load the sales register.">
-          {bookedErr?.message ?? soldErr?.message}
+        <Header period={range.label} canManage={canManage} />
+        <Alert tone="danger" title="Could not load the sales book.">
+          {bookedRes.error?.message ?? soldRes.error?.message}
         </Alert>
       </div>
     );
   }
 
-  const booked = (bookedData ?? []) as RegisterRow[];
-  const sold = (soldData ?? []) as RegisterRow[];
+  const booked = (bookedRes.data ?? []) as BookedEntry[];
+  const sold = (soldRes.data ?? []) as RegisterRow[];
   const unbooked = sold.filter((r) => !r.booked);
 
   const declared = booked.reduce((t, r) => t + Number(r.gross_snapshot ?? 0), 0);
+  const outputDeclared = birSplit(declared).inputTax;
   const actual = sold.reduce((t, r) => t + Number(r.cash_price ?? 0), 0);
   const notBooked = unbooked.reduce((t, r) => t + Number(r.cash_price ?? 0), 0);
-  const outputDeclared = declared - Math.round((declared / 1.12) * 100) / 100;
-  const outputIfAll = actual - Math.round((actual / 1.12) * 100) / 100;
 
   const showAll = show === "all";
   const queue = showAll ? unbooked : unbooked.slice(0, 50);
+  const periodParam = encodeURIComponent(period ?? range.label);
 
   return (
     <div className={pageStack}>
-      <Header period={range.label} />
+      <Header period={range.label} canManage={canManage} />
       <div className="flex flex-wrap items-center gap-3">
         <PeriodPicker value={period ?? range.label} />
         <BranchTabs period={period ?? range.label} active={branch ?? "all"} />
+        {canManage && <StandaloneSale defaultDate={today} />}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile
-          label="Sold this period"
-          value={peso(actual)}
-          sub={`${sold.length} contract${sold.length === 1 ? "" : "s"}, at cash price`}
-        />
-        <StatTile
-          label="Booked this period"
-          value={peso(declared)}
-          sub={`${booked.length} entr${booked.length === 1 ? "y" : "ies"} in the book`}
-          tone="positive"
-        />
-        <StatTile
-          label="Not yet booked"
-          value={peso(notBooked)}
-          sub={`${unbooked.length} sale${unbooked.length === 1 ? "" : "s"} from this period`}
-          tone={notBooked > 0 ? "alert" : "default"}
-        />
-        <StatTile
-          label="Output VAT booked"
-          value={peso(outputDeclared)}
-          sub={`${peso(outputIfAll)} if everything were booked`}
-        />
-      </div>
-
-      {/* The two figures answer different questions and are deliberately not
-          netted into one. Booked counts by the date written in the book; sold
-          counts by contract date. */}
-      <p className="text-xs text-muted">
-        Booked counts entries dated in this period. Sold counts contracts dated
-        in this period. A sale made in one month and booked in the next appears
-        in both columns, in different periods — which is why the two are shown
-        side by side rather than subtracted.
-      </p>
-
-      <SectionCard
-        title="Not yet in the book"
-        sub={
-          unbooked.length === 0
-            ? "Every sale from this period is booked."
-            : `${unbooked.length} sale${unbooked.length === 1 ? "" : "s"} dated in this period with no entry`
-        }
-        action={
-          unbooked.length > 50 && !showAll ? (
-            <Link
-              href={`/bir/sales?period=${encodeURIComponent(period ?? range.label)}&branch=${branch ?? "all"}&show=all`}
-              className={btnSecondary}
-            >
-              Show all {unbooked.length}
-            </Link>
-          ) : undefined
-        }
-      >
-        {unbooked.length === 0 ? (
-          <EmptyState
-            title="Nothing outstanding for this period"
-            hint="Every contract dated in this period has an entry in the sales book."
+      {canManage ? (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile
+            label="Sold this period"
+            value={peso(actual)}
+            sub={`${sold.length} contract${sold.length === 1 ? "" : "s"}, at cash price`}
           />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-175 text-sm">
-              <thead>
-                <tr className={theadRow}>
-                  <th className={td}>Contract</th>
-                  <th className={td}>Date</th>
-                  <th className={td}>Customer</th>
-                  <th className={td}>Item</th>
-                  <th className={td}>Book</th>
-                  <th className={tdNum}>Cash price</th>
-                  {canManage && <th className={td}></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {queue.map((r) => (
-                  <tr key={r.contract_id} className="border-b border-line last:border-0">
-                    <td className={`${td} font-mono text-xs`}>
-                      <Link href={`/contracts/${r.contract_id}`} className="hover:underline">
-                        {r.contract_no}
-                      </Link>
-                    </td>
-                    <td className={td}>{fmtDateShort(r.contract_date)}</td>
-                    <td className={td}>{r.customer_name}</td>
-                    <td className={`${td} text-xs text-muted`}>{r.item_description}</td>
-                    <td className={`${td} text-xs`}>{branchInfo(r.branch).label}</td>
-                    <td className={tdNum}>{peso(r.cash_price)}</td>
-                    {canManage && (
-                      <td className={td}>
-                        <BookSale row={r} defaultDate={today} />
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!showAll && unbooked.length > queue.length && (
-              <p className="pt-2 text-xs text-muted">
-                Showing {queue.length} of {unbooked.length}.
-              </p>
+          <StatTile
+            label="Booked this period"
+            value={peso(declared)}
+            sub={`${booked.length} entr${booked.length === 1 ? "y" : "ies"} in the book`}
+            tone="positive"
+          />
+          <StatTile
+            label="Not yet booked"
+            value={peso(notBooked)}
+            sub={`${unbooked.length} sale${unbooked.length === 1 ? "" : "s"} from this period`}
+            tone={notBooked > 0 ? "alert" : "default"}
+          />
+          <StatTile
+            label="Output VAT booked"
+            value={peso(outputDeclared)}
+            sub="12% of what is in the book"
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <StatTile
+            label="Sales in the book"
+            value={peso(declared)}
+            sub={`${booked.length} entr${booked.length === 1 ? "y" : "ies"}`}
+          />
+          <StatTile
+            label="Output VAT"
+            value={peso(outputDeclared)}
+            sub="12% of the invoiced amount"
+          />
+        </div>
+      )}
+
+      {canManage && (
+        <>
+          {/* Two counts of two different things, deliberately not subtracted.
+              Booked counts by the date written in the book; sold counts by
+              contract date. A July sale booked in August is in both, in
+              different periods. */}
+          <p className="text-xs text-muted">
+            Booked counts entries dated in this period. Sold counts contracts
+            dated in this period. A sale made in one month and booked in the next
+            appears in both columns, in different periods — which is why they sit
+            side by side rather than being subtracted.
+          </p>
+
+          <SectionCard
+            title="Not yet in the book"
+            sub={
+              unbooked.length === 0
+                ? "Every sale from this period is booked."
+                : `${unbooked.length} sale${unbooked.length === 1 ? "" : "s"} dated in this period with no entry`
+            }
+            action={
+              unbooked.length > 50 && !showAll ? (
+                <Link
+                  href={`/bir/sales?period=${periodParam}&branch=${branch ?? "all"}&show=all`}
+                  className={btnSecondary}
+                >
+                  Show all {unbooked.length}
+                </Link>
+              ) : undefined
+            }
+          >
+            {unbooked.length === 0 ? (
+              <EmptyState
+                title="Nothing outstanding for this period"
+                hint="Every contract dated in this period has an entry in the sales book."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-175 text-sm">
+                  <thead>
+                    <tr className={theadRow}>
+                      <th className={td}>Contract</th>
+                      <th className={td}>Date</th>
+                      <th className={td}>Customer</th>
+                      <th className={td}>Item</th>
+                      <th className={td}>Book</th>
+                      <th className={tdNum}>Cash price</th>
+                      <th className={td}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {queue.map((r) => (
+                      <tr key={r.contract_id} className="border-b border-line last:border-0">
+                        <td className={`${td} font-mono text-xs`}>
+                          <Link href={`/contracts/${r.contract_id}`} className="hover:underline">
+                            {r.contract_no}
+                          </Link>
+                        </td>
+                        <td className={td}>{fmtDateShort(r.contract_date)}</td>
+                        <td className={td}>{r.customer_name}</td>
+                        <td className={`${td} text-xs text-muted`}>{r.item_description}</td>
+                        <td className={`${td} text-xs`}>{branchInfo(r.branch).label}</td>
+                        <td className={tdNum}>{peso(r.cash_price)}</td>
+                        <td className={td}>
+                          <BookSale row={r} defaultDate={today} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!showAll && unbooked.length > queue.length && (
+                  <p className="pt-2 text-xs text-muted">
+                    Showing {queue.length} of {unbooked.length}.
+                  </p>
+                )}
+              </div>
             )}
-          </div>
-        )}
-      </SectionCard>
+          </SectionCard>
+        </>
+      )}
 
       <SectionCard
         title="In the book"
-        sub={`${booked.length} entr${booked.length === 1 ? "y" : "ies"} dated in this period`}
+        sub={`${range.start} to ${range.end} · ${booked.length} entr${booked.length === 1 ? "y" : "ies"}`}
         action={
           <Link
-            href={`/api/export/bir-sales?period=${encodeURIComponent(period ?? range.label)}&branch=${branch ?? "all"}`}
+            href={`/api/export/bir-sales?period=${periodParam}&branch=${branch ?? "all"}`}
             className={btnSecondary}
             prefetch={false}
           >
@@ -342,7 +257,11 @@ export default async function BirSalesPage({
         {booked.length === 0 ? (
           <EmptyState
             title="No entries for this period"
-            hint="Book a sale from the list above; it will appear here with its invoice number."
+            hint={
+              canManage
+                ? "Book a sale from the list above; it will appear here with its invoice number."
+                : "Nothing has been entered in the sales book for these dates."
+            }
           />
         ) : (
           <div className="overflow-x-auto">
@@ -352,7 +271,7 @@ export default async function BirSalesPage({
                   <th className={td}>Date</th>
                   <th className={td}>Invoice no.</th>
                   <th className={td}>Customer</th>
-                  <th className={td}>Contract</th>
+                  <th className={td}>Item</th>
                   <th className={td}>Book</th>
                   <th className={tdNum}>Amount</th>
                   {canManage && <th className={td}></th>}
@@ -360,15 +279,22 @@ export default async function BirSalesPage({
               </thead>
               <tbody>
                 {booked.map((r) => (
-                  <tr key={r.entry_id} className="border-b border-line last:border-0">
-                    <td className={td}>{fmtDateShort(r.sales_date!)}</td>
+                  <tr key={r.id} className="border-b border-line last:border-0">
+                    <td className={td}>{fmtDateShort(r.sales_date)}</td>
                     <td className={`${td} font-mono text-xs`}>{r.invoice_no}</td>
-                    <td className={td}>{r.customer_name}</td>
-                    <td className={`${td} font-mono text-xs`}>
-                      <Link href={`/contracts/${r.contract_id}`} className="hover:underline">
-                        {r.contract_no}
-                      </Link>
+                    <td className={td}>
+                      {canManage && r.contract_id ? (
+                        <Link href={`/contracts/${r.contract_id}`} className="hover:underline">
+                          {r.customer_name_snapshot}
+                        </Link>
+                      ) : (
+                        r.customer_name_snapshot
+                      )}
+                      {!r.contract_id && (
+                        <span className="ml-2 text-micro text-muted">no contract</span>
+                      )}
                     </td>
+                    <td className={`${td} text-xs text-muted`}>{r.item_snapshot}</td>
                     <td className={`${td} text-xs`}>{branchInfo(r.branch).label}</td>
                     <td className={tdNum}>{peso(r.gross_snapshot)}</td>
                     {canManage && (
@@ -423,7 +349,7 @@ function BranchTabs({ period, active }: { period: string; active: string }) {
   );
 }
 
-function Header({ period }: { period: string }) {
+function Header({ period, canManage }: { period: string; canManage: boolean }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
@@ -434,9 +360,11 @@ function Header({ period }: { period: string }) {
         <Link href="/bir" className={btnSecondary}>
           Summary
         </Link>
-        <Link href="/bir/expenses" className={btnSecondary}>
-          Expenses
-        </Link>
+        {canManage && (
+          <Link href="/bir/expenses" className={btnSecondary}>
+            Expenses
+          </Link>
+        )}
       </div>
     </div>
   );

@@ -130,3 +130,38 @@ export async function cancelSaleEntry(entryId: string, reason: string) {
   revalidatePath("/bir/sales");
   return {};
 }
+
+/**
+ * A declared sale with no single contract behind it (0043).
+ *
+ * Separate from bookSale on purpose: bookSale's value is that SQL derives the
+ * amount, branch and customer from the contract, so a caller cannot get them
+ * wrong. Here there is no contract to derive from, and the caller must supply
+ * everything — which is precisely why it is not folded into the common path.
+ */
+export async function bookStandaloneSale(input: {
+  invoiceNo: string;
+  salesDate: string;
+  branch: string;
+  gross: number;
+  customerName: string;
+  customerAddress: string;
+  item: string;
+  note: string;
+}) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("book_standalone_sale", {
+    p_invoice_no: input.invoiceNo,
+    p_sales_date: input.salesDate,
+    p_branch: input.branch,
+    p_gross: input.gross,
+    p_customer_name: input.customerName,
+    p_customer_address: input.customerAddress,
+    p_item: input.item,
+    p_note: input.note,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/bir");
+  revalidatePath("/bir/sales");
+  return {};
+}

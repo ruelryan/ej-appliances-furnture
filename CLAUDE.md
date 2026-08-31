@@ -553,8 +553,14 @@ prove via `audit_log` that read-only runs wrote nothing.
   Database's Sales OR in 1 case out of 301. Two documents, both called an OR;
   never take an invoice number from Receipts.
   `scripts/verify-bir-sales.ts` reconciles the app against the filed journal
-  (read-only, run before each quarter): 357 of 363 agree, and the six that do
-  not are listed in `docs/modules/bir.md`.
+  (read-only, run before each quarter). **They agree exactly as of
+  2026-09-01** — ₱7,226,819.65 on both sides. `contract_id` is **nullable
+  since 0043**: one invoice can cover several contracts at an amount matching
+  none of them (the LGU sale), and inventing a contract to satisfy the key
+  would double-count the sale and raise a receivable that does not exist.
+  Because of that, the "In the book" list reads `bir_sales_entries`, never
+  `v_bir_sales_register` — the register is built from contracts and cannot
+  show an entry that has none.
 - **Dashboard** (`/`, rebuilt 2026-08-29): a role router, not a page.
   `sales_agent`→`/commissions`, `delivery`→`/deliveries`, and now
   `collector`→`/collections` (that page already shows assigned accounts, cash

@@ -12,11 +12,12 @@ import {
   btnSecondarySm,
   input,
   label,
+  select,
   textarea,
 } from "@/components/ui";
 import { peso, fmtDateShort } from "@/lib/format";
-import { branchInfo } from "@/lib/bir";
-import { bookSale, cancelSaleEntry } from "../actions";
+import { BIR_BRANCHES, birSplit, branchInfo } from "@/lib/bir";
+import { bookSale, bookStandaloneSale, cancelSaleEntry } from "../actions";
 
 export interface RegisterRow {
   contract_id: string;
@@ -183,8 +184,21 @@ export function BookSale({ row, defaultDate }: { row: RegisterRow; defaultDate: 
   );
 }
 
-/** Undo a booking. Cancels, never deletes — the row keeps its audit trail. */
-export function CancelBooking({ row }: { row: RegisterRow }) {
+export interface BookedEntry {
+  id: string;
+  contract_id: string | null;
+  invoice_no: string;
+  sales_date: string;
+  branch: string;
+  gross_snapshot: number;
+  customer_name_snapshot: string;
+  item_snapshot: string | null;
+}
+
+/** Undo a booking. Cancels, never deletes — the row keeps its audit trail.
+ *  Takes an ENTRY rather than a register row: since 0043 an entry can stand on
+ *  its own with no contract, and the register is built from contracts. */
+export function CancelBooking({ row }: { row: BookedEntry }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -195,7 +209,7 @@ export function CancelBooking({ row }: { row: RegisterRow }) {
     setError("");
     if (!reason.trim()) return setError("A reason is required.");
     startTransition(async () => {
-      const res = await cancelSaleEntry(row.entry_id!, reason);
+      const res = await cancelSaleEntry(row.id, reason);
       if (res.error) setError(res.error);
       else {
         setOpen(false);
@@ -221,7 +235,7 @@ export function CancelBooking({ row }: { row: RegisterRow }) {
         open={open}
         onClose={() => !busy && setOpen(false)}
         title="Cancel this sales entry?"
-        subtitle={`${row.contract_no} · invoice ${row.invoice_no ?? ""}`}
+        subtitle={`${row.customer_name_snapshot} · invoice ${row.invoice_no}`}
         footer={
           <div className="flex justify-end gap-2">
             <button
@@ -284,5 +298,140 @@ function Row({
         {v}
       </span>
     </div>
+  );
+}
+
+/**
+ * Record a declared sale that maps to no single contract.
+ *
+ * The LGU - San Ricardo case: one invoice covering two contracts at an amount
+ * matching neither. Everything is typed here because there is no contract to
+ * read it from — which is why this is a different dialog from BookSale rather
+ * than the same one with its fields unlocked. On the common path the contract
+ * IS the source of truth, and that guarantee is worth keeping intact.
+ */
+export function StandaloneSale({ defaultDate }: { defaultDate: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, startTransition] = useTransition();
+
+  const [invoiceNo, setInvoiceNo] = useState("");
+  const [salesDate, setSalesDate] = useState(defaultDate);
+  const [branch, setBranch] = useState("appliances");
+  const [gross, setGross] = useState("");
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [item, setItem] = useState("");
+  const [note, setNote] = useState("");
+
+  const amount = Number(gross) || 0;
+  const book = branchInfo(branch);
+  const split = birSplit(amount);
+
+  function submit() {
+    setError("");
+    if (!invoiceNo.trim()) return setError("Type the invoice number from the booklet.");
+    if (!name.trim()) return setError("A customer name is required.");
+    if (amount <= 0) return setError("Enter the amount on the invoice.");
+    startTransition(async () => {
+      const res = await bookStandaloneSale({
+        invoiceNo, salesDate, branch, gross: amount,
+        customerName: name, customerAddress: address, item, note,
+      });
+      if (res.error) setError(res.error);
+      else {
+        setOpen(false);
+        setInvoiceNo(""); setGross(""); setName(""); setAddress(""); setItem(""); setNote("");
+        router.refresh();
+      }
+    });
+  }
+
+  return (
+    <>
+      <button type="button" onClick={() => { setError(""); setOpen(true); }} className={btnSecondary}>
+        Add a sale with no contract
+      </button>
+      <Dialog
+        open={open}
+        onClose={() => !busy && setOpen(false)}
+        title="Declared sale with no contract"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button type="button" disabled={busy} onClick={() => setOpen(false)} className={btnSecondary}>
+              Cancel
+            </button>
+            <button type="button" disabled={busy} onClick={submit} className={btnPrimary}>
+              {busy ? "Saving…" : "Add to the book"}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3 text-sm">
+          {error && <Alert tone="danger">{error}</Alert>}
+          <Alert tone="warning" title="Only when no single contract fits.">
+            Use this when one invoice covers several contracts at an amount
+            matching none of them. If the sale is one contract, book it from the
+            list instead, so the amount comes from the contract itself.
+          </Alert>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={label}>Invoice no.</label>
+              <input className={`${input} font-mono`} value={invoiceNo}
+                onChange={(e) => setInvoiceNo(e.target.value)} placeholder="From the booklet" />
+            </div>
+            <div>
+              <label className={label}>Date entered</label>
+              <input type="date" className={input} value={salesDate}
+                onChange={(e) => setSalesDate(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={label}>Which book</label>
+              <select className={select} value={branch} onChange={(e) => setBranch(e.target.value)}>
+                {BIR_BRANCHES.map((b) => (
+                  <option key={b.value} value={b.value}>{b.label}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted">
+                TIN <span className="font-mono">{book.tin}</span>
+              </p>
+            </div>
+            <div>
+              <label className={label}>Invoice amount</label>
+              <input type="number" step="0.01" min="0" inputMode="decimal" className={input}
+                value={gross} onChange={(e) => setGross(e.target.value)} placeholder="0.00" />
+              {amount > 0 && (
+                <p className="mt-1 text-xs text-muted">
+                  {peso(split.vatable)} + {peso(split.inputTax)} output VAT
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className={label}>Customer</label>
+            <input className={input} value={name} onChange={(e) => setName(e.target.value)}
+              placeholder="As written on the invoice" />
+          </div>
+          <div>
+            <label className={label}>Address</label>
+            <input className={input} value={address} onChange={(e) => setAddress(e.target.value)} />
+          </div>
+          <div>
+            <label className={label}>Item</label>
+            <input className={input} value={item} onChange={(e) => setItem(e.target.value)} />
+          </div>
+          <div>
+            <label className={label}>Note (optional)</label>
+            <textarea className={textarea} value={note} onChange={(e) => setNote(e.target.value)} />
+          </div>
+        </div>
+      </Dialog>
+    </>
   );
 }
