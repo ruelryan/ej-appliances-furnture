@@ -1,4 +1,4 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ async function listTables(): Promise<string[]> {
 }
 
 async function fetchAll(
-  admin: ReturnType<typeof createSupabaseClient>,
+  admin: SupabaseClient,
   table: string
 ): Promise<unknown[]> {
   const rows: unknown[] = [];
@@ -89,7 +89,7 @@ export async function GET(req: Request) {
   });
 
   try {
-    const tables = await listTables(admin);
+    const tables = await listTables();
     const dump: Record<string, unknown> = {
       backed_up_at: new Date().toISOString(),
       tables: {},
@@ -105,12 +105,15 @@ export async function GET(req: Request) {
     const body = gzipSync(Buffer.from(JSON.stringify(dump)));
 
     const stamp = new Date().toISOString().slice(0, 10);
-    return new NextResponse(new Uint8Array(body), {
-      headers: {
-        "Content-Type": "application/gzip",
-        "Content-Disposition": `attachment; filename="eandj-backup-${stamp}.json.gz"`,
-      },
-    });
+    return new NextResponse(
+      new Uint8Array(body.buffer, body.byteOffset, body.byteLength),
+      {
+        headers: {
+          "Content-Type": "application/gzip",
+          "Content-Disposition": `attachment; filename="eandj-backup-${stamp}.json.gz"`,
+        },
+      }
+    );
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Backup failed" },
