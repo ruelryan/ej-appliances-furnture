@@ -34,6 +34,10 @@
  * The amount is NEVER taken from the CSV. It is contracts.cash_price, read by
  * the RPC. Where the Sheet's own Cash Price disagrees, the row is reported and
  * skipped: that is a discrepancy for a person, not something to paper over.
+ *
+ * A repeated invoice number is reported but IMPORTED. 0042 removed the unique
+ * index on it after this import found 28 legitimate repeats — one receipt
+ * covering two contracts, and short booklet numbers recycling years apart.
  */
 import fs from "node:fs";
 import { parse } from "csv-parse/sync";
@@ -209,12 +213,16 @@ async function main() {
       continue;
     }
 
+    // A repeated number is reported, NOT skipped. 0042 removed the unique
+    // index because the real history breaks it two legitimate ways: one
+    // receipt covering two contracts for the same customer on the same day,
+    // and short booklet numbers recycling when a new booklet is issued.
     const key = `${c.branch}|${invoiceNo}`;
     if (seen.has(key)) {
-      dupInvoice.push(`${contractNo} and ${seen.get(key)} both claim ${invoiceNo} in the ${c.branch} book`);
-      continue;
+      dupInvoice.push(`${invoiceNo} in the ${c.branch} book: ${seen.get(key)} and ${contractNo}`);
+    } else {
+      seen.set(key, contractNo);
     }
-    seen.set(key, contractNo);
 
     plans.push({
       contractNo, contractId: c.id, invoiceNo, salesDate,
@@ -246,7 +254,7 @@ async function main() {
   report("contract not in the app", notFound);
   report("unreadable Sales Date", badDate);
   report("cash price disagrees — SKIPPED", priceMismatch);
-  report("duplicate invoice in the export — SKIPPED", dupInvoice);
+  report("invoice number used twice — imported, worth a look", dupInvoice);
 
   if (plans.length) {
     console.log("first few to import:");
