@@ -202,6 +202,65 @@ different periods. Subtracting them would invent a number that means nothing.
 tagged by hand. Entries are **cancelled, never deleted**; a cancel frees the
 invoice number and returns the sale to the queue.
 
+## The book starts in 2024
+
+The store became **VAT-registered in 2024** (Ryan, 2026-08-31). The first
+backfill took every contract carrying a `Sales OR` in the Contracts Database,
+which reaches back to 2023 — 64 entries worth ₱1,234,850 that predate the
+registration and belong in no VAT return. `scripts/fix-bir-sales-2024-start.ts`
+**cancelled** them (never deleted — the table has no delete policy), and those
+contracts correctly reappear in the not-yet-booked queue.
+
+Live after the fix: **365 entries, ₱6,914,486**, none dated before 2024-01-01.
+
+## "OR no." in the Receipts tab is NOT the invoice number
+
+Worth stating plainly, because the two are easy to confuse and getting it wrong
+writes false numbers into a tax book. E & J issues two documents both called an
+OR:
+
+| | what it is | where it lives |
+|---|---|---|
+| **Collection receipt** | issued when a payment is taken | Receipts tab · `payments.receipt_no` |
+| **Sales invoice** | issued when the sale is declared | Contracts Database R–T · Sales journal `INVOICE NUMBERS` |
+
+Measured, not assumed: the Receipts "OR no." matches `payments.receipt_no` in
+**4,587 of 4,716** rows, and every one of the 129 exceptions is at PAY5939 or
+later — the payment-numbering divergence already in CLAUDE.md. Meanwhile, where
+a contract carries an OR in both Receipts and the Contracts Database, the two
+agree in **1 case out of 301**. **No import may take an invoice number from the
+Receipts tab.**
+
+## Checking the app against what was filed
+
+`scripts/verify-bir-sales.ts --file <journal.xlsx>` — read-only, writes nothing,
+and worth running before each quarterly filing. It compares
+`bir_sales_entries` against the `Sales - Appliances` and `Sales - Furniture`
+tabs on `(branch, invoice_no)`.
+
+Two things will bite whoever edits it:
+
+- **Read invoice numbers with `raw: true`.** The 2024 series is twelve digits
+  and Excel formats it for display as `2.3014E+11`; with `raw: false` the digits
+  are gone.
+- **Group the app entries by key, do not index them.** One receipt can cover two
+  contracts (see 0042), so the app holds one entry *per contract* under that
+  number while the journal has a single combined row. Indexing kept one entry
+  and produced five false disagreements — Asialink invoice 26 is
+  16,500 + 29,000 = 45,500, exactly what the journal says.
+
+**As of 2026-08-31, 357 of 363 declared sales agree.** The six that do not are
+judgement calls for the office, not code:
+
+| | |
+|---|---|
+| furniture inv 31 · Yosores, Rene · ₱7,900 | in the journal, not in the app — the contract is booked under a different number |
+| furniture inv 32 · LGU - San Ricardo · ₱312,333.65 | in the journal, not in the app. Two LGU contracts exist that day (₱284,040 and ₱64,380); neither matches, nor does their sum. Also `contract_id` is `not null`, so a sale mapping to no single contract cannot be entered at all |
+| furniture inv 58 · Malatag, Josephine · ₱39,999 | in the app, not in the journal — and exactly the amount by which 2025 exceeded the journal |
+| appliances inv 36 · Tambis, Lorenzo | journal ₱6,900, app ₱7,800 |
+| furniture inv 230140005558 · Nunez, Sanny | journal ₱29,900, app ₱26,900 |
+| furniture inv 67 · Baluran, Nonilona | journal ₱17,900, app ₱25,800 across 2 contracts |
+
 ## Still to come
 
 - `/bir/vat` — a proper 2550Q worksheet. `/bir` already shows output less input

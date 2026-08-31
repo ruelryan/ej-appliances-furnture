@@ -225,6 +225,8 @@ npx tsx scripts/import-locations.ts --file <book.xlsx> [--load]  # seed ph_locat
 npx tsx scripts/import-pricelist.ts [--apply]       # seed catalog + photos + dHashes
 npx tsx scripts/import-products.ts [--apply]        # products from a plain list
 npx tsx scripts/import-bir-sales.ts --file <contracts-db.csv> [--apply]  # sales book from Sheet cols R-T
+npx tsx scripts/fix-bir-sales-2024-start.ts [--apply]   # drop pre-VAT (2023) sales entries
+npx tsx scripts/verify-bir-sales.ts --file <journal.xlsx>  # app vs the filed journal (read-only)
 npx tsx scripts/create-owner.ts                     # bootstrap the first owner account
 npx tsx scripts/backfill-addresses.ts [--apply]     # free text → barangay/municipality
 npx tsx scripts/backfill-photo-hashes.ts [--apply]  # dHash existing product photos
@@ -543,7 +545,16 @@ prove via `audit_log` that read-only runs wrote nothing.
   branch. *Booked* (by `sales_date`) and *sold* (by `contract_date`) are
   shown side by side and never subtracted — a July sale booked in August
   belongs to both, in different periods. Still to come: `/bir/vat` (2550Q)
-  and the historical import.
+  and the historical import. **The book starts 2024** — the store became
+  VAT-registered that year, so 64 pre-2024 entries from the first backfill were
+  cancelled (`scripts/fix-bir-sales-2024-start.ts`); 365 live, ₱6,914,486.
+  **The Receipts tab's "OR no." is `payments.receipt_no`, NOT the sales invoice
+  number** — measured at 4,587/4,716, while it agrees with the Contracts
+  Database's Sales OR in 1 case out of 301. Two documents, both called an OR;
+  never take an invoice number from Receipts.
+  `scripts/verify-bir-sales.ts` reconciles the app against the filed journal
+  (read-only, run before each quarter): 357 of 363 agree, and the six that do
+  not are listed in `docs/modules/bir.md`.
 - **Dashboard** (`/`, rebuilt 2026-08-29): a role router, not a page.
   `sales_agent`→`/commissions`, `delivery`→`/deliveries`, and now
   `collector`→`/collections` (that page already shows assigned accounts, cash
