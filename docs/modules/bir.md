@@ -193,8 +193,21 @@ invoice number and returns the sale to the queue.
 
 - `/bir/vat` — a proper 2550Q worksheet. `/bir` already shows output less input
   per registration, which is the shape of it but not the return.
-- Importing the historical sheets (`scripts/import-bir-*.ts`), house pattern:
-  dry run by default, `--apply` to write, report first.
+- **`scripts/import-bir-sales.ts` is written** — it backfills the sales book
+  from the Sheet's **Contracts Database** tab, not from the Sales Journal.
+  That is the important choice: the Sales Journal identifies a customer by
+  name and amount with no contract number, and matching that way scored 43 of
+  45 on real data — the two failures being two contracts for the same person
+  at the same price, and a row declared at ₱29,900 against a ₱26,900 contract.
+  Columns **R–T** (`Sales OR`, `Sales Date`, `Sales By`) already record which
+  contract was booked, so the importer keys on contract number and guesses at
+  nothing. It writes through `book_sale` while impersonating an owner, so
+  every guard holds, and it never takes the amount from the CSV — a Sheet
+  price that disagrees with `cash_price` is reported and skipped.
+  A blank Sales Date falls back to the contract date; one that is present but
+  unreadable is reported, because silently moving a sale into another period
+  changes which return it belongs to.
+- Importing the purchase journal is still to do.
 - The Sheet's Sales Journal emits a row for **every calendar day**, including
   "No transaction" days. The export does not reproduce those — it is a
   presentation choice, and nobody has asked for it.

@@ -224,6 +224,7 @@ npx tsx scripts/extract-tabs.ts <book.xlsx|drive.json> <dir>  # Sheet tabs → C
 npx tsx scripts/import-locations.ts --file <book.xlsx> [--load]  # seed ph_locations
 npx tsx scripts/import-pricelist.ts [--apply]       # seed catalog + photos + dHashes
 npx tsx scripts/import-products.ts [--apply]        # products from a plain list
+npx tsx scripts/import-bir-sales.ts --file <contracts-db.csv> [--apply]  # sales book from Sheet cols R-T
 npx tsx scripts/create-owner.ts                     # bootstrap the first owner account
 npx tsx scripts/backfill-addresses.ts [--apply]     # free text → barangay/municipality
 npx tsx scripts/backfill-photo-hashes.ts [--apply]  # dHash existing product photos
