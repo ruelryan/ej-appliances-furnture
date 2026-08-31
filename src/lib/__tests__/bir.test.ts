@@ -67,6 +67,18 @@ describe("period ranges", () => {
     expect(quarterRange("2026-Q4")).toEqual({ start: "2026-10-01", end: "2026-12-31" });
   });
 
+  it("covers every quarter boundary, including leap-year Q1", () => {
+    expect(quarterRange("2026-Q2")).toEqual({ start: "2026-04-01", end: "2026-06-30" });
+    expect(quarterRange("2026-Q3")).toEqual({ start: "2026-07-01", end: "2026-09-30" });
+    expect(quarterRange("2024-Q1")).toEqual({ start: "2024-01-01", end: "2024-03-31" });
+  });
+
+  it("labels a quarter readably and a month as-is", () => {
+    // The header prints this, so a quarter must not read "2026-Q3".
+    expect(resolvePeriod("2026-Q3", "2026-08-31").label).toBe("2026 Q3");
+    expect(resolvePeriod("2026-08", "2026-08-31").label).toBe("2026-08");
+  });
+
   it("falls back to the current month for junk input", () => {
     expect(resolvePeriod(undefined, "2026-08-31").start).toBe("2026-08-01");
     expect(resolvePeriod("nonsense", "2026-08-31").start).toBe("2026-08-01");
