@@ -370,6 +370,19 @@ prove via `audit_log` that read-only runs wrote nothing.
   (`v_collector_day`, `/collections/report`) + the remittance ledger (0030), no
   per-visit GPS. Routes `/collections`, `/collections/report`,
   `/collections/remittances`.
+- **Collection happens two ways, and only one of them is in `collection_entries`.**
+  The module was built around a collector walking a route. It is not where the
+  money comes from. In August 2026 the whole `collection_entries` table held
+  **three** entries, all cash, all from July, while **Analyn recorded 77
+  payments worth ₱264,594 — 53 of them online, ₱142,172** over Messenger and
+  GCash. Every collections report reads `collection_entries`, so the screens
+  showed near-zero collection during the month with the most collection in it.
+  **`v_online_collections_day` (0037)** is the office-side counterpart to
+  `v_collector_day`: payments carrying the payer's `reference_no`, per day and
+  per person who recorded them. An online payment **must never also be logged as
+  a `collection_entry`** — that is the documented double-post, two payments for
+  one peso — and it never enters the remittance ledger, because the money went
+  straight to the office and there is no custody to track.
 - **Collector remittances** (0030): `remittances` (`RMT####`) is one row per
   hand-over of field cash; `v_collector_remittance.cash_on_hand` = cash
   collected − remitted, per collector. Three deliberate properties: entry

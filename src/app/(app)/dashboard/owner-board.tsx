@@ -36,6 +36,7 @@ export async function OwnerBoard() {
     remit,
     daily,
     collectorsToday,
+    onlineToday,
     neverPaid,
     promises,
     unposted,
@@ -48,6 +49,10 @@ export async function OwnerBoard() {
     supabase.from("v_collector_remittance").select("collector_name, cash_on_hand, last_remitted_on"),
     supabase.from("v_cashflow_daily").select("day, collected").gte("day", dayStart(today, 29)).order("day"),
     supabase.from("v_collector_day").select("collector_name, entries, collected_count, cash_total, online_total").eq("work_date", today),
+    // Most of the collecting is done from the office over Messenger and GCash,
+    // not on a route. v_collector_day only knows about logged field visits, so
+    // on its own this section reported nothing on days when thousands came in.
+    supabase.from("v_online_collections_day").select("recorded_by_name, payments, online_total").eq("work_date", today),
     supabase.from("v_contract_financials").select("id", { count: "exact", head: true }).eq("payment_status", "open").eq("payment_count", 0),
     supabase.from("v_open_promises").select("contract_id", { count: "exact", head: true }),
     supabase.from("collection_entries").select("amount").eq("status", "pending").eq("disposition", "collected"),
@@ -190,16 +195,39 @@ export async function OwnerBoard() {
         </SectionCard>
       )}
 
-      <SectionCard title="Today on the ground" sub={fmtDateShort(today)}>
-        {(collectorsToday.data ?? []).length === 0 ? (
-          <p className="py-3 text-sm text-muted">
-            No collection visits logged today.
-          </p>
+      {/* Collection happens two ways here and this used to show only one of
+          them. Field visits come from collection_entries; most of the money
+          actually arrives over Messenger and GCash and is recorded straight as
+          a payment, which v_collector_day cannot see. Showing only visits
+          reported "nothing collected today" on days worth tens of thousands. */}
+      <SectionCard title="Collected today" sub={fmtDateShort(today)}>
+        {(collectorsToday.data ?? []).length === 0 &&
+        (onlineToday.data ?? []).length === 0 ? (
+          <p className="py-3 text-sm text-muted">Nothing collected yet today.</p>
         ) : (
           <div className="space-y-1.5">
+            {(onlineToday.data ?? []).map((o) => (
+              <div key={`on-${o.recorded_by_name}`} className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="truncate text-ink">
+                  {o.recorded_by_name ?? "—"}
+                  <span className="ml-1.5 rounded-full bg-brand/10 px-1.5 py-0.5 text-micro font-semibold text-brand">
+                    online
+                  </span>
+                </span>
+                <span className="shrink-0 text-xs text-muted">
+                  {o.payments} payment{Number(o.payments) === 1 ? "" : "s"} ·{" "}
+                  <span className="tabular-nums text-ink">{peso(o.online_total)}</span>
+                </span>
+              </div>
+            ))}
             {(collectorsToday.data ?? []).map((c) => (
               <div key={c.collector_name} className="flex items-baseline justify-between gap-3 text-sm">
-                <span className="truncate text-ink">{c.collector_name}</span>
+                <span className="truncate text-ink">
+                  {c.collector_name}
+                  <span className="ml-1.5 rounded-full bg-surface px-1.5 py-0.5 text-micro font-semibold text-muted">
+                    field
+                  </span>
+                </span>
                 <span className="shrink-0 text-xs text-muted">
                   {c.entries} visit{c.entries === 1 ? "" : "s"} · {c.collected_count} paid ·{" "}
                   <span className="tabular-nums text-ink">
