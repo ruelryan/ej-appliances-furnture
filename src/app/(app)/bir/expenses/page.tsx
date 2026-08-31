@@ -213,9 +213,9 @@ export default async function BirExpensesPage({
   );
 }
 
-/** One book per VAT registration, plus the shared overhead that belongs to
- *  neither. Plain links, not a client component: it is a filter, and a GET
- *  keeps working while "View as" is active. */
+/** One tab per VAT registration, plus All. Plain links, not a client
+ *  component: it is a filter, and a GET keeps working while "View as" is
+ *  active. */
 function BranchTabs({ period, active }: { period: string; active: string }) {
   const tabs = [
     { value: "all", label: "All", tin: "" },

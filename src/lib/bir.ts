@@ -20,9 +20,10 @@
  * Appliances and Furniture as separate monthly columns, and why an expense has
  * to say which book it belongs to.
  *
- * `shared` is not a registration. It is overhead that belongs to neither branch
- * on its own — salaries, fuel, utilities — and how to split it is a judgement
- * for the bookkeeper, so the app records the fact and invents nothing.
+ * There is no third "shared" value. Overhead — utilities, salaries — is paid
+ * by the Appliances registration (Ryan, 2026-08-31), so it is recorded there.
+ * An unallocated bucket would only produce rows belonging to neither book, and
+ * therefore filable in neither return. 0040 removed it.
  */
 export const BIR_REGISTERED_ADDRESS = "Bogo, Tomas Oppus, Southern Leyte 6605";
 
@@ -39,19 +40,19 @@ export const BIR_BRANCHES = [
     registeredName: "E & J FURNITURE STORE",
     tin: "437-961-107-00001",
   },
-  {
-    value: "shared",
-    label: "Shared",
-    registeredName: "E & J APPLIANCES FURNITURE",
-    tin: "437-961-107",
-  },
 ] as const;
 
 export type BirBranch = (typeof BIR_BRANCHES)[number]["value"];
 
+/** Falls back to Appliances, which is where overhead belongs and where any
+ *  pre-0040 'shared' row was moved. */
 export function branchInfo(value: string) {
-  return BIR_BRANCHES.find((b) => b.value === value) ?? BIR_BRANCHES[2];
+  return BIR_BRANCHES.find((b) => b.value === value) ?? BIR_BRANCHES[0];
 }
+
+/** The default for a new expense. Overhead is paid by Appliances and that is
+ *  most of what gets typed; Furniture is the deliberate switch. */
+export const DEFAULT_BRANCH: BirBranch = "appliances";
 
 /** `contracts.item_type` is constrained to exactly 'Appliances' | 'Furniture'
  *  (0003), which is the same split as the two registrations — so Phase 2 can
@@ -59,7 +60,8 @@ export function branchInfo(value: string) {
 export function branchForItemType(itemType: string | null): BirBranch {
   if (itemType === "Appliances") return "appliances";
   if (itemType === "Furniture") return "furniture";
-  return "shared";
+  // Unknown item type: Appliances carries the overhead, so it is the safe home.
+  return "appliances";
 }
 
 /** Expense categories, matching the Expenses tab of the General workbook.

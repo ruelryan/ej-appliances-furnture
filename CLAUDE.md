@@ -522,9 +522,11 @@ prove via `audit_log` that read-only runs wrote nothing.
   `437-961-107-00000` E & J Appliances Store and `-00001` E & J Furniture
   Store, at Bogo, Tomas Oppus, Southern Leyte 6605 — which file separately.
   That is why the Sheet's Sales Journal always split Appliances/Furniture,
-  and why `bir_expenses.branch` exists; `shared` is overhead belonging to
-  neither, and the app deliberately invents no allocation. Constants in
-  `src/lib/bir.ts`, TINs asserted in `bir.test.ts`. Phase 2 (sales register + the declared-vs-actual gap, 2550Q) is
+  and why `bir_expenses.branch` exists. **Exactly two values, no "shared"** —
+  0039 shipped a third for overhead and 0040 removed it: utilities and
+  salaries are paid by the Appliances registration, and an unallocated
+  bucket only makes rows that can be filed in neither return. Appliances is
+  the default. Constants in `src/lib/bir.ts`, TINs asserted in `bir.test.ts`. Phase 2 (sales register + the declared-vs-actual gap, 2550Q) is
   designed in `docs/modules/bir.md` and NOT built. **A sale is booked at
   `cash_price`, not `total_price`** — identical on 4/5-month Good-as-Cash terms,
   and it is what stops a reprice restating a filed month.

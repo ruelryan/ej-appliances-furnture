@@ -90,7 +90,7 @@ export default async function BirPage({
 
       <SectionCard
         title="By registration"
-        sub="Two VAT registrations on one base TIN, filed separately. Shared is overhead belonging to neither on its own."
+        sub="Two registrations on one base TIN, filed separately. Overhead — utilities, salaries — is paid by Appliances."
       >
         <table className="w-full text-sm">
           <thead>

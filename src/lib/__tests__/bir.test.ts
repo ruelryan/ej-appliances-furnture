@@ -99,16 +99,24 @@ describe("the two VAT registrations", () => {
     expect(branchInfo("furniture").tin).toBe("437-961-107-00001");
   });
 
-  it("falls back to Shared for anything unrecognised", () => {
-    expect(branchInfo("nonsense").value).toBe("shared");
-    expect(branchInfo("").value).toBe("shared");
+  // 0040 removed the third "shared" bucket: overhead is paid by Appliances,
+  // so an unrecognised value lands there rather than in a book that files
+  // no return.
+  it("falls back to Appliances for anything unrecognised", () => {
+    expect(branchInfo("nonsense").value).toBe("appliances");
+    expect(branchInfo("").value).toBe("appliances");
+    expect(branchInfo("shared").value).toBe("appliances");
+  });
+
+  it("offers exactly the two registrations", () => {
+    expect(BIR_BRANCHES.map((b) => b.value)).toEqual(["appliances", "furniture"]);
   });
 
   it("maps contracts.item_type onto the registrations", () => {
     // item_type is constrained to exactly these two values by 0003.
     expect(branchForItemType("Appliances")).toBe("appliances");
     expect(branchForItemType("Furniture")).toBe("furniture");
-    expect(branchForItemType(null)).toBe("shared");
+    expect(branchForItemType(null)).toBe("appliances");
   });
 
   it("keeps every branch value distinct and lowercase", () => {

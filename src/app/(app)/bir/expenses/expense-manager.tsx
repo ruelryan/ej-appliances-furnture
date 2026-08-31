@@ -18,6 +18,7 @@ import { peso } from "@/lib/format";
 import {
   BIR_BRANCHES,
   BIR_CATEGORIES,
+  DEFAULT_BRANCH,
   DOC_TYPES,
   birSplit,
   branchInfo,
@@ -91,7 +92,7 @@ export function ExpenseManager({
     row ? String(Number(row.gross_vat) > 0 ? row.gross_vat : row.gross_non_vat) : ""
   );
   const [category, setCategory] = useState(row?.category ?? "PURCHASES");
-  const [branch, setBranch] = useState(row?.branch ?? "shared");
+  const [branch, setBranch] = useState<string>(row?.branch ?? DEFAULT_BRANCH);
   const [note, setNote] = useState(row?.note ?? "");
   const [voidReason, setVoidReason] = useState("");
 
@@ -281,8 +282,7 @@ export function ExpenseManager({
                 <p className="mt-1 text-xs text-muted">
                   {branchInfo(branch).registeredName} — TIN{" "}
                   <span className="font-mono">{branchInfo(branch).tin}</span>
-                  {branch === "shared" &&
-                    ". Overhead that belongs to neither branch on its own; the split is the bookkeeper's call."}
+                  . Utilities and salaries are paid by Appliances.
                 </p>
               </div>
 

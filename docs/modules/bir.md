@@ -70,10 +70,14 @@ lives in `BIR_BRANCHES` / `BIR_REGISTERED_ADDRESS` in `src/lib/bir.ts`, with the
 TINs asserted in `bir.test.ts` — a wrong TIN on a book is a misfiled return.
 
 This is why the Sales Journal has always kept Appliances and Furniture as
-separate monthly columns, and it is why `bir_expenses.branch` exists. The third
-value, **`shared`**, is not a registration: it is overhead belonging to neither
-branch on its own (salaries, fuel, utilities). How to split it is a judgement
-for the bookkeeper, so **the app records the fact and invents no allocation**.
+separate monthly columns, and it is why `bir_expenses.branch` exists.
+
+**There are exactly two values, and no "shared".** 0039 shipped a third,
+`shared`, for overhead that appeared to belong to neither. That was wrong:
+utilities and salaries are paid by the **Appliances** registration (Ryan,
+2026-08-31), and an unallocated bucket only produces rows that belong to
+neither book and can therefore be filed in neither return. **0040** removed it,
+moved any such row to Appliances, and made Appliances the default.
 
 `/bir` totals each book separately; `/bir/expenses` filters by book; the export
 takes `?branch=` and stamps the matching registered name and TIN on the file.
