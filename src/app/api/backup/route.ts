@@ -36,6 +36,7 @@ function timingSafeEqual(a: string, b: string): boolean {
 const TABLES = [
   "audit_log",
   "bir_expenses",
+  "bir_sales_entries",
   "cash_advance_expenses",
   "cash_advances",
   "collection_entries",

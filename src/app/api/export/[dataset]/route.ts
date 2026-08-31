@@ -144,11 +144,13 @@ export async function GET(
   // It also needs a period filter and a supplier join, which the generic
   // DATASETS shape has no room for — hence its own path rather than a fifth
   // entry bent out of shape.
-  if (dataset === "bir-expenses") {
+  if (dataset === "bir-expenses" || dataset === "bir-sales") {
     if (!profile || !canSeeBir(profile.role)) {
       return NextResponse.json({ error: "BIR access required" }, { status: 403 });
     }
-    return exportBirExpenses(_req);
+    return dataset === "bir-sales"
+      ? exportBirSales(_req)
+      : exportBirExpenses(_req);
   }
 
   if (profile?.role !== "owner") {
@@ -288,6 +290,93 @@ async function exportBirExpenses(req: Request): Promise<NextResponse> {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="eandj-bir-expenses-${suffix}-${range.start}-to-${range.end}.csv"`,
+    },
+  });
+}
+
+/**
+ * The Summary List of Sales, in the column order of the sheet the bookkeeper
+ * already receives: DATE, NAME, ADDRESS, INVOICE NUMBERS, VAT REG NO., the
+ * three sales buckets, VAT OUTPUT TAX, TOTAL INVOICE AMOUNT.
+ *
+ * Cancelled entries are excluded — a cancelled entry means the sale should not
+ * have been in the book, and the invoice number has been freed for reuse.
+ *
+ * Every customer here is a walk-in individual, so EXEMPT and ZERO-RATED are
+ * always blank and VAT REG NO. is empty: those columns exist because the BIR
+ * form has them, not because this business has such sales.
+ */
+async function exportBirSales(req: Request): Promise<NextResponse> {
+  const url = new URL(req.url);
+  const range = resolvePeriod(url.searchParams.get("period") ?? undefined, phTodayISO());
+  const branch = url.searchParams.get("branch") ?? "all";
+  const scoped = BIR_BRANCHES.some((b) => b.value === branch);
+
+  const supabase = await createClient();
+  const rows: Row[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let q = supabase
+      .from("bir_sales_entries")
+      .select(
+        "id, sales_date, invoice_no, branch, gross_snapshot, vatable_sales, vat_output_tax, customer_name_snapshot, customer_address_snapshot, item_snapshot, period_key"
+      )
+      .is("cancelled_at", null)
+      .gte("sales_date", range.start)
+      .lte("sales_date", range.end);
+
+    if (scoped) q = q.eq("branch", branch);
+
+    const { data, error } = await q
+      .order("sales_date")
+      .order("id")
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    const page = (data ?? []) as Row[];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+
+  const columns: Array<[string, (r: Row) => unknown]> = [
+    ["DATE", (r) => r.sales_date],
+    ["NAME", (r) => r.customer_name_snapshot],
+    ["ADDRESS", (r) => r.customer_address_snapshot],
+    ["INVOICE NUMBERS", (r) => r.invoice_no],
+    ["VAT REG. NO.", () => ""],
+    ["SALES EXEMPTED", () => ""],
+    ["TAXABLE SALES 12%", (r) => r.vatable_sales],
+    ["TAXABLE SALES ZERO-RATED", () => ""],
+    ["VAT OUTPUT TAX", (r) => r.vat_output_tax],
+    ["TOTAL INVOICE AMOUNT", (r) => r.gross_snapshot],
+    ["ITEM", (r) => r.item_snapshot],
+    ["BOOK", (r) => branchInfo(String(r.branch)).label],
+    ["PERIOD", (r) => r.period_key],
+  ];
+
+  const info = scoped ? branchInfo(branch) : null;
+  const preamble = [
+    [info ? info.registeredName : "E & J APPLIANCES FURNITURE"],
+    [info ? `TIN ${info.tin}` : "BOTH BOOKS — for review, not for filing"],
+    [BIR_REGISTERED_ADDRESS],
+    ["SUMMARY LIST OF SALES"],
+    [`${range.start} to ${range.end}`],
+    [],
+  ].map((cells) => cells.map(csvCell).join(","));
+
+  const header = columns.map(([h]) => csvCell(h)).join(",");
+  const lines = rows.map((r) =>
+    columns.map(([, get]) => csvCell(get(r))).join(",")
+  );
+
+  const csv = "\ufeff" + [...preamble, header, ...lines].join("\r\n");
+  const suffix = scoped ? branch : "all";
+
+  return new NextResponse(csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="eandj-bir-sales-${suffix}-${range.start}-to-${range.end}.csv"`,
     },
   });
 }

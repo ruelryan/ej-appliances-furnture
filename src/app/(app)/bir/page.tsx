@@ -28,20 +28,30 @@ export default async function BirPage({
   // Every query branches on `error` before `data`. A dropped connection here
   // would otherwise render a confident "input tax ₱0.00", and a zero that
   // means "we could not ask" is worse than no number at all.
-  const { data: rows, error } = await supabase
-    .from("bir_expenses")
-    .select("category, branch, gross_vat, gross_non_vat, vatable_purchases, vat_input_tax, total")
-    .is("voided_at", null)
-    .gte("expense_date", range.start)
-    .lte("expense_date", range.end)
-    .order("expense_date");
+  const [{ data: rows, error }, { data: salesRows, error: salesErr }] =
+    await Promise.all([
+      supabase
+        .from("bir_expenses")
+        .select("category, branch, gross_vat, gross_non_vat, vatable_purchases, vat_input_tax, total")
+        .is("voided_at", null)
+        .gte("expense_date", range.start)
+        .lte("expense_date", range.end)
+        .order("expense_date"),
+      supabase
+        .from("bir_sales_entries")
+        .select("branch, gross_snapshot, vatable_sales, vat_output_tax")
+        .is("cancelled_at", null)
+        .gte("sales_date", range.start)
+        .lte("sales_date", range.end)
+        .order("sales_date"),
+    ]);
 
-  if (error) {
+  if (error || salesErr) {
     return (
       <div className={pageStack}>
         <Header period={range.label} />
-        <Alert tone="danger" title="Could not load the purchase journal.">
-          {error.message}
+        <Alert tone="danger" title="Could not load the books.">
+          {error?.message ?? salesErr?.message}
         </Alert>
       </div>
     );
@@ -55,6 +65,10 @@ export default async function BirPage({
   const inputTax = sum("vat_input_tax");
   const nonVat = sum("gross_non_vat");
   const total = sum("total");
+
+  const sales = salesRows ?? [];
+  const salesTotal = sales.reduce((t, r) => t + Number(r.gross_snapshot ?? 0), 0);
+  const outputTax = sales.reduce((t, r) => t + Number(r.vat_output_tax ?? 0), 0);
 
   const byCategory = new Map<string, number>();
   for (const r of list) {
@@ -79,11 +93,16 @@ export default async function BirPage({
           sub="Creditable against output VAT"
           tone="positive"
         />
-        <StatTile label="Non-VAT purchases" value={peso(nonVat)} sub="No input tax" />
+        <StatTile
+          label="Sales booked"
+          value={peso(salesTotal)}
+          sub={`${sales.length} entr${sales.length === 1 ? "y" : "ies"} · ${peso(outputTax)} output tax`}
+          href={`/bir/sales?period=${encodeURIComponent(period ?? range.label)}`}
+        />
         <StatTile
           label="Total expenses"
           value={peso(total)}
-          sub={`${list.length} document${list.length === 1 ? "" : "s"}`}
+          sub={`${list.length} document${list.length === 1 ? "" : "s"} · ${peso(nonVat)} non-VAT`}
           href={`/bir/expenses?period=${encodeURIComponent(period ?? range.label)}`}
         />
       </div>
@@ -97,15 +116,20 @@ export default async function BirPage({
             <tr className={theadRow}>
               <th className={td}>Book</th>
               <th className={td}>TIN</th>
+              <th className={tdNum}>Sales booked</th>
+              <th className={tdNum}>Output tax</th>
               <th className={tdNum}>Input tax</th>
-              <th className={tdNum}>Total</th>
+              <th className={tdNum}>Net VAT</th>
             </tr>
           </thead>
           <tbody>
             {BIR_BRANCHES.map((b) => {
               const mine = list.filter((r) => r.branch === b.value);
-              const t = mine.reduce((a, r) => a + Number(r.total ?? 0), 0);
+              const mySales = sales.filter((r) => r.branch === b.value);
               const i = mine.reduce((a, r) => a + Number(r.vat_input_tax ?? 0), 0);
+              const s = mySales.reduce((a, r) => a + Number(r.gross_snapshot ?? 0), 0);
+              const o = mySales.reduce((a, r) => a + Number(r.vat_output_tax ?? 0), 0);
+              const net = o - i;
               return (
                 <tr key={b.value} className="border-b border-line last:border-0">
                   <td className={td}>
@@ -115,22 +139,33 @@ export default async function BirPage({
                     </span>
                   </td>
                   <td className={`${td} font-mono text-xs`}>{b.tin}</td>
-                  <td className={tdNum}>{peso(i)}</td>
+                  <td className={tdNum}>
+                    <Link
+                      href={`/bir/sales?period=${encodeURIComponent(period ?? range.label)}&branch=${b.value}`}
+                      className="hover:underline"
+                    >
+                      {peso(s)}
+                    </Link>
+                  </td>
+                  <td className={tdNum}>{peso(o)}</td>
                   <td className={tdNum}>
                     <Link
                       href={`/bir/expenses?period=${encodeURIComponent(period ?? range.label)}&branch=${b.value}`}
                       className="hover:underline"
                     >
-                      {peso(t)}
+                      {peso(i)}
                     </Link>
                   </td>
+                  <td className={`${tdNum} font-semibold`}>{peso(net)}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
         <p className="mt-2 text-xs text-muted">
-          Registered address: {BIR_REGISTERED_ADDRESS}
+          Net VAT is output tax on sales booked in this period less input tax on
+          expenses recorded in it — the shape of a 2550Q line, not the return
+          itself. Registered address: {BIR_REGISTERED_ADDRESS}
         </p>
       </SectionCard>
 
@@ -194,6 +229,9 @@ function Header({ period }: { period: string }) {
         </p>
       </div>
       <div className="flex gap-2">
+        <Link href="/bir/sales" className={btnSecondary}>
+          Sales book
+        </Link>
         <Link href="/bir/expenses" className={btnSecondary}>
           Expenses
         </Link>

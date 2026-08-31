@@ -93,3 +93,40 @@ export async function upsertBirSupplier(input: {
   revalidateBir();
   return {};
 }
+
+// ── The sales book ───────────────────────────────────────────
+// book_sale derives the branch from contracts.item_type and snapshots the
+// cash price itself, so neither can be passed in and got wrong. The invoice
+// number is the one thing the caller supplies, and it is typed from the
+// booklet — the app never mints it.
+
+export async function bookSale(input: {
+  contractId: string;
+  invoiceNo: string;
+  salesDate: string;
+  note: string;
+}) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("book_sale", {
+    p_contract_id: input.contractId,
+    p_invoice_no: input.invoiceNo,
+    p_sales_date: input.salesDate,
+    p_note: input.note,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/bir");
+  revalidatePath("/bir/sales");
+  return {};
+}
+
+export async function cancelSaleEntry(entryId: string, reason: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cancel_sale_entry", {
+    p_id: entryId,
+    p_reason: reason,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/bir");
+  revalidatePath("/bir/sales");
+  return {};
+}

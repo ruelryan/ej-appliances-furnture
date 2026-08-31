@@ -52,6 +52,7 @@ const TABLES: Array<{ name: string; orderBy: string }> = [
   { name: "contract_notes", orderBy: "id" },
   { name: "audit_log", orderBy: "id" },
   { name: "bir_expenses", orderBy: "id" },
+  { name: "bir_sales_entries", orderBy: "id" },
   { name: "id_counters", orderBy: "scope" },
   { name: "time_records", orderBy: "id" },
   { name: "employee_rates", orderBy: "id" },

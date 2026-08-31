@@ -38,6 +38,7 @@ export const LINKS: NavLink[] = [
   // The bookkeeper's whole app is these three pages, so the sub-routes are
   // nav entries for them alone. Owner and admin reach them from /bir and do
   // not need three sidebar rows for one module.
+  { href: "/bir/sales", label: "Sales book", icon: "contracts", roles: ["bookkeeper"] },
   { href: "/bir/expenses", label: "Expenses", icon: "payments", roles: ["bookkeeper"] },
   { href: "/bir/suppliers", label: "Suppliers", icon: "deliveries", roles: ["bookkeeper"] },
   { href: "/analytics", label: "Analytics", icon: "analytics", roles: ["owner"] },
@@ -71,7 +72,8 @@ export const TAB_HREFS: Record<Role, string[]> = {
   delivery: ["/", "/deliveries", "/contracts", "/dtr"],
   // The bookkeeper can reach exactly one section, so the tab row is that
   // section. "/" immediately redirects to /bir for them.
-  bookkeeper: ["/", "/bir", "/bir/expenses", "/bir/suppliers"],
+  // The two books are the job; suppliers is reference data and lives in More.
+  bookkeeper: ["/", "/bir", "/bir/sales", "/bir/expenses"],
 };
 
 export const ALL_ROLES: Role[] = [

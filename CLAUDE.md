@@ -510,8 +510,8 @@ prove via `audit_log` that read-only runs wrote nothing.
 - **Analytics** (owner-only route `/analytics`): dashboards (monthly sales,
   collections-vs-expected, by-agent, aging, cashflow) built on the financial
   views; Recharts in `charts.tsx`. Consult the dataviz skill before changing.
-- **BIR books + the `bookkeeper` role** (0039, Phase 1): `/bir`,
-  `/bir/expenses`, `/bir/suppliers` and `/api/export/bir-expenses` hold the
+- **BIR books + the `bookkeeper` role** (0039–0041): `/bir`, `/bir/sales`,
+  `/bir/expenses`, `/bir/suppliers` and two CSV exports hold the
   Subsidiary Purchase Journal that used to live in a Google Sheet. Owner and
   admin write (`can_manage_bir()`); owner, admin and **bookkeeper** read
   (`can_see_bir()`). Expenses are **voided, never deleted**. The VAT split is
@@ -526,10 +526,18 @@ prove via `audit_log` that read-only runs wrote nothing.
   0039 shipped a third for overhead and 0040 removed it: utilities and
   salaries are paid by the Appliances registration, and an unallocated
   bucket only makes rows that can be filed in neither return. Appliances is
-  the default. Constants in `src/lib/bir.ts`, TINs asserted in `bir.test.ts`. Phase 2 (sales register + the declared-vs-actual gap, 2550Q) is
-  designed in `docs/modules/bir.md` and NOT built. **A sale is booked at
-  `cash_price`, not `total_price`** — identical on 4/5-month Good-as-Cash terms,
-  and it is what stops a reprice restating a filed month.
+  the default. Constants in `src/lib/bir.ts`, TINs asserted in `bir.test.ts`.
+  **The sales book shipped in 0041** (`/bir/sales`): `v_bir_sales_register` is
+  every contract with its booking if it has one, so an undeclared sale is
+  visible rather than absent. **A sale is booked at `cash_price`, not
+  `total_price`** — identical on 4/5-month Good-as-Cash terms, and it is what
+  stops a reprice restating a filed month. Each registration has its OWN
+  invoice booklet, so numbers are TYPED, never minted; two partial unique
+  indexes enforce one booking per contract and one use of a number per
+  branch. *Booked* (by `sales_date`) and *sold* (by `contract_date`) are
+  shown side by side and never subtracted — a July sale booked in August
+  belongs to both, in different periods. Still to come: `/bir/vat` (2550Q)
+  and the historical import.
 - **Dashboard** (`/`, rebuilt 2026-08-29): a role router, not a page.
   `sales_agent`→`/commissions`, `delivery`→`/deliveries`, and now
   `collector`→`/collections` (that page already shows assigned accounts, cash

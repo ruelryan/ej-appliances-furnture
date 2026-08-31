@@ -149,22 +149,55 @@ bent out of shape. It reuses that file's `csvCell()` escaping (CSV injection,
 Voided rows are excluded: a void means the document should never have been in
 the book. Columns are the sheet's, in the sheet's order.
 
-## Phase 2 — designed, not built
+## The sales book
 
-- `bir_sales_entries`: `contract_id`, `invoice_no`, `sales_date`, `booked_by`,
-  plus a `gross_snapshot` frozen at booking. The app's version of the Contracts
-  Database columns R–T (`Sales OR`, `Sales Date`, `Sales By`).
-- **A sale is booked at the CASH PRICE, as if sold for cash** (Ryan,
-  2026-08-31) — `contracts.cash_price`, not `total_price`. On 4- and 5-month
-  Good-as-Cash terms the two are identical; they diverge only at 6 months
-  (cash × 1.225) and 12 months (cash × 1.375). This is also the safer choice for
-  a filed book: `cash_price` never moves on a reprice (`0022`), so **a reprice
-  cannot restate a month that has already been declared** — the trap that makes
-  the analytics views' `sum(total_price)` rewrite past months.
-- A register listing **every** contract as Booked or Not yet booked, with the
-  period's declared-vs-actual gap always visible. Selection stays manual;
-  nothing is silently dropped.
-- `/bir/vat`: a 2550Q worksheet, output VAT less input VAT.
+`bir_sales_entries` + `v_bir_sales_register` (**0041**), route `/bir/sales`,
+export `/api/export/bir-sales`.
+
+**Booked at the cash price**, `contracts.cash_price`, never `total_price`
+(Ryan, 2026-08-31 — sales go to the bookkeeper as if sold for cash). On 4/5-month
+Good-as-Cash terms the two are identical; they diverge at 6 months (cash × 1.225)
+and 12 months (cash × 1.375). Contract 2026188 is the extreme case in the live
+data: cash ₱29,900 against a term price of ₱41,112.50.
+
+It is also the safer column for a filed book: a reprice moves `total_price` but
+never `cash_price` (`0022`), so **a reprice cannot restate a month already
+declared** — the trap that makes the analytics views' `sum(total_price)` rewrite
+past months.
+
+**The invoice number is always typed**, never minted or suggested. Each
+registration has its own BIR-registered booklet, so the numbers are two
+independent sequences. An app-assigned number would be a number the BIR series
+does not know about — the same shape as the contract-number collision that came
+out of the Sheet reconciliation. Two partial unique indexes hold the invariants
+a pre-check cannot: one live booking per contract, and one use of an invoice
+number **per branch** (the same number in the other book is legal, because it is
+a different booklet).
+
+**The register is the point.** `v_bir_sales_register` is every contract with its
+booking if it has one, so an undeclared sale is *visible* rather than absent.
+`/bir/sales` shows, for the period: sold, booked, not yet booked, and the output
+VAT both ways.
+
+Two figures that are deliberately **not** netted: *booked* counts entries by
+`sales_date` (the date written in the book), *sold* counts contracts by
+`contract_date`. A sale made in July and booked in August appears in both, in
+different periods. Subtracting them would invent a number that means nothing.
+
+`branch` is derived from `contracts.item_type` — 0003 constrains it to
+`Appliances`/`Furniture`, and all 1,544 live rows carry one, so nothing is
+tagged by hand. Entries are **cancelled, never deleted**; a cancel frees the
+invoice number and returns the sale to the queue.
+
+## Still to come
+
+- `/bir/vat` — a proper 2550Q worksheet. `/bir` already shows output less input
+  per registration, which is the shape of it but not the return.
+- Importing the historical sheets (`scripts/import-bir-*.ts`), house pattern:
+  dry run by default, `--apply` to write, report first.
+- The Sheet's Sales Journal emits a row for **every calendar day**, including
+  "No transaction" days. The export does not reproduce those — it is a
+  presentation choice, and nobody has asked for it.
 
 Open, and for a professional rather than for this repo: for **goods**, gross
 sales is what the buyer "pays *or is obligated to pay*", so output VAT falls due
