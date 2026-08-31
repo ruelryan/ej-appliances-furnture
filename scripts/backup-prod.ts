@@ -79,7 +79,28 @@ const TABLES: Array<{ name: string; orderBy: string }> = [
 
 const PAGE = 1000;
 
-async function dumpTable(name: string, orderBy: string): Promise<number> {
+/**
+ * A table named in TABLES that does not exist in the database yet.
+ *
+ * This is the normal case for the backup you take immediately BEFORE applying
+ * the migration that creates it — and the house rule adds the table to TABLES
+ * in the same commit as that migration, so the two are guaranteed to disagree
+ * at exactly the moment a backup matters most. On 2026-08-31 that aborted the
+ * pre-0039 dump outright and it had to be taken with an older copy of this
+ * script.
+ *
+ * So: skip it, say so loudly, and record it in the manifest. Every OTHER error
+ * still aborts — a permission failure or a dropped table must never be quietly
+ * downgraded to "no rows".
+ */
+const MISSING_TABLE_CODES = new Set(["PGRST205", "42P01"]);
+
+function isMissingTable(error: { code?: string; message?: string }): boolean {
+  if (error.code && MISSING_TABLE_CODES.has(error.code)) return true;
+  return /Could not find the table|does not exist/i.test(error.message ?? "");
+}
+
+async function dumpTable(name: string, orderBy: string): Promise<number | null> {
   const rows: unknown[] = [];
   for (let offset = 0; ; offset += PAGE) {
     const { data, error } = await db
@@ -87,7 +108,10 @@ async function dumpTable(name: string, orderBy: string): Promise<number> {
       .select("*")
       .order(orderBy, { ascending: true })
       .range(offset, offset + PAGE - 1);
-    if (error) throw new Error(`${name}: ${error.message}`);
+    if (error) {
+      if (offset === 0 && isMissingTable(error)) return null;
+      throw new Error(`${name}: ${error.message}`);
+    }
     rows.push(...(data ?? []));
     if (!data || data.length < PAGE) break;
   }
@@ -136,9 +160,16 @@ async function main() {
   console.log(`Backing up to ${outDir}\n`);
 
   const counts: Record<string, number> = {};
+  const missing: string[] = [];
   for (const t of TABLES) {
-    counts[t.name] = await dumpTable(t.name, t.orderBy);
-    console.log(`  ${t.name.padEnd(28)} ${counts[t.name]} rows`);
+    const n = await dumpTable(t.name, t.orderBy);
+    if (n === null) {
+      missing.push(t.name);
+      console.log(`  ${t.name.padEnd(28)} — not in this database, skipped`);
+      continue;
+    }
+    counts[t.name] = n;
+    console.log(`  ${t.name.padEnd(28)} ${n} rows`);
   }
   const authCount = await dumpAuthUsers();
   console.log(`  ${"auth users".padEnd(28)} ${authCount} accounts`);
@@ -148,8 +179,14 @@ async function main() {
     JSON.stringify(
       {
         created_at: new Date().toISOString(),
-        migration_high_water: "0027",
+        // Read from the repo rather than hardcoded: this said "0027" while the
+        // tree was on 0039, which is the kind of stale note that gets believed.
+        repo_migration_high_water: repoMigrationHighWater(),
         tables: counts,
+        // Named in TABLES but absent from the database — normally because this
+        // dump was taken before the migration that creates them. Recorded so a
+        // gap in the backup can never be mistaken for an empty table.
+        missing_tables: missing,
         auth_users: authCount,
         notes:
           "Storage bucket product-photos NOT included (re-derivable from pricelist import). Counts verified against server-side exact counts.",
@@ -160,7 +197,33 @@ async function main() {
   );
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  console.log(`\n✅ Backup complete: ${TABLES.length} tables, ${total} rows, manifest written.`);
+  const dumped = TABLES.length - missing.length;
+  console.log(`\n✅ Backup complete: ${dumped} tables, ${total} rows, manifest written.`);
+  if (missing.length) {
+    console.log(
+      `\n⚠  ${missing.length} table(s) in this script do not exist in the database ` +
+        `and were skipped:\n   ${missing.join(", ")}\n` +
+        `   Expected if you are backing up BEFORE applying the migration that ` +
+        `creates them.\n   Recorded in manifest.json as missing_tables.`
+    );
+  }
+}
+
+/** Highest-numbered file in supabase/migrations, for the manifest. It is the
+ *  REPO's high-water mark, which may be ahead of what is applied to the
+ *  database this dump came from — hence the field name. */
+function repoMigrationHighWater(): string {
+  try {
+    const dir = path.join(process.cwd(), "supabase", "migrations");
+    const nums = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".sql"))
+      .map((f) => f.slice(0, 4))
+      .sort();
+    return nums.at(-1) ?? "unknown";
+  } catch {
+    return "unknown";
+  }
 }
 
 main().catch((e) => {

@@ -66,16 +66,43 @@ const TABLES = [
   "time_records",
 ] as const;
 
+/**
+ * A table listed above that does not exist in the database.
+ *
+ * The house rule adds a new table to this list in the same commit as the
+ * migration that creates it, so between deploying and applying there is a
+ * window where they disagree. That must be reported, never silently dumped as
+ * an empty table — a hole in a backup you cannot see is worse than a failure.
+ */
+const MISSING_TABLE_CODES = new Set(["PGRST205", "42P01"]);
+
+function isMissingTable(error: { code?: string; message?: string }): boolean {
+  if (error.code && MISSING_TABLE_CODES.has(error.code)) return true;
+  return /Could not find the table|does not exist/i.test(error.message ?? "");
+}
+
+/** Rows, or null when the table does not exist in this database. */
 async function fetchAll(
   admin: SupabaseClient,
   table: string
-): Promise<unknown[]> {
+): Promise<unknown[] | null> {
   const rows: unknown[] = [];
   // Stable-sort pagination: order by ctid is unavailable through PostgREST;
   // use id where it exists, else fall back to the table's natural order with
   // an explicit order to satisfy the pagination discipline. id is the
   // convention across every table in this schema (0014+ includes suppliers).
-  const { data: first } = await admin.from(table).select("*").limit(1);
+  // The error here used to be discarded, so a table that does NOT EXIST came
+  // back as `first = null` and was dumped as an empty array — a hole in the
+  // backup, indistinguishable from a genuinely empty table. Now a missing
+  // table returns null and is reported; every other error still throws.
+  const { data: first, error: probe } = await admin
+    .from(table)
+    .select("*")
+    .limit(1);
+  if (probe) {
+    if (isMissingTable(probe)) return null;
+    throw new Error(`${table}: ${probe.message}`);
+  }
   if (!first || first.length === 0) return [];
   const sample = first[0] as Record<string, unknown>;
   const orderCol = "id" in sample ? "id" : Object.keys(sample)[0];
@@ -109,12 +136,21 @@ export async function GET(req: Request) {
 
   try {
     const tables = TABLES as readonly string[];
+    const missing: string[] = [];
     const dump: Record<string, unknown> = {
       backed_up_at: new Date().toISOString(),
+      // Named in TABLES but absent from the database — normally the window
+      // between deploying a migration's code and applying the migration. The
+      // dump stays valid; this says exactly what it does not contain.
+      missing_tables: missing,
       tables: {},
     };
     for (const table of tables) {
       const rows = await fetchAll(admin, table);
+      if (rows === null) {
+        missing.push(table);
+        continue;
+      }
       (dump.tables as Record<string, unknown>)[table] = rows;
     }
 

@@ -778,6 +778,13 @@ These shaped real code. Do not "simplify" them away.
   already made two risky operations recoverable — the delivery statuses after
   the cutover were restored from one. The `product-photos` bucket is not
   backed up (re-derivable from the pricelist import).
+  **A table in the list that does not exist yet is skipped with a warning and
+  recorded in the manifest as `missing_tables`** — not an abort. That is the
+  normal case for the backup taken immediately BEFORE the migration that
+  creates it, and it aborted the pre-0039 dump outright until it was fixed.
+  Every other error still aborts. The cron route had the mirror-image bug and
+  was worse: it discarded the probe error, so a missing table was dumped as an
+  empty array and read as a real, empty table.
   **Its table list is hand-maintained and the row-count check cannot catch an
   omission** — the manifest verifies the tables it dumped, so a table missing
   from `TABLES` is missing from the verification too. That is how `remittances`
