@@ -228,6 +228,7 @@ npx tsx scripts/import-bir-sales.ts --file <contracts-db.csv> [--apply]  # sales
 npx tsx scripts/fix-bir-sales-2024-start.ts [--apply]   # drop pre-VAT (2023) sales entries
 npx tsx scripts/verify-bir-sales.ts --file <journal.xlsx>  # app vs the filed journal (read-only)
 npx tsx scripts/import-bir-expenses.ts --file <bir.xlsx> [--apply]  # purchase journal, 2024+
+npx tsx scripts/fix-bir-suppliers.ts --file <sales-wb.xlsx> [--apply]  # supplier VAT status + TIN merges
 npx tsx scripts/create-owner.ts                     # bootstrap the first owner account
 npx tsx scripts/backfill-addresses.ts [--apply]     # free text → barangay/municipality
 npx tsx scripts/backfill-photo-hashes.ts [--apply]  # dHash existing product photos

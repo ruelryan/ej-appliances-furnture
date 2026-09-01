@@ -322,6 +322,50 @@ and the bookkeeper's have now been checked against each other across four years.
 Re-running is guarded: it refuses to import when rows already exist from 2024
 onward, since there is no natural key to deduplicate a purchase-journal row on.
 
+## Supplier VAT status comes from the Expenses tab
+
+`scripts/fix-bir-suppliers.ts --file <sales-workbook.xlsx>`.
+
+The importer set `vat_registered` from "did this supplier ever have a row under
+TOTAL AMOUNT PAID (VAT)", which is too loose — **17 of the 109 suppliers have
+amounts in both columns**, so a single stray row flipped them. Ryan caught it on
+Jash Marketing: ₱66,700 under VAT against ₱629,932 under non-VAT, and they are
+not VAT-registered.
+
+The rule is now the **predominant column by amount** across the whole Expenses
+tab (2021 onward, 184 suppliers) rather than the 2024+ slice the importer saw.
+Five were corrected, all VAT → non-VAT: Angeli Space Rental, Cordova Auto Parts,
+Jash Marketing, Jhoel Furniture Shop, Michael E. Tacle Woodcraft. The script
+lists every both-columns supplier so the office can overrule it — this is a
+reading of the evidence, not a fact the sheet states.
+
+**Merging by TIN found nothing, and that is the correct answer.** A shared TIN
+means the same taxpayer entered twice, and the Expenses tab does contain two
+such pairs — `E** GASOLINE STATION` beside `EMIRATES GASOLINE STATION`, and
+`OPRA` beside `APRA TRADING` — but only one half of each is in the app, because
+both typos live in the pre-2024 rows that were never imported. Suppliers with no
+TIN are never merged: an absent TIN is not evidence of sameness.
+
+### Left open: input tax claimed against a non-VAT supplier
+
+Correcting the flags exposed **7 expense rows claiming ₱8,373.21 of input tax
+from suppliers now marked non-VAT**:
+
+| supplier | rows | input tax |
+|---|---:|---:|
+| Jash Marketing | 3 | ₱3,375.00 |
+| Michael E. Tacle Woodcraft | 1 | ₱2,914.29 |
+| Jhoel Furniture Shop | 1 | ₱1,285.71 |
+| Angeli Space Rental | 1 | ₱750.00 |
+| Cordova Auto Parts Shop | 1 | ₱48.21 |
+
+Deliberately **not** auto-corrected. Either the supplier is non-VAT and those
+claims should not have been made, or those particular purchases did carry a VAT
+invoice and the flag is wrong for them — and only the office knows which.
+Jhoel is the sharpest case: the Expenses tab shows them ₱0 under VAT across
+five years, yet the bookkeeper's workbook has a VAT row for them, so the two
+sheets disagree.
+
 ## Landing on a period that has records
 
 `/bir`, `/bir/sales` and `/bir/expenses` with no `?period=` land on the **newest
