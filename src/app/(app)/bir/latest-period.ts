@@ -46,6 +46,15 @@ export async function latestPeriodWithData(
   }
 
   if (!dates.length) return null;
-  // Newest across whichever books were asked for.
-  return dates.sort().at(-1)!.slice(0, 7);
+  dates.sort();
+
+  // For ONE book, the newest date is the answer.
+  //
+  // For BOTH, it is the EARLIER of the two newest — the lagging book decides.
+  // Taking the later one guarantees only that *a* book has records, and the
+  // summary shows both: on 2026-08-31 sales ran to 25 August while expenses
+  // stopped at 30 June (no Q3 tab in the workbook yet), so "newest" landed on
+  // August, where the expense tiles were zero and Net VAT read as output tax
+  // with nothing subtracted. Flattering, and not what anyone would file.
+  return (source === "both" ? dates[0] : dates.at(-1)!).slice(0, 7);
 }

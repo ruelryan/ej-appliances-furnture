@@ -75,6 +75,16 @@ export default async function BirPage({
   const salesTotal = sales.reduce((t, r) => t + Number(r.gross_snapshot ?? 0), 0);
   const outputTax = sales.reduce((t, r) => t + Number(r.vat_output_tax ?? 0), 0);
 
+  // A period can legitimately hold one book and not the other — expenses lag
+  // sales while the bookkeeper's workbook waits for its next quarterly tab. Say
+  // so, rather than showing a Net VAT that quietly subtracts nothing.
+  const emptyBook =
+    list.length === 0 && sales.length > 0
+      ? "expenses"
+      : sales.length === 0 && list.length > 0
+        ? "sales"
+        : null;
+
   const byCategory = new Map<string, number>();
   for (const r of list) {
     byCategory.set(r.category, (byCategory.get(r.category) ?? 0) + Number(r.total ?? 0));
@@ -85,6 +95,14 @@ export default async function BirPage({
     <div className={pageStack}>
       <Header period={range.label} />
       <PeriodPicker value={shownPeriod} />
+      {emptyBook && (
+        <Alert tone="warning" title={`No ${emptyBook} recorded for ${range.label}.`}>
+          {emptyBook === "expenses"
+            ? "Net VAT below is output tax with no input tax subtracted, because no purchase has been entered for this period yet. Pick a period that has both books before reading it as a return."
+            : "Nothing has been entered in the sales book for this period yet."}
+        </Alert>
+      )}
+
       {autoPeriod && (
         <p className="text-xs text-muted">
           Showing {range.label}, the most recent period with records. Use the
