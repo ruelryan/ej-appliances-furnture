@@ -12,7 +12,7 @@ copy of the old script: `C:\Users\ryan\Downloads\eandjappscript.txt`). Owner:
 Ryan (ruelryanrosal@gmail.com) — not a professional developer; explain
 technical trade-offs plainly and confirm before destructive actions.
 
-## Status (last reviewed 2026-08-29)
+## Status (last reviewed 2026-09-01)
 
 Facts here carry their own date. Trust the per-entry date, not the heading —
 this section is the volatile half of the file and drifts fastest.
@@ -62,17 +62,26 @@ this section is the volatile half of the file and drifts fastest.
     is re-runnable and re-derives the diff from the workbook each run, but the
     fix is to stop dual entry, not to keep re-syncing.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
-  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0033 all applied
-  to prod** (0033 `v_cashflow_daily` applied and verified 2026-08-29) (0029/0031/0032 applied and verified 2026-08-05, code deployed the
-  same day). Catalog: **136 products**, all with photos and perceptual hashes
+  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0044 all applied
+  to prod** — 0034–0044 verified 2026-09-01 by probing the live catalog for the
+  object each one creates (`separated_on`, `set_separation_date`,
+  `payslips.holiday_lines`, `v_online_collections_day`, `reopen_contract`,
+  `bir_expenses`, `can_see_bir`, `bir_sales_entries`, `v_bir_sales_register`,
+  nullable `contract_id`, `book_sale` gating on delivery), not by trusting this
+  line. **There is no migrations table — nothing records what has been
+  applied**, so `apply-migrations.ts` will happily re-run a file. Re-probe the
+  catalog rather than assume. (0033 verified 2026-08-29; 0029/0031/0032 verified
+  2026-08-05.) Catalog: **136 products**, all with photos and perceptual hashes
   (seeded by `scripts/import-pricelist.ts`; 12 duplicates merged out).
-- GitHub: `ruelryan/ej-appliances-furnture`. Branch state (2026-08-17):
-  **`main` is current and is the branch to work from** — `feat/collector-
-  remittances` (0030 plus the whole 0029/0031/0032 security + integrity audit)
-  was fast-forwarded into it at **3415c47** and pushed; local and origin agree,
-  and prod runs this code. That branch and the empty
-  `security/rls-and-rpc-hardening` were **deleted 2026-08-17**. Two branches
-  remain, both on purpose:
+- GitHub: `ruelryan/ej-appliances-furnture`. Branch state (2026-09-01):
+  **`main` is current and is the branch to work from** — local and origin
+  agree, and prod runs this code. `feat/collector-remittances` (0030 plus the
+  whole 0029/0031/0032 security + integrity audit) was fast-forwarded in at
+  3415c47; it and the empty `security/rls-and-rpc-hardening` were **deleted
+  2026-08-17**. Three branches remain:
+  - **`feat/contract-close-and-bir`** (local only) — fully merged: its work is
+    0038 plus the entire BIR book, in `main` through **027a1c9**. Nothing is
+    stranded on it. Safe to delete; kept only because nobody has.
   - **`redesign/fintech-light`** (remote only) — mostly merged at 4dee47a, but
     it still carries **one unmerged commit, 659d70e "In-app staff manual at
     /help"** (2026-07-21): `src/app/(app)/help/` with a 785-line `topics.tsx`,
@@ -234,6 +243,8 @@ npx tsx scripts/create-owner.ts                     # bootstrap the first owner 
 npx tsx scripts/backfill-addresses.ts [--apply]     # free text → barangay/municipality
 npx tsx scripts/backfill-photo-hashes.ts [--apply]  # dHash existing product photos
 npx tsx scripts/backfill-product-categories.ts [--apply]  # derive products.category from names
+npx tsx scripts/verify-bookkeeper-confinement.ts    # become each role, count what it sees; always rolls back
+npx tsx scripts/sweep-classes.ts [--apply]          # bulk restyle via an old→new class map
 ```
 
 `npm run e2e` (bare) runs **both** suites — it writes to prod. Use the
@@ -272,6 +283,11 @@ catalog), `roles-and-permissions.md`, `business-rules-legal.md`, `testing.md`,
 that changes user-facing behavior, a route, a role's access, a business rule,
 or the schema updates the matching `docs/` page in the same commit.** On
 drift, the code is the truth — fix the doc.
+
+`docs/superpowers/specs/` holds **designs for work not yet built** — currently
+`2026-08-30-messenger-inquiry-bot-design.md` (a Messenger inquiry bot for the
+Facebook Page). Nothing there is shipped; do not read a spec as a description
+of the app.
 
 `README.md` is the *setup* doc (new machine, fresh Supabase project, Sheet
 import, Vercel) — not a second architecture reference. The standing rule above
@@ -312,17 +328,39 @@ prove via `audit_log` that read-only runs wrote nothing.
   balance, followup tier) come ONLY from the `v_contract_financials` view
   (0002 migration), computed in Asia/Manila. Never recompute in JS.
 - **Writes go through SECURITY DEFINER functions** (`create_contract`,
-  `record_payment`, `void_payment`, `unvoid_payment`, `close_contract`) —
-  never insert contracts/payments directly; IDs
+  `record_payment`, `void_payment`, `unvoid_payment`, `close_contract`,
+  `reopen_contract`) — never insert contracts/payments directly; IDs
   (YYYY### and PAY####) come from the race-safe `id_counters` table.
-- **Roles (5, migration 0011)**: `owner`, `admin` (admin assistant — posts
-  payments/receipts, creates contracts), `collector` (assigned worklist, logs
-  collections, never posts payments), `sales_agent` (restricted read-only —
-  own closed deals + own commission/customers only), `delivery`; `staff` is
+- **Closing an account (0038), and why it is asymmetric.** `close_contract`
+  existed from 0001 but **nothing ever called it** — every closed contract
+  before 0038 was a hand-written UPDATE, which is how 2026167 and 2026182 came
+  to read "Fully paid" with a balance on them. 0038 widened it from
+  `is_owner()` to **`can_post_payments()`** (Analyn records the payments, so
+  she is who sees an account reach zero) and gave it a button. That
+  deliberately hands a **write-off** to an admin: closing with a balance stays
+  legal here — settlement, write-off and Recto-Law repossession all end a
+  contract with money outstanding — and Ryan chose the simpler permission with
+  that tension stated. The controls are the audit trigger and a UI that names
+  the exact balance first. **`reopen_contract` is owner-only, on purpose**:
+  0032 made closing a one-way door (`record_payment` refuses a closed
+  contract), so a mis-click otherwise strands an account; closing is routine,
+  reversing someone else's close is not.
+- **Roles (6 — 0011 made five, 0039 added the sixth)**: `owner`, `admin` (admin
+  assistant — posts payments/receipts, creates contracts), `collector`
+  (assigned worklist, logs collections, never posts payments), `sales_agent`
+  (restricted read-only — own closed deals + own commission/customers only),
+  `delivery`, and **`bookkeeper`** (0039 — the BIR books and nothing else: no
+  contracts, customers, payments or tasks). `staff` is
   legacy (migrated to `admin`, kept in the CHECK during transition). Enforced
   by RLS in Postgres; SQL helpers `can_post_payments()` (owner/admin),
-  `is_collector()`/`is_sales_agent()`/`is_delivery()`, `my_role()`; TS mirror
-  in `src/lib/supabase/server.ts` (`Role` union, `canPostPayments`). Nav
+  `is_collector()`/`is_sales_agent()`/`is_delivery()`, `can_see_bir()` /
+  `can_manage_bir()`, `my_role()`; TS mirror
+  in `src/lib/supabase/server.ts` (`Role` union, `canPostPayments`,
+  `canSeeBir`, `isBookkeeperRole`, `isOwnerRole`).
+  **The bookkeeper is walled off by SUBTRACTION, not by policy** — it is
+  excluded from `is_active_user()` rather than added to sixty policies (see
+  Gotchas), so adding a seventh role means re-deciding that function first, and
+  `scripts/verify-bookkeeper-confinement.ts` is what proves the wall holds. Nav
   visibility is a per-link `roles[]` allowlist in `nav-links.tsx` — UI hiding
   is convenience only. Payments are never deleted — void/restore.
 - **Business modules follow one shape**: a migration + a colocated
@@ -344,7 +382,25 @@ prove via `audit_log` that read-only runs wrote nothing.
   `employee_rates`) deducted only on 16–end slips; draft→final (staff RLS
   sees only own final; reopen instead of deleting finals); print page
   `/print/payslip/[id]`. All writes via RPCs (`create_payslip`,
-  `finalize_payslip`, …).
+  `finalize_payslip`, …). **Three later migrations, each fixing a way the
+  holiday rule paid the wrong amount** — treat holidays as the hazard in any
+  payroll change:
+  - **0034 — a period can be paid before it ends.** `create_payslip` used to
+    refuse `v_end > ph_today()`. Simply lifting that guard would have
+    *underpaid*: `v_dtr_days` only emits the synthetic unworked-regular-holiday
+    row for days that have arrived, so a slip built on the 30th carries ₱0 for
+    a holiday on the 31st — and under-snapshots `basic_pay`, permanently
+    understating the 13th-month base. 0034 separates the two bounds that were
+    sharing one bind. **Never re-merge them.**
+  - **0035 — `employee_rates.separated_on` + `set_separation_date` (owner
+    only).** The unworked-holiday rule had a start bound and **no end bound**,
+    so anyone who ever punched in kept accruing 8h on every future regular
+    weekday holiday *forever*. Caught on Roger's final slip (₱450 for a holiday
+    a week after he left).
+  - **0036 — `payslips.holiday_lines`,** snapshotted like every other payslip
+    amount. Each line carries the **premium above the plain hourly rate**, not
+    the day's gross, so `basic_pay + sum(holiday_lines.amount) = dtr_pay`
+    reconciles exactly. Keep that identity if you touch either side.
 - **DTR** (0005–0008, 0010 migrations): staff clock in/out via
   `clock_in`/`clock_out` RPCs (one block/day, Manila time); hours &
   holiday-pay math lives ONLY in SQL (`dtr_hours()`, views
@@ -611,9 +667,35 @@ prove via `audit_log` that read-only runs wrote nothing.
   toggle, plus the audit log and the CSV export links. **`/account`** is the
   one page every role gets: change your own password. Neither is a business
   module and neither has a migration of its own.
-- CSV exports: `/api/export/[dataset]` (owner-only) — exactly four datasets:
-  `contracts` (from `v_contract_financials`), `payments`, `aging`,
-  `customers`. Keep-alive: `/api/health`.
+- **Five API routes, and two of them exist for a reason worth knowing:**
+  - `/api/export/[dataset]` (owner-only) — exactly four datasets: `contracts`
+    (from `v_contract_financials`), `payments`, `aging`, `customers`.
+  - `/api/contracts/search` — the jump-to-contract typeahead. **A GET route
+    handler rather than a server action, and that is the whole point**: a
+    server action is a POST, and `middleware.ts` refuses every non-GET while
+    "View as" is active, so a POST-backed typeahead breaks for exactly the
+    owner previewing another role. **Any new interactive feature hits this** —
+    if it must work under View as, it is a GET. It uses the request's own
+    session (anon key + cookie), never the service role, so RLS scopes it and
+    it needs no role check of its own.
+  - `/api/backup` — cron-triggered full DB dump. Own bearer auth, whitelisted
+    in `middleware.ts` for that reason, and it carries its **own hardcoded
+    `TABLES` list** separate from `scripts/backup-prod.ts` (see Gotchas — a new
+    table must be added to both).
+  - `/api/preview` — enters/leaves "View as" (a GET for the same reason above).
+  - `/api/health` — keep-alive. **It does hit the database** (an `exact` count
+    over `customers`), so it is a poor latency probe; `/login` is the one that
+    renders without a query.
+- **`src/lib/auth-headers.ts` — `x-eandj-uid`, a trust channel between
+  middleware and the page.** Middleware has already verified the session, so it
+  passes the uid forward and `getProfile()` skips a second `auth.getUser()`
+  round trip to Mumbai. **It is only trustworthy because middleware ALWAYS
+  writes it — `set` when there is a user, `delete` when there is not.** A
+  client can send `x-eandj-uid: <someone else's uuid>`; leaving an incoming
+  value untouched on any path would be straight privilege escalation, so
+  **never make either branch conditional**, and never trust the header in a
+  route middleware does not cover. `getProfile()` still falls back to
+  `auth.getUser()` when it is absent.
 
 ## Design system
 
@@ -676,8 +758,19 @@ These shaped real code. Do not "simplify" them away.
   on forfeiture. Needs a lawyer.
 - **Art. 1308 mutuality.** A price cannot be revised by one party alone, and
   notice does not cure it. That is why repricing is framed as a *conditional
-  discount lapsing on an objective event the customer controls*, enforced in
-  SQL, and why existing contracts need a signed amendment.
+  price lapsing on an objective event the customer controls*, enforced in
+  SQL, and why existing contracts need a signed amendment. **The printed
+  contract no longer says "discount"** (2026-09-01, Ryan's call) — clause 5
+  reads "the price for settlement within the N-month term". The vocabulary
+  changed; the legal shape did not, and must not: conditional price, objective
+  customer-controlled trigger, change only by signed amendment. Never reword it
+  into a penalty or a dealer-declared increase. `/print/amendment/[id]` still
+  carries the old "discount" wording — a known mismatch between the pair.
+- **The demand letter is signed by the owner alone** — signature image, printed
+  name, "Owner"; no customer signature line, no "Date Received". The image
+  comes from `OWNER_SIGNATURE_DATA_URI` and is deliberately NOT in the repo:
+  this repo is **public** on GitHub, git history is permanent, and `public/` is
+  served without auth. Unset just prints a blank line to sign by hand.
 - **Art. 1169**: a demand letter is what puts the customer in default. 15 days
   (`DEMAND_DEADLINE_DAYS`), inside the usual 10–30 range.
 - **RA 3765 (Truth in Lending)**: the printed contract discloses amount
@@ -799,12 +892,12 @@ These shaped real code. Do not "simplify" them away.
     (Supabase SSR needs Node APIs). The project-level `regions` key moves Node
     functions; per-route overrides go under `functions` in the same file.
   - **What is left is the number of SEQUENTIAL round trips**, not the number of
-    queries. Pages already batch into 1–2 `Promise.all` waves, but each request
-    still pays: middleware `auth.getUser()` → layout `getProfile()` → layout
-    task-count → the page's waves. That is 4–5 trips × ~0.3s before anything
-    renders, and auth is resolved two or three times per request. Collapsing the
-    layout's two calls, and reusing the middleware's auth result, is the next
-    lever.
+    queries. Pages already batch into 1–2 `Promise.all` waves. The auth leg was
+    the worst of it — `auth.getUser()` resolved two or three times per request
+    (middleware, then layout `getProfile()`, then any page calling it again) —
+    and that **was fixed 2026-08-30** (`032274e`) by forwarding the verified uid
+    in `x-eandj-uid`; see the auth-headers bullet in Architecture. What remains
+    unbatched is the layout's task-count query sitting after `getProfile()`.
   - **`/api/health` DOES hit the database** — it runs an `exact` count over
     `customers` as the keep-alive. I described it as touching no database while
     diagnosing this, including in the commit message for the region change; that
