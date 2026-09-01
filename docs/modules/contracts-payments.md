@@ -24,12 +24,24 @@ usually "work through the book", not "open one contract".
   nothing could close a contract until 0038, so most of the book is still
   `open` and that cap is a real ceiling, not a formality.
 - **The search box jumps anywhere in the book**, open or closed, and is the
-  way past that cap. It is a plain **GET** form that re-renders the same page
-  with `?find=`, not a typeahead calling a server action — a server action is a
-  POST, and `middleware.ts` refuses every non-GET while "View as" is active, so
-  a POST search would break for the owner previewing another role. It reuses
-  the escaped `.or()` grammar from `/contracts` (`quoteIlikePattern`), matching
-  contract number, customer name and item, newest first, 25 rows.
+  way past that cap. Matches appear **as you type**, from
+  `GET /api/contracts/search`.
+  - It is a **route handler, not a server action**, and that is the whole
+    reason it exists: an action is a POST, and `middleware.ts` refuses every
+    non-GET while "View as" is active, so a POST-backed typeahead would break
+    for the owner previewing another role.
+  - It uses the caller's own session, never the service role, so **RLS scopes
+    the results** — a collector sees only their assigned contracts. There is
+    deliberately no extra role check; it could only disagree with the policies.
+  - The surrounding `<form>` is kept: pressing Enter with nothing highlighted
+    submits and the page renders the same search server-side (`?find=`). That
+    is the no-JavaScript path and costs one element.
+  - 200ms debounce, and the in-flight request is **aborted** on every keystroke
+    — which is also what prevents a slow early response landing last and
+    overwriting newer results, so there is no separate stale-response check.
+  - Both paths reuse the escaped `.or()` grammar (`quoteIlikePattern`): inside
+    an `.or()` the string is PostgREST filter syntax, and an unescaped comma
+    would start a condition of its own.
 
 ## Terms math
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { input } from "@/components/ui";
+import { ContractSearch } from "./contract-search";
 
 export const NAV_SORTS = [
   { key: "name", label: "A–Z by name" },
@@ -71,24 +71,21 @@ export function ContractNavBar({
       </div>
 
       {/*
-        A plain GET form, not a typeahead calling a server action. Two reasons:
-        a server action is a POST, and middleware refuses every non-GET while
-        "View as" is active — so a POST search would break for the owner
-        previewing another role. And the arrows above only walk OPEN contracts,
-        capped at 1000 rows, so a client-side filter over that list could not
-        find a closed account or anything past the cap. This searches the whole
-        book, server-side, using the same escaped .or() as /contracts.
+        Matches appear as you type, from GET /api/contracts/search — a route
+        handler rather than a server action, because an action is a POST and
+        middleware refuses every non-GET while "View as" is active.
+
+        The form around it is kept on purpose: pressing Enter with nothing
+        highlighted submits and the page renders the same search server-side,
+        which is the path with JavaScript off. It costs one element.
+
+        Either way the search covers the WHOLE book. The arrows above walk only
+        OPEN contracts, capped at 1000 rows, so a client-side filter over that
+        list could not find a closed account or anything past the cap.
       */}
       <form action={`/contracts/${contractId}`} method="get" className="flex gap-2">
         <input type="hidden" name="nav" value={sort} />
-        <input
-          type="search"
-          name="find"
-          defaultValue={find}
-          placeholder="Jump to another contract — name, no., or item…"
-          aria-label="Search contracts"
-          className={input}
-        />
+        <ContractSearch contractId={contractId} sort={sort} find={find} />
         <button
           type="submit"
           className="shrink-0 rounded-card border border-line bg-white px-4 text-sm font-semibold text-ink hover:bg-surface"
