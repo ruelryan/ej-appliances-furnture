@@ -87,6 +87,14 @@ A 4/5-month Good-as-Cash contract whose term has elapsed with a balance outstand
 
 Two consequences to keep in mind: the printed contract reads `v_contract_original_terms`, not the live row, so a reprice never puts new figures above an old signature; and the analytics sales views sum `total_price` by `contract_date`, so a reprice restates a past month's reported sales (reconstructible from `contract_repricings` — known, undecided).
 
+### Printing (`/print/contract/[id]`) — one A4 sheet, and it has to stay that way
+
+Every `/print/*` page targets **A4**, declared once in `globals.css` as `@page { size: A4; margin: 14mm 14mm 16mm }`. Until 2026-09-01 there was no `@page` rule at all, so a browser fell back to its locale default (US Letter on a stock Chrome) and a layout drawn at 210mm was silently scaled or spilled.
+
+The contract is the tight one: it measured **306.7mm into 267mm** of printable height, which pushed the signature block onto a second sheet by itself — a signature page with no terms above it. **PAYMENT TERMS and the R.A. 3765 disclosure sit side by side in a 2-column grid** to buy that back; it now measures **248mm, with ~19mm of headroom**. A cash sale has no disclosure box, so its single box takes the full width instead.
+
+If you add anything to this page, re-measure rather than assume — the headroom is under one paragraph of clause text. `.print-keep` (plus `li`, `tr`, `thead`) carries `break-inside: avoid`, so a numbered term or a signature block can never be torn across a page boundary.
+
 ## Repossession
 
 `repossession_stage` (0027) is the owner's escalation pipeline after collection fails: `none` → `letter_prepared` → `letter_sent` → `for_pullout` → `repossessed`, set only via `set_repossession_stage` (owner-only), surfaced on the contract page's repossession control. It advances only by explicit owner decision — deliberately not auto-advanced by printing or sending the demand letter, because under the Recto Law taking the item back **cancels the sale and bars recovering the balance**; electing that remedy is a real decision, not a workflow side effect. See [business-rules-legal.md](../business-rules-legal.md), including the unresolved question about payments kept on past repossessions.

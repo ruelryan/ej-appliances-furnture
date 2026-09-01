@@ -98,10 +98,59 @@ h3 {
   border-radius: var(--radius-card);
 }
 
+/* ── Print: A4 bond paper ──────────────────────────────────────────────────
+   Every /print/* page is meant for A4, which is what the Philippines actually
+   buys — but nothing here ever SAID so, and a browser with no @page rule falls
+   back to its locale default (US Letter on a stock Chrome install). Letter is
+   6mm narrower and 18mm shorter than A4, so a layout drawn at 210mm either
+   got silently scaled down or spilled a thin strip onto a second sheet.
+
+   The margin is the paper margin, so #print-area drops its own padding when
+   printing (below) — otherwise the two stack and the text block shrinks. */
+@page {
+  size: A4;
+  margin: 14mm 14mm 16mm;
+}
+
 @media print {
   body {
     background: #ffffff;
     color: #000000;
+  }
+
+  /* @page owns the margins now; the on-screen sheet padding must not add to
+     them. max-width likewise: the printable width IS the page. */
+  #print-area {
+    max-width: none;
+    width: auto;
+    padding: 0;
+  }
+
+  /* Legal documents must not have their blocks torn across a page boundary:
+     a numbered term split mid-sentence, or a signature line stranded alone on
+     a sheet of its own, both read as a different document to the one signed.
+     `break-inside` is the modern property; `page-break-inside` is kept for
+     older print engines that still ignore it. */
+  .print-keep,
+  #print-area li,
+  #print-area tr,
+  #print-area thead {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* A heading immediately before a page break orphans its own section. */
+  #print-area h1,
+  #print-area h2,
+  #print-area h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Long tables may break between rows, just never inside one. */
+  #print-area table {
+    page-break-inside: auto;
+    break-inside: auto;
   }
 }
 

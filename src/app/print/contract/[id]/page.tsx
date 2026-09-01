@@ -65,7 +65,7 @@ export default async function ContractPrintPage({
         <span>Date: {fmtDate(c.contract_date)}</span>
       </div>
 
-      <table className="mb-4 w-full text-xs">
+      <table className="print-keep mb-4 w-full text-xs">
         <tbody>
           {(
             [
@@ -78,14 +78,21 @@ export default async function ContractPrintPage({
             ] as Array<[string, string]>
           ).map(([k, v]) => (
             <tr key={k} className="border-b border-line">
-              <td className="w-1/3 py-1.5 text-muted">{k}</td>
-              <td className="py-1.5 font-medium">{v}</td>
+              <td className="w-1/3 py-1 text-muted">{k}</td>
+              <td className="py-1 font-medium">{v}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <div className="mb-4 rounded border border-muted p-3">
+      {/* Side by side, and that is what makes the contract fit one A4 sheet.
+          Stacked, the page ran 307mm into 267mm of printable height, so the
+          signature block landed alone on a second sheet — a signature page with
+          no terms above it is exactly what you do not want a customer to sign.
+          A cash sale has no finance charge to disclose, so its single box takes
+          the full width instead of sitting in a half-empty grid. */}
+      <div className={term > 0 ? "mb-4 grid grid-cols-2 gap-3" : "mb-4"}>
+      <div className="print-keep rounded border border-muted p-3">
         <div className="mb-2 text-xs font-semibold">PAYMENT TERMS</div>
         <table className="w-full text-xs">
           <tbody>
@@ -127,7 +134,7 @@ export default async function ContractPrintPage({
       </div>
 
       {term > 0 && (
-        <div className="mb-4 rounded border border-muted p-3">
+        <div className="print-keep rounded border border-muted p-3">
           <div className="mb-2 text-xs font-semibold">
             DISCLOSURE OF FINANCE CHARGE (R.A. 3765)
           </div>
@@ -162,9 +169,10 @@ export default async function ContractPrintPage({
           </p>
         </div>
       )}
+      </div>
 
       <div className="mb-2 text-xs font-semibold">TERMS AND CONDITIONS</div>
-      <ol className="mb-4 list-decimal space-y-1.5 pl-5 text-[11px]">
+      <ol className="mb-4 list-decimal space-y-1 pl-5 text-[11px]">
         <li>
           The customer agrees to pay the downpayment upon signing and the
           monthly amortization every month thereafter until the total contract
@@ -191,19 +199,29 @@ export default async function ContractPrintPage({
           receipt or reference number for every payment.
         </li>
         {(term === 4 || term === 5) && (
+          // The word "discount" is deliberately absent (Ryan, 2026-09-01) — the
+          // Good as Cash price is presented as the price for this term, not as
+          // a reduction off some higher one. What must NOT be lost is the legal
+          // shape underneath it: Art. 1308 forbids a price one party can revise
+          // alone, so this stays a CONDITIONAL price that lapses on an objective
+          // event the customer controls (the term elapsing unpaid), with the
+          // longer schedules named up front and any change requiring a signed
+          // amendment. Reword freely; do not turn it into a penalty or an
+          // increase the dealer declares.
           <li>
-            <strong>Good as Cash condition.</strong> The total contract price above
-            is a discounted price, offered on the condition that the account is
-            fully paid within the {term}-month term. Should the term lapse with a
-            balance still outstanding, the discount ceases to apply and the
-            standard {6}-month price of{" "}
+            <strong>Good as Cash condition.</strong> The total contract price
+            above is the price for settlement within the {term}-month term, and
+            applies on the condition that the account is fully paid within that
+            term. Should the term lapse with a balance still outstanding, that
+            price ceases to apply and the standard 6-month price of{" "}
             <strong>{peso(Number(c.cash_price) * 1.225)}</strong> shall govern,
             with the payments already made credited in full. Should the 6-month
-            term likewise lapse with a balance outstanding, the 12-month price of{" "}
+            term likewise lapse with a balance outstanding, the standard 12-month
+            price of{" "}
             <strong>{peso(Number(c.cash_price) * 1.375)}</strong> shall govern.
             Any such change takes effect only upon a written amendment signed by
             both parties. The customer may at any time settle the balance at the
-            original discounted price stated above, and the discount shall then be
+            {" "}{term}-month price stated above, and that price shall then be
             restored in full.
           </li>
         )}

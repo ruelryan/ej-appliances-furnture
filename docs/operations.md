@@ -13,6 +13,8 @@ Day-to-day operational procedures. The app is deployed on Vercel and backed by a
 
 `.env.local` (gitignored) holds `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_DB_PASSWORD` (quote it — it contains `#`). Sanity-check with `npx tsx scripts/check-connection.ts`.
 
+**`OWNER_SIGNATURE_DATA_URI`** — the owner's signature for `/print/demand-letter/[id]`, as a `data:image/png;base64,…` URI (~7KB trimmed transparent PNG). It is an env var and **not a file in the repo on purpose**: `ruelryan/ej-appliances-furnture` is **public**, git history is permanent, and anything under `public/` is served with no auth — a signature that authenticates contracts, demand letters and amendments must not be published. Read in a server component, it only ever reaches the HTML of an owner/admin-gated page. Set it in Vercel under **Production** scope, like the Supabase keys. **Unset is a safe state, not a break**: the letter falls back to a blank ruled line to sign by hand, which is what every local checkout and Preview deploy gets. To regenerate from a scan: trim the whitespace, threshold to a transparent PNG ~520px wide, and base64 it.
+
 ## Deploying
 
 There are **two** ways code reaches production, and both are live:

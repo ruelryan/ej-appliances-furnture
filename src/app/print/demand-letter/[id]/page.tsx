@@ -3,7 +3,7 @@ import { createClient, getProfile, canPostPayments } from "@/lib/supabase/server
 import { buildDemandLetterBody, type ContractFinancials } from "@/lib/messages";
 import { fmtDate, phTodayISO } from "@/lib/format";
 import { formatAddress } from "@/lib/maps";
-import { Letterhead, SignatureBlocks } from "../../letterhead";
+import { Letterhead, OwnerSignature } from "../../letterhead";
 import { PrintControls } from "../../print-controls";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +46,7 @@ export default async function DemandLetterPage({
       <div className="mb-1 text-right text-xs">Date: {fmtDate(phTodayISO())}</div>
       <div className="mb-4 text-xs">Address: {formatAddress(c)}</div>
       <div className="whitespace-pre-wrap">{message}</div>
-      <SignatureBlocks />
+      <OwnerSignature closing="Very truly yours," />
     </div>
   );
 }

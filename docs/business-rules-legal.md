@@ -12,6 +12,7 @@ When goods are sold on installment, the seller has a fixed menu of remedies if t
 They are strict alternatives. Taking the item back **bars** recovering the balance, and any contract clause saying otherwise is void. Consequences in the app:
 
 - The demand letter (`/print/demand-letter/[id]`) states a **single elected remedy**, never both.
+- It is signed **by the owner only** — signature image, printed name, "Owner". There is no customer signature line and no "Date Received" block: a demand is served *by* the business, and asking the debtor to sign the demand served on them was never the point (2026-09-01). The signature comes from `OWNER_SIGNATURE_DATA_URI`, an env var and deliberately not a repo file — see [operations.md](operations.md).
 - `repossession_stage` (owner-only, `set_repossession_stage`: none → letter_prepared → letter_sent → for_pullout → repossessed) is deliberately **not** auto-advanced by serving a demand letter — serving a letter and electing to repossess are separate decisions.
 - Repossessing cancels the sale. The contract is then closed, not collected on.
 
@@ -21,7 +22,8 @@ They are strict alternatives. Taking the item back **bars** recovering the balan
 
 A contract's price cannot be revised by one party alone, and notifying the customer does not cure the defect. This is why **term repricing** (migration 0022) works the way it does:
 
-- Repricing is framed as a *conditional discount that lapses on an objective event the customer controls* (the Good-as-Cash term elapsing with a balance), enforced in SQL.
+- Repricing is framed as a *conditional price that lapses on an objective event the customer controls* (the Good-as-Cash term elapsing with a balance), enforced in SQL.
+- **The printed contract says "price", not "discount"** (2026-09-01, Ryan's call): clause 5 reads *"the price for settlement within the N-month term"*, and the longer schedules are named in it up front. The vocabulary changed; **the legal shape did not**, and must not. What makes this survive Art. 1308 is that the price is conditional, the trigger is objective and customer-controlled, and any change still requires a signed amendment — not the word "discount". Reword the clause freely; never turn it into a penalty or an increase the dealer declares. `/print/amendment/[id]` still uses the older "discount" wording — a known inconsistency between the two documents, not yet reconciled.
 - It is **two-step and never automatic**: `propose_reprice` drafts an amendment (`/print/amendment/[id]`) → the customer signs → `confirm_reprice` applies it. `revert_reprice` restores the original if they settle.
 - Existing contracts always need a **signed amendment** — the printout exists precisely for the signature.
 

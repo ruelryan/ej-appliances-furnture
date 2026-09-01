@@ -11,6 +11,11 @@ export const COMPANY = {
   address: "Purok Gemelina, Bogo, Tomas Oppus, Southern Leyte",
   gcashName: "Ruel Ryan Rosal",
   gcashNumber: "09069029261",
+  // Who signs the formal documents. Kept separate from gcashName even though
+  // they read the same today: one is a payee on a wallet, the other is the
+  // person whose signature ends a legal letter, and they can diverge.
+  owner: "Ruel Ryan Rosal",
+  ownerTitle: "Owner",
 };
 
 // Days the customer is given to settle or make an arrangement after a
@@ -138,11 +143,12 @@ export function buildDemandLetterBody(
     `If you are unable to settle the full amount, we strongly encourage you to contact us within the same ${days} day period to discuss a payment arrangement. We would far rather agree a schedule you can keep than take this any further.\n\n` +
     `Should you neither settle nor make an arrangement within that period, ${COMPANY.name} will elect one of the remedies available to it under the contract and under law — either to pursue payment of the unpaid balance, or to cancel the sale and recover the item. These remedies are alternatives: if we elect to recover the item, we will not thereafter pursue you for the unpaid balance.\n\n` +
     `Please note that our acceptance of any partial payment shall not be taken as a waiver of the remainder of the balance, nor of any of our rights under the contract.\n\n` +
-    `We trust this matter can be settled without further action.\n\n` +
-    `Very truly yours,\n\n\n` +
-    `${COMPANY.name}\n` +
-    `By: ______________________________\n` +
-    `     Proprietor`
+    `We trust this matter can be settled without further action.`
+    // The body ENDS here, with no valediction. "Very truly yours," plus the
+    // name, title and signature are rendered by <OwnerSignature closing=…/> on
+    // the print page instead: they belong to one block that must not be split
+    // across a page break, and the letter now carries a real signature image
+    // rather than the "By: ____" blank this used to print.
   );
 }
 
