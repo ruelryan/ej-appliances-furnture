@@ -113,13 +113,13 @@ async function main() {
   const journal = readJournal(loadWorkbook(FILE));
 
   const entries: {
-    sales_date: string; invoice_no: string; branch: string;
+    contract_id: string | null; sales_date: string; invoice_no: string; branch: string;
     gross_snapshot: number; customer_name_snapshot: string;
   }[] = [];
   for (let f = 0; ; f += 1000) {
     const { data, error } = await db
       .from("bir_sales_entries")
-      .select("sales_date, invoice_no, branch, gross_snapshot, customer_name_snapshot")
+      .select("contract_id, sales_date, invoice_no, branch, gross_snapshot, customer_name_snapshot")
       .is("cancelled_at", null)
       .order("id")
       .range(f, f + 999);
@@ -192,7 +192,36 @@ async function main() {
   );
   section("AMOUNT DISAGREES", mismatched);
 
-  const clean = !missing.length && !extra.length && !mismatched.length;
+  // Only a delivered item is a sale (0044). book_sale enforces it now, but
+  // anything declared before that guard existed can still be sitting here, and
+  // a sale declared for an item that was never delivered is the one case that
+  // would need putting right with the BIR.
+  const undelivered: string[] = [];
+  {
+    const ids = live.map((e) => e.contract_id).filter(Boolean) as string[];
+    const status = new Map<string, string>();
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data } = await db
+        .from("v_bir_sales_register")
+        .select("contract_id, delivery_status")
+        .in("contract_id", ids.slice(i, i + 200));
+      (data ?? []).forEach((r) =>
+        status.set(String(r.contract_id), String(r.delivery_status ?? "not recorded"))
+      );
+    }
+    for (const e of live) {
+      if (!e.contract_id) continue; // a standalone entry has no delivery to check
+      const st = status.get(e.contract_id);
+      if (st && st !== "delivered") {
+        undelivered.push(
+          `  ${e.branch.padEnd(11)} inv ${String(e.invoice_no).padEnd(14)} ${String(e.customer_name_snapshot).slice(0, 24).padEnd(24)} ${peso(Number(e.gross_snapshot)).padStart(12)}  ${e.sales_date}  delivery=${st}`
+        );
+      }
+    }
+  }
+  section("DECLARED BUT NOT DELIVERED", undelivered);
+
+  const clean = !missing.length && !extra.length && !mismatched.length && !undelivered.length;
   console.log(
     clean
       ? "\n✅ The app's sales book and the filed journal agree."

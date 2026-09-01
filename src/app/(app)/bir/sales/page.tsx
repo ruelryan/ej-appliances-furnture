@@ -26,7 +26,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const REGISTER_SELECT =
-  "contract_id, contract_no, contract_date, customer_name, customer_address, item_description, item_type, cash_price, total_price, term_months, branch, booked, entry_id, invoice_no, sales_date, gross_snapshot";
+  "contract_id, contract_no, contract_date, customer_name, customer_address, item_description, item_type, cash_price, total_price, term_months, branch, booked, entry_id, invoice_no, sales_date, gross_snapshot, delivery_status";
 
 const ENTRY_SELECT =
   "id, contract_id, invoice_no, sales_date, branch, gross_snapshot, customer_name_snapshot, item_snapshot";
@@ -105,13 +105,21 @@ export default async function BirSalesPage({
   const sold = (soldRes.data ?? []) as RegisterRow[];
   const unbooked = sold.filter((r) => !r.booked);
 
+  // Only a delivered item is a sale (0044). The undelivered ones are still
+  // shown, in their own group without a Book button: three of the four live
+  // examples are in stock and become declarable within days, and quietly
+  // dropping them from the page is how a sale gets forgotten. The "not yet
+  // booked" tile counts both, because both are undeclared sales.
+  const ready = unbooked.filter((r) => r.delivery_status === "delivered");
+  const waiting = unbooked.filter((r) => r.delivery_status !== "delivered");
+
   const declared = booked.reduce((t, r) => t + Number(r.gross_snapshot ?? 0), 0);
   const outputDeclared = birSplit(declared).inputTax;
   const actual = sold.reduce((t, r) => t + Number(r.cash_price ?? 0), 0);
   const notBooked = unbooked.reduce((t, r) => t + Number(r.cash_price ?? 0), 0);
 
   const showAll = show === "all";
-  const queue = showAll ? unbooked : unbooked.slice(0, 50);
+  const queue = showAll ? ready : ready.slice(0, 50);
   const periodParam = encodeURIComponent(shownPeriod);
 
   return (
@@ -177,27 +185,27 @@ export default async function BirSalesPage({
           </p>
 
           <SectionCard
-            title="Not yet in the book"
+            title="Ready to book"
             sub={
-              unbooked.length === 0
-                ? "Every sale from this period is booked."
-                : `${unbooked.length} sale${unbooked.length === 1 ? "" : "s"} dated in this period with no entry`
+              ready.length === 0
+                ? "Every delivered sale from this period is booked."
+                : `${ready.length} delivered sale${ready.length === 1 ? "" : "s"} dated in this period with no entry`
             }
             action={
-              unbooked.length > 50 && !showAll ? (
+              ready.length > 50 && !showAll ? (
                 <Link
                   href={`/bir/sales?period=${periodParam}&branch=${branch ?? "all"}&show=all`}
                   className={btnSecondary}
                 >
-                  Show all {unbooked.length}
+                  Show all {ready.length}
                 </Link>
               ) : undefined
             }
           >
-            {unbooked.length === 0 ? (
+            {ready.length === 0 ? (
               <EmptyState
-                title="Nothing outstanding for this period"
-                hint="Every contract dated in this period has an entry in the sales book."
+                title="Nothing ready to book for this period"
+                hint="Every delivered contract dated in this period has an entry in the sales book."
               />
             ) : (
               <div className="overflow-x-auto">
@@ -233,15 +241,80 @@ export default async function BirSalesPage({
                     ))}
                   </tbody>
                 </table>
-                {!showAll && unbooked.length > queue.length && (
+                {!showAll && ready.length > queue.length && (
                   <p className="pt-2 text-xs text-muted">
-                    Showing {queue.length} of {unbooked.length}.
+                    Showing {queue.length} of {ready.length}.
                   </p>
                 )}
               </div>
             )}
           </SectionCard>
         </>
+      )}
+
+      {canManage && waiting.length > 0 && (
+        <SectionCard
+          title="Waiting on delivery"
+          sub={`${waiting.length} sale${waiting.length === 1 ? "" : "s"} dated in this period that cannot be declared yet`}
+        >
+          <p className="mb-2 text-xs text-muted">
+            Only a delivered item counts as a sale, so these have no Book
+            button — <span className="font-mono">book_sale</span> refuses them
+            too. A cancelled item is never delivered, which is why a cancelled
+            sale needs no credit note: it never entered the book. The rest
+            become bookable the moment they are marked delivered.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-150 text-sm">
+              <thead>
+                <tr className={theadRow}>
+                  <th className={td}>Contract</th>
+                  <th className={td}>Date</th>
+                  <th className={td}>Customer</th>
+                  <th className={td}>Item</th>
+                  <th className={td}>Delivery</th>
+                  <th className={tdNum}>Cash price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {waiting.map((r) => (
+                  <tr key={r.contract_id} className="border-b border-line last:border-0">
+                    <td className={`${td} font-mono text-xs`}>
+                      <Link href={`/contracts/${r.contract_id}`} className="hover:underline">
+                        {r.contract_no}
+                      </Link>
+                    </td>
+                    <td className={td}>{fmtDateShort(r.contract_date)}</td>
+                    <td className={td}>{r.customer_name}</td>
+                    <td className={`${td} text-xs text-muted`}>{r.item_description}</td>
+                    <td className={td}>
+                      <span
+                        className={
+                          r.delivery_status === "cancelled"
+                            ? "rounded-full bg-danger-bg px-2 py-0.5 text-micro font-semibold text-danger"
+                            : "rounded-full bg-warning-bg px-2 py-0.5 text-micro font-semibold text-warning"
+                        }
+                      >
+                        {r.delivery_status === "cancelled"
+                          ? "Cancelled"
+                          : r.delivery_status === "in_stock"
+                            ? "In stock"
+                            : r.delivery_status === "to_order"
+                              ? "To order"
+                              : r.delivery_status === "ordered"
+                                ? "Ordered"
+                                : r.delivery_status === "pending"
+                                  ? "Pending"
+                                  : "Not recorded"}
+                      </span>
+                    </td>
+                    <td className={tdNum}>{peso(r.cash_price)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
       )}
 
       <SectionCard

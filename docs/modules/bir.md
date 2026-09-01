@@ -262,6 +262,41 @@ Getting there resolved six differences, and the mix is worth remembering:
 | Tambis, Nunez, Malatag | **Sheet wrong.** Corrected in the journal by Ryan. |
 | LGU - San Ricardo inv 32 | **Neither wrong.** One invoice over two contracts at an amount matching neither — see below. |
 
+## Only a delivered item counts as a sale
+
+Ryan asked what happens to the record when a contract is closed because the sale
+was cancelled, then answered it himself (2026-09-01): **"only the items verified
+as delivered will be counted on sales."**
+
+That settles the tax question without any machinery:
+
+- A **cancelled** sale is never delivered, so it never enters the book. Nothing
+  to reverse, **no credit note, no amended return**.
+- A **delivered** sale that later goes bad is a different thing. The sale
+  happened and stays declared; the unpaid balance is **bad debt**, an
+  income-tax matter rather than a VAT reversal.
+
+**It keys on the delivery, never on `payment_status`.** Closing a contract here
+means both "paid off" and "written off" — 389 closed contracts still carry a
+balance (₱3.7M), 44 of them declared — so the payment status says nothing about
+whether a sale happened. `deliveries.status` (0014) is the source of truth; the
+legacy `contracts.delivery_status` text is a trigger-derived label.
+
+`book_sale` **refuses** a contract whose delivery is not `delivered` (0044),
+naming the current status. `v_bir_sales_register` carries `delivery_status`, so
+`/bir/sales` splits the queue into **Ready to book** and **Waiting on
+delivery** — the second listed without a Book button rather than hidden,
+because most of those become declarable within days and a sale dropped from the
+page is a sale that gets forgotten. Both still count toward "not yet booked".
+
+`book_standalone_sale` is exempt: it has no contract, so there is no delivery to
+check.
+
+`verify-bir-sales.ts` reports **DECLARED BUT NOT DELIVERED** on every run. One
+row predates the guard — furniture invoice 120, 2026-07-20, Madrona Richie M.,
+₱17,500, delivery `pending`. Either the delivery record is stale or the sale was
+declared early; it is in 2026 Q3, unfiled, so either fix is still free.
+
 ## A declared sale with no contract
 
 `bir_sales_entries.contract_id` is **nullable since 0043**, and

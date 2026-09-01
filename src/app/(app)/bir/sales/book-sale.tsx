@@ -36,6 +36,7 @@ export interface RegisterRow {
   invoice_no: string | null;
   sales_date: string | null;
   gross_snapshot: number | null;
+  delivery_status: string | null;
 }
 
 /**

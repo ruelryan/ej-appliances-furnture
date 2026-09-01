@@ -548,7 +548,14 @@ prove via `audit_log` that read-only runs wrote nothing.
   branch. *Booked* (by `sales_date`) and *sold* (by `contract_date`) are
   shown side by side and never subtracted — a July sale booked in August
   belongs to both, in different periods. Still to come: `/bir/vat` (2550Q)
-  and the historical import. **The book starts 2024** — the store became
+  and the historical import. **Only a DELIVERED item is declared as a sale**
+  (0044): `book_sale` refuses any other delivery status, so a cancelled sale
+  never enters the book and needs no credit note, while a delivered sale that
+  goes bad stays declared and is bad debt rather than a VAT reversal. It keys
+  on `deliveries.status`, NOT `payment_status` — closing means both "paid
+  off" and "written off" here (389 closed contracts still owe ₱3.7M), so the
+  payment status says nothing about whether a sale happened.
+  **The book starts 2024** — the store became
   VAT-registered that year, so 64 pre-2024 entries from the first backfill were
   cancelled (`scripts/fix-bir-sales-2024-start.ts`); 365 live, ₱6,914,486.
   **The Receipts tab's "OR no." is `payments.receipt_no`, NOT the sales invoice
