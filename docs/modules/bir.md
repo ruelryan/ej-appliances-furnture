@@ -322,6 +322,37 @@ and the bookkeeper's have now been checked against each other across four years.
 Re-running is guarded: it refuses to import when rows already exist from 2024
 onward, since there is no natural key to deduplicate a purchase-journal row on.
 
+## Two expense sources, and why
+
+| script | source | covers |
+|---|---|---|
+| `import-bir-expenses.ts` | bookkeeper workbook, `Q<n> <year> Exp …` tabs | the **declared** journal, already split by registration — stops where the bookkeeper stops |
+| `import-bir-expenses-detail.ts` | the office's own **Expenses** tab | everything after that, to the present |
+
+The bookkeeper's workbook ends at Q2 2026 because no Q3 tab exists yet, which
+left `/bir` showing July with sales and no purchases. The detailed tab runs to
+the present but has **no branch column**, so the second script's real job is
+deciding which book each row belongs to.
+
+**Ryan's rule (2026-09-01):** *"just separate the furniture supplier to the
+furniture... gasoline and others are on appliances."* Furniture goes to the
+furniture book; fuel, rent, hardware and IT go to appliances, which is also
+where the overhead already lives (0040).
+
+A supplier counts as furniture when its **name** says so, or when every expense
+already booked for it went to the furniture book. History alone is not enough —
+18 suppliers appear in both books historically, so a name that plainly reads
+"furniture" has to win. Every assignment is printed with its reason; the report
+is the point, because a wrong guess puts a purchase in the wrong VAT return.
+
+The July–August 2026 run: 26 rows, ₱207,236.14 — 2 to furniture (Jhoel
+Furniture Shop, Calutan's Furnishing), 24 to appliances including four fuel
+stations. Both books now run to 2026-08-25.
+
+Document type is taken from what the same supplier's existing rows carry, since
+this tab has no OR/SI columns; a new supplier gets `none` rather than a guess.
+Re-running is refused if any expense already exists on or after the start date.
+
 ## Supplier VAT status comes from the Expenses tab
 
 `scripts/fix-bir-suppliers.ts --file <sales-workbook.xlsx>`.
