@@ -61,6 +61,22 @@ this section is the volatile half of the file and drifts fastest.
   - **This will recur** while sales are still written in the Sheet. The script
     is re-runnable and re-derives the diff from the workbook each run, but the
     fix is to stop dual entry, not to keep re-syncing.
+  - **2026-09-07 — the Messenger links were never synced.** Every account sold
+    after the cutover showed no collection group chat: the script created
+    customers with the FB link only and never read the Collection tab, and the
+    new-sale form had no group-chat field (it was customer-page-only, and in
+    practice never filled in). Fixed both: the form takes both links, and the
+    script gained step 7 (fill BLANK links from the Sheet, never overwrite) plus
+    **`--links-only`**, which was used that day — 21 customers filled from the
+    live Sheet (downloaded to `eandj-data\sheet-2026-09-07\`), backup
+    `backup-2026-09-07-*` taken first. **Not applied, needs Ryan**: six more
+    sales exist only in the Sheet (2026192–2026197; one is "Annabelle, Kelly",
+    the reversed name of existing customer "Kelly, Anabelle" 2026187, so a full
+    run would mint a duplicate customer), and two payments the script reads as
+    missing are the SAME receipts on a different date — OR 1545 on 2025181
+    (app 07-27 per the 08-20 ruling, Sheet now says 07-29 again) and OR 1477
+    on 2026181 (app 08-27, Sheet 08-12). A full `--apply` would double-post
+    the second; the matcher keys on contract+date+amount, not receipt number.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
   `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0044 all applied
   to prod** — 0034–0044 verified 2026-09-01 by probing the live catalog for the

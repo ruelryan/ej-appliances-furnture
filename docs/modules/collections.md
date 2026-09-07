@@ -107,7 +107,7 @@ The Directions link (`directionsUrl` in `src/lib/maps.ts`) prefers, in order: th
 A customer has two distinct Messenger URLs (0020), and the importer used to collapse them into one column, silently discarding one:
 
 - `messenger_url` — the customer's **personal** FB/Messenger profile, captured at sale time. Shown on the contract and customer pages, **not** on the collector worklist.
-- `collection_gc_url` — the **collection group chat** (owner + admin + collector + customer) the admin creates after the sale. This is the only link the worklist card renders.
+- `collection_gc_url` — the **collection group chat** (owner + admin + collector + customer) the admin creates around the sale. Entered on the new-sale form or later via "Edit links" on the customer page. This is the only link the worklist card renders. `scripts/sync-sheet-divergence.ts` also fills blank links from the Sheet's Collection tab (group chat) and Contracts Database (personal), never overwriting a value the app already holds.
 
 Collectors get the group chat only: collection talk belongs where the owner and admin can see it, and steering field communication into a chat the customer joined knowingly keeps it inside the Data Privacy Act's lines (see [../business-rules-legal.md](../business-rules-legal.md) — never disclose a debt to a third party). `set_customer_links` (owner/admin only — `customers` previously had no update path at all) writes both; a collector must not be able to repoint the chat they are chased on. Pass `null` to leave a link unchanged, `''` to clear it.
 

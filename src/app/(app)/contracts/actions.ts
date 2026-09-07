@@ -93,6 +93,7 @@ export interface CreateContractInput {
     streetPurok: string;
     landmark: string;
     messengerUrl: string;
+    collectionGcUrl?: string;
   };
   contractDate: string;
   itemDescription: string;
@@ -139,6 +140,7 @@ export async function createContract(input: CreateContractInput) {
         street_purok: nc.streetPurok || null,
         landmark: nc.landmark || null,
         messenger_url: nc.messengerUrl || null,
+        collection_gc_url: nc.collectionGcUrl || null,
       })
       .select("id")
       .single();

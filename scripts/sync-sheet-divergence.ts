@@ -16,6 +16,12 @@
  *   4. fix the two records where the two systems disagree (Sheet wins)
  *   5. carry over delivery status and the owner's contract closures
  *   6. leave id_counters above every number now in use
+ *   7. fill in the two Messenger links the Sheet has and the app lacks — the
+ *      personal FB link (Contracts Database) and the collection group chat
+ *      (Collection tab). Only blanks are filled; a link the app already holds
+ *      is never overwritten, because it may have been corrected in the app.
+ *      This step existed nowhere before 2026-09-07, which is why every account
+ *      sold after the cutover showed no group chat.
  *
  * Payment numbers are NOT carried over. From PAY5939 the same PAY#### means a
  * different payment in each system, and payments.payment_no is unique — reusing
@@ -44,6 +50,14 @@ dotenv.config({ path: ".env.local" });
 pg.types.setTypeParser(1082, (v) => v);
 
 const APPLY = process.argv.includes("--apply");
+/**
+ * --links-only: skip steps 1–6 (renumber, contracts, payments, conflicts,
+ * closures, counters) and fill in Messenger links for contracts the app already
+ * has. Creating sales and payments is a money-shaped decision — the Sheet's new
+ * rows may carry a reversed or misspelt name that would mint a duplicate
+ * customer — so the links can be caught up without taking that decision.
+ */
+const LINKS_ONLY = process.argv.includes("--links-only");
 
 const DATA_DIR =
   process.env.EANDJ_DATA_DIR ?? path.join(os.homedir(), "Documents", "eandj-data");
@@ -157,7 +171,8 @@ async function main() {
     process.exit(1);
   }
   console.log(`Sheet : ${BOOK}`);
-  console.log(`Mode  : ${APPLY ? "APPLY (will COMMIT)" : "DRY RUN (will ROLLBACK)"}\n`);
+  console.log(`Mode  : ${APPLY ? "APPLY (will COMMIT)" : "DRY RUN (will ROLLBACK)"}${
+    LINKS_ONLY ? " — LINKS ONLY (steps 1–6 reported, not applied)" : ""}\n`);
 
   const wb = XLSX.readFile(BOOK);
   const sc = tab(wb, "Contracts Database", 1).rows
@@ -194,6 +209,17 @@ async function main() {
       ref: txt(r["Reference no."]),
     }));
 
+  // The Collection tab is keyed by contract number ("Customer Card no."), so
+  // the group chat is per contract in the Sheet and per customer in the app.
+  const sg = tab(wb, "Collection", 1).rows
+    .filter((r) => r["Customer Card no."] != null)
+    .map((r) => ({
+      no: String(r["Customer Card no."]).trim(),
+      name: txt(r["Customer Name"]),
+      gc: txt(r["Messenger Collection GC"]),
+    }))
+    .filter((r) => r.gc);
+
   const client = await connect();
   const q = async <T = Row>(sql: string, params: unknown[] = []) =>
     (await client.query(sql, params)).rows as T[];
@@ -207,11 +233,14 @@ async function main() {
     payment_date: string; amount: string; voided_at: string | null }>(
     `select id, payment_no, contract_id, payment_date, amount, voided_at
        from payments order by payment_no`);
-  const dbCust = await q<{ id: string; display_name: string }>(
-    `select id, display_name from customers`);
+  const dbCust = await q<{ id: string; display_name: string;
+    messenger_url: string | null; collection_gc_url: string | null }>(
+    `select id, display_name, messenger_url, collection_gc_url from customers`);
 
   const noById = new Map(dbC.map((c) => [c.id, c.contract_no]));
   const idByNo = new Map(dbC.map((c) => [c.contract_no, c.id]));
+  const custById = new Map(dbCust.map((c) => [c.id, c]));
+  const custIdByContractNo = new Map(dbC.map((c) => [c.contract_no, c.customer_id]));
   const custByName = new Map<string, string>();
   for (const c of dbCust) if (!custByName.has(norm(c.display_name))) custByName.set(norm(c.display_name), c.id);
 
@@ -288,6 +317,40 @@ async function main() {
     key(c.contractNo, c.set.payment_date ?? c.match.date, c.set.amount ?? c.match.amount)));
   const toImport = missingPayments.filter((p) => !conflictKeys.has(key(p.contractNo, p.date, p.amount)));
 
+  // ── Messenger links the app is missing ─────────────────────────────────
+  // One candidate per (contract, link) the Sheet has a value for. Against an
+  // existing contract we can decide now; against one created in this run the
+  // customer may not exist yet, so the decision is made after step 2, inside
+  // the transaction. Either way only a NULL is ever filled.
+  type LinkFill = { no: string; name: string | null; fb: string | null; gc: string | null };
+  const fbByNo = new Map(sc.filter((c) => c.fb).map((c) => [c.no, c]));
+  const gcByNo = new Map(sg.map((r) => [r.no, r]));
+  const newNos = new Set(missingContracts.map((c) => c.no));
+  const linkFills: LinkFill[] = [];
+  const linksDiffer: { no: string; name: string; which: string; app: string; sheet: string }[] = [];
+  for (const no of new Set([...fbByNo.keys(), ...gcByNo.keys()])) {
+    const sheetNo = no;
+    const fb = fbByNo.get(sheetNo)?.fb ?? null;
+    const gc = gcByNo.get(sheetNo)?.gc ?? null;
+    const name = fbByNo.get(sheetNo)?.name ?? gcByNo.get(sheetNo)?.name ?? null;
+    if (newNos.has(sheetNo)) {
+      if (!LINKS_ONLY) linkFills.push({ no: sheetNo, name, fb, gc });
+      continue;
+    }
+    // asSheet() maps the app's pre-renumber row onto the Sheet's number
+    const appNo = ren && sheetNo === RENUMBER.to ? RENUMBER.from : sheetNo;
+    const cust = custById.get(custIdByContractNo.get(appNo) ?? "");
+    if (!cust) continue;                      // not in the app at all (e.g. 30120-style skips)
+    const needFb = fb && !cust.messenger_url ? fb : null;
+    const needGc = gc && !cust.collection_gc_url ? gc : null;
+    if (fb && cust.messenger_url && cust.messenger_url !== fb)
+      linksDiffer.push({ no: sheetNo, name: cust.display_name, which: "personal", app: cust.messenger_url, sheet: fb });
+    if (gc && cust.collection_gc_url && cust.collection_gc_url !== gc)
+      linksDiffer.push({ no: sheetNo, name: cust.display_name, which: "group chat", app: cust.collection_gc_url, sheet: gc });
+    if (needFb || needGc) linkFills.push({ no: sheetNo, name, fb: needFb, gc: needGc });
+  }
+  linkFills.sort((a, b) => a.no.localeCompare(b.no));
+
   // ── report ─────────────────────────────────────────────────────────────
   const line = (s = "") => console.log(s);
   line("─".repeat(72));
@@ -315,10 +378,24 @@ async function main() {
       c.already ? `already applied (${c.already.payment_no})`
         : c.row ? c.row.payment_no : "NOT FOUND"} — ${c.why}`);
 
+  line();
+  line(`5. LINKS      ${linkFills.length} customers to fill in`);
+  for (const f of linkFills)
+    line(`   ${f.no}  ${String(f.name ?? "").padEnd(26).slice(0, 26)}  ${
+      [f.fb ? "personal" : null, f.gc ? "group chat" : null].filter(Boolean).join(" + ")}${
+      newNos.has(f.no) ? "  (contract created this run)" : ""}`);
+  if (linksDiffer.length) {
+    line(`   ${linksDiffer.length} differ from the Sheet and are LEFT as the app has them:`);
+    for (const d of linksDiffer)
+      line(`   ${d.no}  ${d.name.padEnd(26).slice(0, 26)}  ${d.which}: app ${d.app}  |  sheet ${d.sheet}`);
+  }
+  if (LINKS_ONLY && (ren || missingContracts.length || toImport.length))
+    line(`   --links-only: steps 1–4 above are reported only; nothing else is applied`);
   line("─".repeat(72));
   line();
 
-  if (!ren && missingContracts.length === 0 && toImport.length === 0) {
+  const nothingElse = !ren && missingContracts.length === 0 && toImport.length === 0;
+  if ((LINKS_ONLY || nothingElse) && linkFills.length === 0) {
     line("Nothing to do.");
     await client.end();
     return;
@@ -332,9 +409,10 @@ async function main() {
        json_build_object('sub', $1::text, 'role', 'authenticated')::text, true)`,
     [ACTING_USER]);
 
-  const done = { renamed: 0, customers: 0, contracts: 0, payments: 0, conflicts: 0, deliveries: 0, closed: 0 };
+  const done = { renamed: 0, customers: 0, contracts: 0, payments: 0, conflicts: 0, deliveries: 0, closed: 0, links: 0 };
 
   try {
+   if (!LINKS_ONLY) {
     // 1. renumber
     if (ren) {
       const r = await q(`update contracts set contract_no = $1
@@ -459,6 +537,24 @@ async function main() {
       await client.query(`select close_contract($1::uuid)`, [idByNo.get(c.no)]);
       done.closed++;
     }
+   } // !LINKS_ONLY
+
+    // 6. Messenger links — through set_customer_links (owner/admin RPC), and
+    // re-read inside the transaction so a customer created in step 2 is
+    // decided on what it holds now, not on the pre-run snapshot. NULL leaves a
+    // link untouched; only blanks are filled.
+    for (const f of linkFills) {
+      const cid = idByNo.get(f.no);
+      if (!cid) throw new Error(`links for ${f.no}: no contract in the app`);
+      const [cu] = await q<{ id: string; messenger_url: string | null; collection_gc_url: string | null }>(
+        `select cu.id, cu.messenger_url, cu.collection_gc_url
+           from customers cu join contracts c on c.customer_id = cu.id where c.id = $1`, [cid]);
+      const setFb = f.fb && !cu.messenger_url ? f.fb : null;
+      const setGc = f.gc && !cu.collection_gc_url ? f.gc : null;
+      if (!setFb && !setGc) continue;
+      await client.query(`select set_customer_links($1::uuid, $2::text, $3::text)`, [cu.id, setFb, setGc]);
+      done.links++;
+    }
 
     // ── verify before deciding to commit ─────────────────────────────────
     const [{ n: cCount }] = await q<{ n: string }>(`select count(*)::text n from contracts`);
@@ -477,6 +573,7 @@ async function main() {
     line(`   conflicts    ${done.conflicts}`);
     line(`   deliveries   ${done.deliveries}`);
     line(`   closed       ${done.closed}`);
+    line(`   links        ${done.links} customers`);
     line();
     line(`   contracts now ${cCount} (was ${dbC.length})`);
     line(`   payments  now ${pCount} (was ${dbP.length})`);

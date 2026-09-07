@@ -109,6 +109,7 @@ export function ContractForm({
             streetPurok: String(fd.get("street_purok") ?? "").trim(),
             landmark: String(fd.get("landmark") ?? "").trim(),
             messengerUrl: String(fd.get("messenger_url") ?? "").trim(),
+            collectionGcUrl: String(fd.get("collection_gc_url") ?? "").trim(),
           }
         : undefined,
       contractDate: String(fd.get("contract_date")),
@@ -187,12 +188,19 @@ export function ContractForm({
               </p>
             )}
             <AddressFields tree={locationTree} />
-            {/* Personal profile only. The collection group chat is created by
-                the admin after the contract exists — added on the customer page. */}
+            {/* Two different links (0020). Both optional here; both can also be
+                set later with "Edit links" on the customer page. The group chat
+                used to be customer-page-only, and in practice it was never
+                added — every account sold after the July 2026 cutover had none. */}
             <input
               name="messenger_url"
               placeholder="Customer's personal Facebook/Messenger link (optional)"
               defaultValue={prefill?.messengerUrl ?? ""}
+              className={`col-span-2 ${input}`}
+            />
+            <input
+              name="collection_gc_url"
+              placeholder="Collection group chat link (optional — shown to the collector)"
               className={`col-span-2 ${input}`}
             />
           </div>
