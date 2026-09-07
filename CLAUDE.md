@@ -69,14 +69,21 @@ this section is the volatile half of the file and drifts fastest.
     script gained step 7 (fill BLANK links from the Sheet, never overwrite) plus
     **`--links-only`**, which was used that day — 21 customers filled from the
     live Sheet (downloaded to `eandj-data\sheet-2026-09-07\`), backup
-    `backup-2026-09-07-*` taken first. **Not applied, needs Ryan**: six more
-    sales exist only in the Sheet (2026192–2026197; one is "Annabelle, Kelly",
-    the reversed name of existing customer "Kelly, Anabelle" 2026187, so a full
-    run would mint a duplicate customer), and two payments the script reads as
-    missing are the SAME receipts on a different date — OR 1545 on 2025181
-    (app 07-27 per the 08-20 ruling, Sheet now says 07-29 again) and OR 1477
-    on 2026181 (app 08-27, Sheet 08-12). A full `--apply` would double-post
-    the second; the matcher keys on contract+date+amount, not receipt number.
+    `backup-2026-09-07-*` taken first. Then, on Ryan's rulings the same day, a
+    full `--apply` folded in the **six sales that existed only in the Sheet
+    (2026192–2026197)** — prod now **1,550 contracts, 1,157 customers**, counter
+    at 197 — with two new script rules that this drift taught: **`CUSTOMER_ALIASES`**
+    (Sheet contract no. → app customer, for a reversed/misspelt name; 2026196
+    "Annabelle, Kelly" IS "Kelly, Anabelle" of 2026187 — without it a duplicate
+    customer is minted) and two more `CONFLICTS` for receipts the Sheet dates
+    differently — OR 1545 on 2025181 moved BACK to 07-29 (the 08-20 ruling had
+    moved it to 07-27; the Sheet now says 07-29 and the Sheet was taken as
+    right again) and OR 1477 on 2026181 moved 08-27 → 08-12. **The matcher keys
+    on contract+date+amount, not receipt number**, so a re-dated receipt reads
+    as a missing payment and, without a CONFLICTS rule, a full run
+    double-posts it (0032's cap caught one of the two only because the account
+    was nearly paid off). If the Sheet re-dates a receipt again, add the rule
+    before running — or fix the matcher to fall back to receipt number.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
   `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0044 all applied
   to prod** — 0034–0044 verified 2026-09-01 by probing the live catalog for the

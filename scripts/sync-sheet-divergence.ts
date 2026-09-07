@@ -72,6 +72,14 @@ const ACTING_USER = "99fbe929-87e4-46b7-82c5-5ef7e55dd838";
 const RENUMBER = { from: "2026160", to: "2026163" };
 
 /**
+ * Sheet contract no. → the app customer it belongs to, when the Sheet's name
+ * would not match. Names are matched by norm(display_name), so a reversed or
+ * misspelt name mints a duplicate customer without this.
+ * 2026196 "Annabelle, Kelly" is "Kelly, Anabelle" (2026187) — Ryan, 2026-09-07.
+ */
+const CUSTOMER_ALIASES: Record<string, string> = { "2026196": "Kelly, Anabelle" };
+
+/**
  * Cash prices the Sheet is missing, supplied by the owner. A contract with no
  * price cannot be created — compute_terms would make the whole schedule zero —
  * so without an entry here the row is skipped and reported instead.
@@ -291,10 +299,17 @@ async function main() {
     why: string;
   };
   const CONFLICTS: Conflict[] = [
-    { contractNo: "2025181", match: { amount: 7000, date: "2026-07-29" }, set: { payment_date: "2026-07-27" },
-      why: "Sheet dates this payment 07-27" },
+    // 2026-08-20: the Sheet said 07-27 and the app's 07-29 was moved to it.
+    // 2026-09-07: the Sheet reads 07-29 again and Ryan ruled the Sheet right, so
+    // the row goes back. Same receipt (OR 1545) throughout — one payment, never two.
+    { contractNo: "2025181", match: { amount: 7000, date: "2026-07-27" }, set: { payment_date: "2026-07-29" },
+      why: "Sheet dates this payment 07-29 (OR 1545; Ryan, 2026-09-07)" },
     { contractNo: "165", match: { amount: 1695, date: "2026-08-12" }, set: { amount: 1800 },
       why: "Sheet records ₱1,800, app has ₱1,695" },
+    // OR 1477 was recorded in the app on 08-27; the Sheet has it 08-12. Without
+    // this rule the matcher (contract+date+amount) reads it as a second ₱4,000.
+    { contractNo: "2026181", match: { amount: 4000, date: "2026-08-27" }, set: { payment_date: "2026-08-12" },
+      why: "Sheet dates this payment 08-12 (OR 1477; Ryan, 2026-09-07)" },
   ];
   // Look for the fixed state first. Once applied the "before" values are gone, and
   // a second run must recognise its own work rather than report the row missing.
@@ -425,12 +440,16 @@ async function main() {
 
     // 2. contracts (ascending, so the counter walks forward naturally)
     for (const c of missingContracts) {
-      // find or create the customer
-      let custId = custByName.get(norm(c.name));
+      // find or create the customer. CUSTOMER_ALIASES first: a Sheet row whose
+      // name is a misspelling or reversal of a customer the app already has.
+      const alias = CUSTOMER_ALIASES[c.no];
+      let custId = alias ? custByName.get(norm(alias)) : custByName.get(norm(c.name));
+      if (alias && !custId) throw new Error(`${c.no}: alias "${alias}" is not a customer in the app`);
       if (!custId) {
-        const comma = String(c.name).indexOf(",");
-        const last = comma < 0 ? String(c.name).trim() : String(c.name).slice(0, comma).trim();
-        const first = comma < 0 ? "" : String(c.name).slice(comma + 1).trim();
+        const clean = String(c.name).replace(/\s+/g, " ");
+        const comma = clean.indexOf(",");
+        const last = comma < 0 ? clean.trim() : clean.slice(0, comma).trim();
+        const first = comma < 0 ? "" : clean.slice(comma + 1).trim();
         const ins = await q<{ id: string }>(
           `insert into customers (last_name, first_name, phones, messenger_url, address)
            values ($1, $2, $3, $4, $5) returning id`,
