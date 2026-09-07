@@ -83,7 +83,9 @@ this section is the volatile half of the file and drifts fastest.
     as a missing payment and, without a CONFLICTS rule, a full run
     double-posts it (0032's cap caught one of the two only because the account
     was nearly paid off). If the Sheet re-dates a receipt again, add the rule
-    before running — or fix the matcher to fall back to receipt number.
+    before running. **Receipt number alone is NOT a key** — the two booklets
+    reuse numbers (1477 and 1545 each also sit on a 2026-04/05 payment), so a
+    receipt-number fallback would need contract + amount alongside it.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
   `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0044 all applied
   to prod** — 0034–0044 verified 2026-09-01 by probing the live catalog for the
