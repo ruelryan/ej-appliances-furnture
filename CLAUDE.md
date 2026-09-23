@@ -259,6 +259,7 @@ npx tsx scripts/backup-prod.ts            # full JSON dump of all tables → ean
 npx tsx scripts/migrate/import.ts --dir <csvs> [--load]  # Sheet re-import
 npx tsx scripts/sync-sheet-divergence.ts [--apply]  # fold Sheet drift back in
 npx tsx scripts/fix-contract-2026190-term.ts [--apply]  # one-off, done 2026-08-29
+npx tsx scripts/fix-bir-government-sales.ts [--apply]   # one-off, done 2026-09-23; idempotent
 npx tsx scripts/extract-tabs.ts <book.xlsx|drive.json> <dir>  # Sheet tabs → CSVs
 npx tsx scripts/import-locations.ts --file <book.xlsx> [--load]  # seed ph_locations
 npx tsx scripts/import-pricelist.ts [--apply]       # seed catalog + photos + dHashes
@@ -645,11 +646,14 @@ prove via `audit_log` that read-only runs wrote nothing.
   hold a TERMS figure that disagrees with a filed one. 0045 added the two
   columns a contract cannot supply — `quantity` and `sale_type`
   (Private/Government, which matters because a government buyer withholds VAT
-  — the backfill made every existing row `Private`, and **six live rows look
-  like government buyers and still need a ruling one at a time**: four
-  elementary/high schools, and the LGU - San Ricardo standalone entry; a sale
-  to a public school is not automatically a government sale, so none was
-  changed automatically)
+  — the backfill made every existing row `Private`; **six were ruled government
+  by Ryan on 2026-09-23 and set that day** by
+  `scripts/fix-bir-government-sales.ts`: four elementary/high schools plus the
+  LGU - San Ricardo standalone entry, now **6 Government ₱456,033.65 / 369
+  Private**. The script pins its six by `(sales_date, invoice_no, branch)`
+  rather than a name pattern — a pattern re-run later would sweep up rows
+  nobody has ruled on, and a sale to a public school is not automatically a
+  government sale)
   — plus `update_sale_entry_details`, which corrects those two and nothing
   else. It **dropped and recreated** `book_sale`/`book_standalone_sale` rather
   than replacing them (a changed argument list makes an overload); both new
