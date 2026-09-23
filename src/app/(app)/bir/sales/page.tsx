@@ -7,29 +7,42 @@ import {
   getProfile,
 } from "@/lib/supabase/server";
 import { peso, fmtDateShort, phTodayISO } from "@/lib/format";
-import { BIR_BRANCHES, birSplit, branchInfo, resolvePeriod } from "@/lib/bir";
+import {
+  BIR_BRANCHES,
+  type LedgerEntry,
+  birSplit,
+  branchInfo,
+  resolvePeriod,
+} from "@/lib/bir";
 import { SectionCard } from "@/components/section-card";
 import { StatTile } from "@/components/stat-tile";
 import { Alert } from "@/components/alert";
 import { EmptyState } from "@/components/empty-state";
-import { btnSecondary, pageStack, theadRow, td, tdNum } from "@/components/ui";
+import {
+  btnSecondary,
+  cardStack,
+  pageStack,
+  theadRow,
+  td,
+  tdNum,
+} from "@/components/ui";
 import { PeriodPicker } from "../period-picker";
 import { latestPeriodWithData } from "../latest-period";
-import {
-  BookSale,
-  CancelBooking,
-  StandaloneSale,
-  type BookedEntry,
-  type RegisterRow,
-} from "./book-sale";
+import { BookSale, StandaloneSale, type RegisterRow } from "./book-sale";
+import { Ledger } from "./ledger";
+import type { BookableContract } from "./ledger-entry";
 
 export const dynamic = "force-dynamic";
 
 const REGISTER_SELECT =
   "contract_id, contract_no, contract_date, customer_name, customer_address, item_description, item_type, cash_price, total_price, term_months, branch, booked, entry_id, invoice_no, sales_date, gross_snapshot, delivery_status";
 
+// Everything the paper ledger has a column for. The address, the VAT split and
+// the two typed columns (0045) are read here rather than recomputed: they are
+// snapshots taken at booking, and a filed month must not move because a
+// customer was renamed or a rate changed.
 const ENTRY_SELECT =
-  "id, contract_id, invoice_no, sales_date, branch, gross_snapshot, customer_name_snapshot, item_snapshot";
+  "id, contract_id, invoice_no, sales_date, branch, gross_snapshot, vatable_sales, vat_output_tax, customer_name_snapshot, customer_address_snapshot, item_snapshot, quantity, sale_type";
 
 export default async function BirSalesPage({
   searchParams,
@@ -101,7 +114,7 @@ export default async function BirSalesPage({
     );
   }
 
-  const booked = (bookedRes.data ?? []) as BookedEntry[];
+  const booked = (bookedRes.data ?? []) as LedgerEntry[];
   const sold = (soldRes.data ?? []) as RegisterRow[];
   const unbooked = sold.filter((r) => !r.booked);
 
@@ -117,6 +130,11 @@ export default async function BirSalesPage({
   const outputDeclared = birSplit(declared).inputTax;
   const actual = sold.reduce((t, r) => t + Number(r.cash_price ?? 0), 0);
   const notBooked = unbooked.reduce((t, r) => t + Number(r.cash_price ?? 0), 0);
+
+  // One ledger per registration; the All tab stacks both.
+  const ledgerBranches = scoped
+    ? [branch!]
+    : BIR_BRANCHES.map((b) => b.value as string);
 
   const showAll = show === "all";
   const queue = showAll ? ready : ready.slice(0, 50);
@@ -330,72 +348,49 @@ export default async function BirSalesPage({
           </Link>
         }
       >
-        {booked.length === 0 ? (
-          <EmptyState
-            title="No entries for this period"
-            hint={
-              canManage
-                ? "Book a sale from the list above; it will appear here with its invoice number."
-                : "Nothing has been entered in the sales book for these dates."
-            }
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-175 text-sm">
-              <thead>
-                <tr className={theadRow}>
-                  <th className={td}>Date</th>
-                  <th className={td}>Invoice no.</th>
-                  <th className={td}>Customer</th>
-                  <th className={td}>Item</th>
-                  <th className={td}>Book</th>
-                  <th className={tdNum}>Amount</th>
-                  {canManage && <th className={td}></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {booked.map((r) => (
-                  <tr key={r.id} className="border-b border-line last:border-0">
-                    <td className={td}>{fmtDateShort(r.sales_date)}</td>
-                    <td className={`${td} font-mono text-xs`}>{r.invoice_no}</td>
-                    <td className={td}>
-                      {canManage && r.contract_id ? (
-                        <Link href={`/contracts/${r.contract_id}`} className="hover:underline">
-                          {r.customer_name_snapshot}
-                        </Link>
-                      ) : (
-                        r.customer_name_snapshot
-                      )}
-                      {!r.contract_id && (
-                        <span className="ml-2 text-micro text-muted">no contract</span>
-                      )}
-                    </td>
-                    <td className={`${td} text-xs text-muted`}>{r.item_snapshot}</td>
-                    <td className={`${td} text-xs`}>{branchInfo(r.branch).label}</td>
-                    <td className={tdNum}>{peso(r.gross_snapshot)}</td>
-                    {canManage && (
-                      <td className={td}>
-                        <CancelBooking row={r} />
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-line font-semibold">
-                  <td className={td} colSpan={5}>
-                    Declared this period
-                  </td>
-                  <td className={tdNum}>{peso(declared)}</td>
-                  {canManage && <td className={td}></td>}
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
+        {/* The bookkeeper's own layout, one ledger per registration. Under the
+            All tab that is two ledgers stacked rather than one merged table:
+            they keep separate invoice booklets and file separate returns, which
+            is exactly why the workbook has two tabs. */}
+        <div className={cardStack}>
+          <p className="text-xs text-muted">
+            The columns, their order and the line for a day with no sale are the
+            paper book&rsquo;s. Six of them — F, VAT reg. no., Exempted,
+            Zero-rated, Local, Service — have never carried a value and are
+            drawn empty so the positions still match. Every sale is entered
+            under Cash.
+          </p>
+          {ledgerBranches.map((b) => (
+            <Ledger
+              key={b}
+              branch={b}
+              entries={booked.filter((e) => e.branch === b)}
+              start={range.start}
+              end={range.end}
+              canManage={canManage}
+              bookable={bookableFor(ready, b)}
+              defaultDate={today}
+            />
+          ))}
+        </div>
       </SectionCard>
     </div>
   );
+}
+
+/** The entry line offers only what may legally be declared: delivered, not yet
+ *  booked, and belonging to this registration's booklet. */
+function bookableFor(ready: RegisterRow[], branch: string): BookableContract[] {
+  return ready
+    .filter((r) => r.branch === branch)
+    .map((r) => ({
+      contract_id: r.contract_id,
+      contract_no: r.contract_no,
+      customer_name: r.customer_name,
+      customer_address: r.customer_address,
+      item_description: r.item_description,
+      cash_price: Number(r.cash_price),
+    }));
 }
 
 /** One tab per registration, plus All. Plain links: a GET keeps working while

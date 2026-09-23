@@ -16,7 +16,13 @@ import {
   textarea,
 } from "@/components/ui";
 import { peso, fmtDateShort } from "@/lib/format";
-import { BIR_BRANCHES, birSplit, branchInfo } from "@/lib/bir";
+import {
+  BIR_BRANCHES,
+  BIR_SALE_TYPES,
+  DEFAULT_SALE_TYPE,
+  birSplit,
+  branchInfo,
+} from "@/lib/bir";
 import { bookSale, bookStandaloneSale, cancelSaleEntry } from "../actions";
 
 export interface RegisterRow {
@@ -59,6 +65,8 @@ export function BookSale({ row, defaultDate }: { row: RegisterRow; defaultDate: 
 
   const [invoiceNo, setInvoiceNo] = useState("");
   const [salesDate, setSalesDate] = useState(defaultDate);
+  const [saleType, setSaleType] = useState<string>(DEFAULT_SALE_TYPE);
+  const [quantity, setQuantity] = useState("1");
   const [note, setNote] = useState("");
 
   const book = branchInfo(row.branch);
@@ -66,18 +74,26 @@ export function BookSale({ row, defaultDate }: { row: RegisterRow; defaultDate: 
   function submit() {
     setError("");
     if (!invoiceNo.trim()) return setError("Type the invoice number from the booklet.");
+    const qty = Number(quantity);
+    if (!Number.isInteger(qty) || qty < 1) {
+      return setError("Quantity must be a whole number, 1 or more.");
+    }
     startTransition(async () => {
       const res = await bookSale({
         contractId: row.contract_id,
         invoiceNo,
         salesDate,
         note,
+        saleType,
+        quantity: qty,
       });
       if (res.error) setError(res.error);
       else {
         setOpen(false);
         setInvoiceNo("");
         setNote("");
+        setSaleType(DEFAULT_SALE_TYPE);
+        setQuantity("1");
         router.refresh();
       }
     });
@@ -170,6 +186,41 @@ export function BookSale({ row, defaultDate }: { row: RegisterRow; defaultDate: 
             Type the number printed on the {book.label} booklet. The app does not
             assign it — it must match the paper.
           </p>
+
+          {/* The two columns of the paper book that the contract cannot supply
+              (0045). Both are snapshotted with the sale. */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={label}>Type of sales</label>
+              <select
+                className={select}
+                value={saleType}
+                onChange={(e) => setSaleType(e.target.value)}
+              >
+                {BIR_SALE_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={label}>Quantity</label>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                className={input}
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
+            </div>
+          </div>
+          {saleType === "Government" && (
+            <p className="text-xs text-warning">
+              A government buyer withholds VAT. Check the invoice before saving.
+            </p>
+          )}
 
           <div>
             <label className={label}>Note (optional)</label>
@@ -324,6 +375,8 @@ export function StandaloneSale({ defaultDate }: { defaultDate: string }) {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [item, setItem] = useState("");
+  const [saleType, setSaleType] = useState<string>(DEFAULT_SALE_TYPE);
+  const [quantity, setQuantity] = useState("1");
   const [note, setNote] = useState("");
 
   const amount = Number(gross) || 0;
@@ -335,15 +388,21 @@ export function StandaloneSale({ defaultDate }: { defaultDate: string }) {
     if (!invoiceNo.trim()) return setError("Type the invoice number from the booklet.");
     if (!name.trim()) return setError("A customer name is required.");
     if (amount <= 0) return setError("Enter the amount on the invoice.");
+    const qty = Number(quantity);
+    if (!Number.isInteger(qty) || qty < 1) {
+      return setError("Quantity must be a whole number, 1 or more.");
+    }
     startTransition(async () => {
       const res = await bookStandaloneSale({
         invoiceNo, salesDate, branch, gross: amount,
         customerName: name, customerAddress: address, item, note,
+        saleType, quantity: qty,
       });
       if (res.error) setError(res.error);
       else {
         setOpen(false);
         setInvoiceNo(""); setGross(""); setName(""); setAddress(""); setItem(""); setNote("");
+        setSaleType(DEFAULT_SALE_TYPE); setQuantity("1");
         router.refresh();
       }
     });
@@ -423,9 +482,29 @@ export function StandaloneSale({ defaultDate }: { defaultDate: string }) {
             <label className={label}>Address</label>
             <input className={input} value={address} onChange={(e) => setAddress(e.target.value)} />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={label}>Item</label>
+              <input className={input} value={item} onChange={(e) => setItem(e.target.value)} />
+            </div>
+            <div>
+              <label className={label}>Quantity</label>
+              <input type="number" min={1} step={1} className={input}
+                value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            </div>
+          </div>
           <div>
-            <label className={label}>Item</label>
-            <input className={input} value={item} onChange={(e) => setItem(e.target.value)} />
+            <label className={label}>Type of sales</label>
+            <select className={select} value={saleType} onChange={(e) => setSaleType(e.target.value)}>
+              {BIR_SALE_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            {saleType === "Government" && (
+              <p className="mt-1 text-xs text-warning">
+                A government buyer withholds VAT. Check the invoice before saving.
+              </p>
+            )}
           </div>
           <div>
             <label className={label}>Note (optional)</label>

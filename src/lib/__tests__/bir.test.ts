@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   BIR_BRANCHES,
+  BIR_SALE_TYPES,
   BIR_SPLIT_CASES,
+  type LedgerEntry,
   birSplit,
   branchForItemType,
   branchInfo,
+  buildLedgerRows,
+  ledgerTotals,
   monthRange,
   orCannotClaimInputTax,
   periodKey,
@@ -135,5 +139,100 @@ describe("the two VAT registrations", () => {
     const values = BIR_BRANCHES.map((b) => b.value);
     expect(new Set(values).size).toBe(values.length);
     for (const v of values) expect(v).toBe(v.toLowerCase());
+  });
+});
+
+/**
+ * The ledger is the paper book's layout, and the thing that makes it the paper
+ * book rather than a list is the line for a day that had no sale. These cases
+ * pin that, plus the two ways a date can go wrong: an entry outside the period
+ * leaking in, and a day shifting by one because a Date was built in the
+ * machine's local zone.
+ */
+describe("buildLedgerRows", () => {
+  const entry = (over: Partial<LedgerEntry> & { sales_date: string }): LedgerEntry => ({
+    id: over.sales_date + (over.invoice_no ?? ""),
+    contract_id: null,
+    invoice_no: "230140005451",
+    customer_name_snapshot: "Diez, Mitch",
+    customer_address_snapshot: "Cantamuac, Malitbog, Southern Leyte",
+    item_snapshot: "Haier Washing Machine with Dryer",
+    vatable_sales: 10428.57,
+    vat_output_tax: 1251.43,
+    gross_snapshot: 11680,
+    quantity: 1,
+    sale_type: "Private",
+    branch: "appliances",
+    ...over,
+  });
+
+  it("emits one row per calendar day when nothing was sold", () => {
+    const rows = buildLedgerRows([], "2026-09-01", "2026-09-30");
+    expect(rows).toHaveLength(30);
+    expect(rows.every((r) => r.kind === "none")).toBe(true);
+    expect(rows[0].date).toBe("2026-09-01");
+    expect(rows[29].date).toBe("2026-09-30");
+  });
+
+  it("puts a sale on its day and leaves the quiet days in place", () => {
+    const rows = buildLedgerRows([entry({ sales_date: "2026-09-02" })], "2026-09-01", "2026-09-03");
+    expect(rows.map((r) => r.kind)).toEqual(["none", "entry", "none"]);
+    expect(rows.map((r) => r.date)).toEqual(["2026-09-01", "2026-09-02", "2026-09-03"]);
+  });
+
+  it("lists several sales under one day, dated on the first line only", () => {
+    const rows = buildLedgerRows(
+      [
+        entry({ sales_date: "2026-09-02", invoice_no: "5451" }),
+        entry({ sales_date: "2026-09-02", invoice_no: "5452" }),
+      ],
+      "2026-09-02",
+      "2026-09-02"
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.first)).toEqual([true, false]);
+  });
+
+  it("ignores an entry dated outside the period", () => {
+    const rows = buildLedgerRows(
+      [entry({ sales_date: "2026-08-31" }), entry({ sales_date: "2026-10-01" })],
+      "2026-09-01",
+      "2026-09-02"
+    );
+    expect(rows.every((r) => r.kind === "none")).toBe(true);
+  });
+
+  it("steps across a month and a year boundary without losing or shifting a day", () => {
+    expect(buildLedgerRows([], "2026-01-31", "2026-02-01").map((r) => r.date)).toEqual([
+      "2026-01-31",
+      "2026-02-01",
+    ]);
+    expect(buildLedgerRows([], "2025-12-31", "2026-01-01").map((r) => r.date)).toEqual([
+      "2025-12-31",
+      "2026-01-01",
+    ]);
+    // 2024 was a leap year; the book has a Feb 29 line.
+    expect(buildLedgerRows([], "2024-02-28", "2024-03-01")).toHaveLength(3);
+  });
+
+  it("foots the columns, with CASH carrying the whole invoice", () => {
+    const totals = ledgerTotals([
+      entry({ sales_date: "2026-09-02" }),
+      entry({
+        sales_date: "2026-09-03",
+        vatable_sales: 6160.71,
+        vat_output_tax: 739.29,
+        gross_snapshot: 6900,
+      }),
+    ]);
+    expect(totals.vatable).toBe(16589.28);
+    expect(totals.output).toBe(1990.72);
+    expect(totals.gross).toBe(18580);
+    expect(totals.cash).toBe(totals.gross);
+    expect(totals.vatable + totals.output).toBe(totals.gross);
+  });
+
+  it("spells the two sale types as the book does", () => {
+    expect(BIR_SALE_TYPES).toEqual(["Private", "Government"]);
   });
 });

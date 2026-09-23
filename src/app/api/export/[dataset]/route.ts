@@ -296,15 +296,18 @@ async function exportBirExpenses(req: Request): Promise<NextResponse> {
 
 /**
  * The Summary List of Sales, in the column order of the sheet the bookkeeper
- * already receives: DATE, NAME, ADDRESS, INVOICE NUMBERS, VAT REG NO., the
- * three sales buckets, VAT OUTPUT TAX, TOTAL INVOICE AMOUNT.
+ * already receives — all eighteen columns, including the six that are blank in
+ * every row ever written. They are emitted empty rather than dropped so the
+ * file can be pasted into the workbook without re-aligning anything.
  *
  * Cancelled entries are excluded — a cancelled entry means the sale should not
  * have been in the book, and the invoice number has been freed for reuse.
  *
- * Every customer here is a walk-in individual, so EXEMPT and ZERO-RATED are
- * always blank and VAT REG NO. is empty: those columns exist because the BIR
- * form has them, not because this business has such sales.
+ * EXEMPT, ZERO-RATED and VAT REG NO. are blank because every customer here is
+ * a walk-in individual; LOCAL and SERVICE because the book has never used
+ * them; ACCOUNT because every sale is entered as cash, on the bookkeeper's
+ * instruction (Ryan, 2026-09-23). Those columns exist because the BIR form has
+ * them, not because this business has such sales.
  */
 async function exportBirSales(req: Request): Promise<NextResponse> {
   const url = new URL(req.url);
@@ -318,7 +321,7 @@ async function exportBirSales(req: Request): Promise<NextResponse> {
     let q = supabase
       .from("bir_sales_entries")
       .select(
-        "id, sales_date, invoice_no, branch, gross_snapshot, vatable_sales, vat_output_tax, customer_name_snapshot, customer_address_snapshot, item_snapshot, period_key"
+        "id, sales_date, invoice_no, branch, gross_snapshot, vatable_sales, vat_output_tax, customer_name_snapshot, customer_address_snapshot, item_snapshot, quantity, sale_type, period_key"
       )
       .is("cancelled_at", null)
       .gte("sales_date", range.start)
@@ -343,6 +346,7 @@ async function exportBirSales(req: Request): Promise<NextResponse> {
     ["DATE", (r) => r.sales_date],
     ["NAME", (r) => r.customer_name_snapshot],
     ["ADDRESS", (r) => r.customer_address_snapshot],
+    ["F", () => ""],
     ["INVOICE NUMBERS", (r) => r.invoice_no],
     ["VAT REG. NO.", () => ""],
     ["SALES EXEMPTED", () => ""],
@@ -350,7 +354,13 @@ async function exportBirSales(req: Request): Promise<NextResponse> {
     ["TAXABLE SALES ZERO-RATED", () => ""],
     ["VAT OUTPUT TAX", (r) => r.vat_output_tax],
     ["TOTAL INVOICE AMOUNT", (r) => r.gross_snapshot],
-    ["ITEM", (r) => r.item_snapshot],
+    ["CLASSIFICATION LOCAL", () => ""],
+    ["CLASSIFICATION SERVICE", () => ""],
+    ["TERMS CASH", (r) => r.gross_snapshot],
+    ["TERMS ACCOUNT", () => ""],
+    ["TYPE OF SALES", (r) => r.sale_type],
+    ["ITEM DESCRIPTION", (r) => r.item_snapshot],
+    ["QUANTITY", (r) => r.quantity],
     ["BOOK", (r) => branchInfo(String(r.branch)).label],
     ["PERIOD", (r) => r.period_key],
   ];

@@ -87,8 +87,13 @@ this section is the volatile half of the file and drifts fastest.
     reuse numbers (1477 and 1545 each also sit on a 2026-04/05 payment), so a
     receipt-number fallback would need contract + amount alongside it.
 - Supabase project `trjlqcvhrgggcvsxxaml`, region **ap-south-1** (pooler:
-  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0044 all applied
-  to prod** — 0034–0044 verified 2026-09-01 by probing the live catalog for the
+  `aws-1-ap-south-1.pooler.supabase.com`). Migrations **0001–0045 all applied to
+  prod** — 0045 applied and verified 2026-09-23 (columns `quantity`/`sale_type`
+  on `bir_sales_entries`, both check constraints, and exactly one signature
+  each for `book_sale`/`book_standalone_sale`/`update_sale_entry_details` — no
+  overloads; backup `backup-2026-09-23-*` taken first, 31 tables, 23,339 rows,
+  and the whole file was dry-run in a rolled-back transaction before applying)
+  — 0034–0044 verified 2026-09-01 by probing the live catalog for the
   object each one creates (`separated_on`, `set_separation_date`,
   `payslips.holiday_lines`, `v_online_collections_day`, `reopen_contract`,
   `bir_expenses`, `can_see_bir`, `bir_sales_entries`, `v_bir_sales_register`,
@@ -628,7 +633,23 @@ prove via `audit_log` that read-only runs wrote nothing.
   indexes enforce one booking per contract and one use of a number per
   branch. *Booked* (by `sales_date`) and *sold* (by `contract_date`) are
   shown side by side and never subtracted — a July sale booked in August
-  belongs to both, in different periods. Still to come: `/bir/vat` (2550Q)
+  belongs to both, in different periods. **`/bir/sales` is laid out as the
+  bookkeeper's paper ledger (0045)** — the "Sales - Appliances" tab's own
+  eighteen columns in its order, a two-row header, and a line for every
+  calendar day reading "No transaction" when there was none. Six columns (F,
+  VAT reg. no., Exempted, Zero-rated, Local, Service) are blank in every row
+  ever written and are **drawn anyway, empty**: the value of the layout is that
+  column eight on screen is column eight on paper. **TERMS is rendered, never
+  stored** — every sale goes under CASH on the bookkeeper's instruction (Ryan,
+  2026-09-23) even though most are installment contracts, so the app cannot
+  hold a TERMS figure that disagrees with a filed one. 0045 added the two
+  columns a contract cannot supply — `quantity` and `sale_type`
+  (Private/Government, which matters because a government buyer withholds VAT)
+  — plus `update_sale_entry_details`, which corrects those two and nothing
+  else. It **dropped and recreated** `book_sale`/`book_standalone_sale` rather
+  than replacing them (a changed argument list makes an overload); both new
+  args have defaults, so the old four-arg call still resolves and the migration
+  is safe to apply before the code. Still to come: `/bir/vat` (2550Q)
   and the historical import. **Only a DELIVERED item is declared as a sale**
   (0044): `book_sale` refuses any other delivery status, so a cancelled sale
   never enters the book and needs no credit note, while a delivered sale that

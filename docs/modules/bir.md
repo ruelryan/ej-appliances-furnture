@@ -202,6 +202,89 @@ different periods. Subtracting them would invent a number that means nothing.
 tagged by hand. Entries are **cancelled, never deleted**; a cancel frees the
 invoice number and returns the sale to the queue.
 
+## The page is laid out as the paper book (0045)
+
+`/bir/sales` renders the ledger in the column order of the bookkeeper's
+"Sales - Appliances" tab, because that is what the office has checked against
+for years and a translation step is where a mis-read happens. Eighteen columns,
+a two-row header with the paper's groupings, and **a line for every calendar
+day** — a day with no sale reads `No transaction` / `-`, exactly as the book
+writes it. A day that is simply absent looks identical to a day someone forgot
+to write up, which is the failure this module exists to prevent.
+
+| # | Column | Source |
+|---|---|---|
+| 1 | DATE | `sales_date` |
+| 2 | NAME | `customer_name_snapshot` |
+| 3 | ADDRESS | `customer_address_snapshot` |
+| 4 | F | always blank |
+| 5 | INVOICE NUMBERS | `invoice_no` |
+| 6 | VAT REG. NO. | always blank |
+| 7 | SALES — EXEMPTED | always blank |
+| 8 | TAXABLE SALES — 12% | `vatable_sales` |
+| 9 | TAXABLE SALES — ZERO-RATED | always blank |
+| 10 | VAT OUTPUT TAX | `vat_output_tax` |
+| 11 | TOTAL INVOICE AMOUNT | `gross_snapshot` |
+| 12–13 | CLASSIFICATION — LOCAL / SERVICE | always blank |
+| 14–15 | TERMS — CASH / ACCOUNT | `gross_snapshot` in CASH; ACCOUNT always blank |
+| 16 | TYPE OF SALES | `sale_type` |
+| 17 | ITEM DESCRIPTION | `item_snapshot` |
+| 18 | QUANTITY | `quantity` |
+
+**The six always-blank columns are drawn, not dropped.** The value of the
+layout is that column eight on the screen is column eight on the paper. They
+exist because the BIR form has them, not because this business has such sales.
+
+**TERMS is rendered, not stored.** Every row of the real book puts the whole
+invoice under CASH and leaves ACCOUNT empty — the bookkeeper's instruction is
+to treat all sales as cash (Ryan, 2026-09-23), even though most of them are
+installment contracts. Keeping it out of the table means the app can never hold
+a TERMS figure that disagrees with an amount already filed. If the convention
+changes, it changes in `ledgerTotals` and in the ledger's two TERMS cells
+together.
+
+**One ledger is one registration**, and the All tab stacks two rather than
+merging them: separate booklets, separate returns. Owner and admin get a
+nineteenth column outside the book's eighteen, holding Edit and Cancel — it
+sits outside so the columns being compared against paper keep their positions.
+
+### The two columns a contract cannot supply
+
+0045 added `quantity` and `sale_type` to `bir_sales_entries`, snapshotted like
+every other figure there.
+
+- **QUANTITY** — the contract carries a free-text item description and no
+  count, so this is not derivable. Defaults to 1.
+- **TYPE OF SALES** — `Private` or `Government`. Not cosmetic: a government
+  buyer withholds VAT. The book has one, Inopacan National High School,
+  2024-03-06, ₱28,300.
+
+`update_sale_entry_details(id, sale_type, quantity)` corrects those two and
+**nothing else**. The alternative is cancel-and-rebook, which on an
+already-filed entry moves `booked_at` so the audit trail reads as a
+re-declaration of the sale rather than a correction to one field. Amounts stay
+underivable from the UI: they come from the contract at booking, which is the
+guarantee 0041 exists to protect.
+
+### The entry line
+
+The last row of the ledger is live for owner and admin — the app's version of
+writing the next line into the book. Three things are typed: the invoice number
+from the booklet, the type, the quantity. Name, address and every amount fill
+in from the chosen contract and stay read-only.
+
+The contract list is the same queue as *Ready to book* — delivered, not yet
+booked, this registration — so a sale that cannot legally be declared is never
+offered. The dialog-based **Book** button stays: the queue is what makes an
+unbooked sale visible, and the entry line cannot do that job.
+
+Note that `book_sale` and `book_standalone_sale` were **dropped and recreated**
+in 0045 rather than replaced. A changed argument list makes an overload, and
+PostgREST then resolves `rpc()` ambiguously. Both new arguments carry defaults
+and `p_note` keeps its position, so the four-argument call in the
+previously-deployed code still resolves — which is what made it safe to apply
+0045 before pushing the code.
+
 ## The book starts in 2024
 
 The store became **VAT-registered in 2024** (Ryan, 2026-08-31). The first

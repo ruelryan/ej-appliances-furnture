@@ -105,6 +105,8 @@ export async function bookSale(input: {
   invoiceNo: string;
   salesDate: string;
   note: string;
+  saleType: string;
+  quantity: number;
 }) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("book_sale", {
@@ -112,6 +114,8 @@ export async function bookSale(input: {
     p_invoice_no: input.invoiceNo,
     p_sales_date: input.salesDate,
     p_note: input.note,
+    p_sale_type: input.saleType,
+    p_quantity: input.quantity,
   });
   if (error) return { error: error.message };
   revalidatePath("/bir");
@@ -148,6 +152,8 @@ export async function bookStandaloneSale(input: {
   customerAddress: string;
   item: string;
   note: string;
+  saleType: string;
+  quantity: number;
 }) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("book_standalone_sale", {
@@ -159,6 +165,34 @@ export async function bookStandaloneSale(input: {
     p_customer_address: input.customerAddress,
     p_item: input.item,
     p_note: input.note,
+    p_sale_type: input.saleType,
+    p_quantity: input.quantity,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/bir");
+  revalidatePath("/bir/sales");
+  return {};
+}
+
+/**
+ * Correct the two columns of an entry that are typed rather than derived
+ * (0045).
+ *
+ * The alternative is cancel-and-rebook, which on an already-filed entry moves
+ * `booked_at` and reads in the audit trail as a re-declaration of the sale
+ * instead of a correction to one field. Amounts stay underivable from here on
+ * purpose — they come from the contract at booking.
+ */
+export async function updateSaleEntryDetails(input: {
+  entryId: string;
+  saleType: string;
+  quantity: number;
+}) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_sale_entry_details", {
+    p_id: input.entryId,
+    p_sale_type: input.saleType,
+    p_quantity: input.quantity,
   });
   if (error) return { error: error.message };
   revalidatePath("/bir");

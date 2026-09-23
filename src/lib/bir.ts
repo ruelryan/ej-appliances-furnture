@@ -180,3 +180,126 @@ export const BIR_SPLIT_CASES: { gross: number; vatable: number; inputTax: number
   { gross: 8960, vatable: 8000, inputTax: 960 },
   { gross: 0, vatable: 0, inputTax: 0 },
 ];
+
+// ── The sales book as it looks on paper (0045) ────────────────
+//
+// The bookkeeper's "Sales - Appliances" tab is a journal with a fixed column
+// order, and the office checks the screen against it line by line. Six of its
+// columns are blank in every row ever written (F, VAT REG. NO., EXEMPTED,
+// ZERO-RATED, LOCAL, SERVICE) and are kept anyway, empty: the value of the
+// layout is that column 8 on screen is column 8 on paper.
+
+/**
+ * TYPE OF SALES. Two values, exactly as the book spells them.
+ *
+ * Nearly every row is Private. Government exists because it changes how the
+ * sale is treated — a government buyer withholds VAT — so guessing Private for
+ * one would put a wrong figure in a filed return. In the book it is the
+ * Inopacan National High School row of 2024-03-06.
+ */
+export const BIR_SALE_TYPES = ["Private", "Government"] as const;
+export type BirSaleType = (typeof BIR_SALE_TYPES)[number];
+export const DEFAULT_SALE_TYPE: BirSaleType = "Private";
+
+/** One booked sale, as the ledger needs it. Every figure is a snapshot taken
+ *  at booking — never re-read from the contract, or a rename would restate a
+ *  filed month. */
+export interface LedgerEntry {
+  id: string;
+  contract_id: string | null;
+  sales_date: string;
+  invoice_no: string;
+  customer_name_snapshot: string;
+  customer_address_snapshot: string | null;
+  item_snapshot: string | null;
+  vatable_sales: number;
+  vat_output_tax: number;
+  gross_snapshot: number;
+  quantity: number;
+  sale_type: string;
+  branch: string;
+}
+
+/**
+ * A line of the book: either a sale, or a day that had none.
+ *
+ * `first` marks the first line of a date, which is what carries the date in
+ * the DATE column — the paper book writes the day once and lists that day's
+ * sales beneath it.
+ */
+export type LedgerRow =
+  | { kind: "entry"; date: string; first: boolean; entry: LedgerEntry }
+  | { kind: "none"; date: string; first: true };
+
+/**
+ * Every calendar day in the period, in order, with its sales.
+ *
+ * A day with no sale gets a "No transaction" line, exactly as the paper book
+ * does. That is not decoration: a day that is simply absent looks identical to
+ * a day someone forgot to write up, and the whole point of this module is that
+ * an undeclared sale stays visible.
+ *
+ * Dates are compared and stepped as plain ISO strings in UTC. Building them
+ * through a local-zone Date is how a day shifts by one either side of
+ * midnight — the same class of bug as the `pg` date parser in the Sheet sync.
+ */
+export function buildLedgerRows(
+  entries: LedgerEntry[],
+  start: string,
+  end: string
+): LedgerRow[] {
+  const byDate = new Map<string, LedgerEntry[]>();
+  for (const e of entries) {
+    if (e.sales_date < start || e.sales_date > end) continue;
+    const day = byDate.get(e.sales_date);
+    if (day) day.push(e);
+    else byDate.set(e.sales_date, [e]);
+  }
+
+  const rows: LedgerRow[] = [];
+  for (let d = start; d <= end; d = nextDay(d)) {
+    const day = byDate.get(d);
+    if (!day || day.length === 0) {
+      rows.push({ kind: "none", date: d, first: true });
+      continue;
+    }
+    day.forEach((entry, i) => {
+      rows.push({ kind: "entry", date: d, first: i === 0, entry });
+    });
+  }
+  return rows;
+}
+
+/** The next ISO date, stepped in UTC so no local zone can move the day. */
+function nextDay(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+}
+
+/**
+ * The journal footer.
+ *
+ * `cash` repeats `gross` rather than deriving anything: every row of the book
+ * puts the whole invoice in the CASH column and leaves ACCOUNT empty, on the
+ * bookkeeper's instruction to treat all sales as cash (Ryan, 2026-09-23), even
+ * though most of them are installment contracts. If that convention ever
+ * changes it changes here and in the ledger's TERMS columns together.
+ */
+export function ledgerTotals(entries: LedgerEntry[]) {
+  let vatable = 0;
+  let output = 0;
+  let gross = 0;
+  for (const e of entries) {
+    vatable += Number(e.vatable_sales ?? 0);
+    output += Number(e.vat_output_tax ?? 0);
+    gross += Number(e.gross_snapshot ?? 0);
+  }
+  const round = (n: number) => Math.round(n * 100) / 100;
+  return {
+    vatable: round(vatable),
+    output: round(output),
+    gross: round(gross),
+    cash: round(gross),
+    count: entries.length,
+  };
+}
