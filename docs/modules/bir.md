@@ -256,8 +256,14 @@ every other figure there.
 - **QUANTITY** — the contract carries a free-text item description and no
   count, so this is not derivable. Defaults to 1.
 - **TYPE OF SALES** — `Private` or `Government`. Not cosmetic: a government
-  buyer withholds VAT. The book has one, Inopacan National High School,
-  2024-03-06, ₱28,300.
+  buyer withholds VAT. The live book has **six** rows that look like government
+  buyers, all of which the 0045 backfill left as `Private` and which need a
+  ruling one at a time (2026-09-23): Inopacan National HS 2024-03-06 ₱28,300;
+  Nahulid Elementary 2024-11-18 ₱32,000; Union Elementary 2026-03-19 ₱32,000
+  and 2026-03-23 ₱5,000; Camang Elementary 2026-08-17 ₱46,400; and LGU - San
+  Ricardo 2024-12-12 ₱312,333.65 (the standalone entry of 0043). A sale to a
+  public school is not automatically a government sale — it can be the PTA or
+  a teacher buying personally — so none was changed automatically.
 
 `update_sale_entry_details(id, sale_type, quantity)` corrects those two and
 **nothing else**. The alternative is cancel-and-rebook, which on an

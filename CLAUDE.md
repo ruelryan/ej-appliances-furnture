@@ -644,7 +644,12 @@ prove via `audit_log` that read-only runs wrote nothing.
   2026-09-23) even though most are installment contracts, so the app cannot
   hold a TERMS figure that disagrees with a filed one. 0045 added the two
   columns a contract cannot supply — `quantity` and `sale_type`
-  (Private/Government, which matters because a government buyer withholds VAT)
+  (Private/Government, which matters because a government buyer withholds VAT
+  — the backfill made every existing row `Private`, and **six live rows look
+  like government buyers and still need a ruling one at a time**: four
+  elementary/high schools, and the LGU - San Ricardo standalone entry; a sale
+  to a public school is not automatically a government sale, so none was
+  changed automatically)
   — plus `update_sale_entry_details`, which corrects those two and nothing
   else. It **dropped and recreated** `book_sale`/`book_standalone_sale` rather
   than replacing them (a changed argument list makes an overload); both new
