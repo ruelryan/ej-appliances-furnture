@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/supabase/server";
+import { ContractSearch } from "@/components/contract-search";
 import { OwnerBoard } from "./dashboard/owner-board";
 import { AdminBoard } from "./dashboard/admin-board";
 
@@ -32,6 +33,20 @@ export default async function DashboardPage() {
       <h1 className="text-xl font-semibold text-ink">
         {profile.role === "owner" ? `Good day, ${greeting}` : "Today"}
       </h1>
+
+      {/* Above the board on purpose. Nearly every task here starts by finding
+          one account — recording a payment, answering a customer on Messenger,
+          checking a balance — and that used to mean Contracts, then the search
+          box, then typing. Picking a match opens the contract; pressing Enter
+          with nothing highlighted falls through to /contracts?q=…, the full
+          filtered list, which is also the no-JavaScript path. */}
+      <form action="/contracts" method="get" className="flex gap-2">
+        <ContractSearch
+          name="q"
+          placeholder="Find a customer or contract — name, no., or item…"
+        />
+      </form>
+
       {profile.role === "owner" ? (
         <OwnerBoard />
       ) : (

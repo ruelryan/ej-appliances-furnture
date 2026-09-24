@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { peso, fmtDateShort } from "@/lib/format";
 import { TierBadge } from "@/components/tier-badge";
 import { PaidProgress } from "@/components/paid-progress";
-import { btnPrimary, btnSecondary, input } from "@/components/ui";
+import { btnPrimary, btnSecondary } from "@/components/ui";
+import { ContractSearch } from "@/components/contract-search";
 import { quoteIlikePattern } from "@/lib/supabase/filters";
 
 export const dynamic = "force-dynamic";
@@ -51,14 +52,13 @@ export default async function ContractsPage({
         </Link>
       </div>
 
+      {/* The text box is a live typeahead; everything around it is unchanged.
+          Picking a match opens that contract directly. Pressing Enter with
+          nothing highlighted still submits the form, which filters this list
+          server-side and is what keeps the status select — and the no-JS
+          path — working. */}
       <form className="flex gap-2" action="/contracts" method="get">
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="Search name, contract no., or item…"
-          className={input}
-        />
+        <ContractSearch name="q" find={q} />
         <select
           name="status"
           defaultValue={status}

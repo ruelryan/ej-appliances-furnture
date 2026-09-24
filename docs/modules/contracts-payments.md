@@ -18,6 +18,16 @@ After that, `guard_contract_money` (a `before update` trigger from 0022) rejects
 The contract page header carries its own navigation, because the job is
 usually "work through the book", not "open one contract".
 
+**The same search box is on three surfaces** — the contract page nav bar, the
+`/contracts` list, and the dashboard — which is why the component lives in
+`src/components/contract-search.tsx` rather than beside any one of them. It
+takes the field `name` the wrapping form posts (`find` on the contract page,
+whose own `q` means something else; `q` on the other two) and, on the contract
+page only, the nav `sort` to carry through and the `currentId` to dim. On the
+dashboard it sits **above** the board: nearly every task there starts by
+finding one account, and Enter with nothing highlighted falls through to
+`/contracts?q=…`, the full filtered list.
+
 - **◀ ▶ walk the OPEN contracts** in the chosen order (A–Z, longest since
   payment, most overdue). The list is one query capped at PostgREST's 1000
   rows, and it is `.order()`ed so which rows come back is at least stable —

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ContractSearch } from "./contract-search";
+import { ContractSearch } from "@/components/contract-search";
 
 export const NAV_SORTS = [
   { key: "name", label: "A–Z by name" },
@@ -85,7 +85,13 @@ export function ContractNavBar({
       */}
       <form action={`/contracts/${contractId}`} method="get" className="flex gap-2">
         <input type="hidden" name="nav" value={sort} />
-        <ContractSearch contractId={contractId} sort={sort} find={find} />
+        <ContractSearch
+          name="find"
+          find={find}
+          sort={sort}
+          currentId={contractId}
+          placeholder="Jump to another contract — name, no., or item…"
+        />
         <button
           type="submit"
           className="shrink-0 rounded-card border border-line bg-white px-4 text-sm font-semibold text-ink hover:bg-surface"

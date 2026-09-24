@@ -1,14 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { input } from "@/components/ui";
 import { peso } from "@/lib/format";
-
-/** A combobox must name the list it controls, and the highlighted option, or
- *  a screen reader announces neither. */
-const LIST_ID = "contract-search-results";
-const optionId = (i: number) => `contract-search-option-${i}`;
 
 interface Hit {
   id: string;
@@ -20,16 +15,20 @@ interface Hit {
 }
 
 /**
- * Jump to another contract, with matches appearing as you type.
+ * Find a contract, with matches appearing as you type. Used in three places —
+ * the contract detail nav bar, /contracts, and the dashboard — which is why it
+ * lives here rather than beside any one of them.
  *
  * It fetches a GET route (`/api/contracts/search`) rather than calling a server
  * action, because an action is a POST and middleware refuses every non-GET
  * while "View as" is on. RLS scopes the results, so a collector only ever sees
  * their own worklist here.
  *
- * The surrounding <form> is kept and still works: pressing Enter with nothing
- * highlighted submits to the page, which renders the same search server-side.
- * That is the no-JavaScript path, and it costs one element to keep.
+ * The surrounding <form> is always kept and still works: pressing Enter with
+ * nothing highlighted submits to whichever page wraps it, which renders the
+ * same search server-side. That is the no-JavaScript path, and it costs one
+ * element to keep. `name` is what that form posts — `q` on the list pages,
+ * `find` on the detail page — so it has to be passed in.
  *
  * Deliberate details, each of which was wrong in an earlier draft:
  *  - 200ms debounce, so a five-letter name is one request rather than five;
@@ -42,13 +41,25 @@ interface Hit {
  *  - Escape closes it without clearing what was typed.
  */
 export function ContractSearch({
-  contractId,
+  name = "q",
+  find = "",
   sort,
-  find,
+  currentId,
+  placeholder = "Search name, contract no., or item…",
+  label = "Search contracts",
 }: {
-  contractId: string;
-  sort: string;
-  find: string;
+  /** Field name the wrapping form submits (`q` on list pages, `find` on the
+   *  contract page, whose own `q` means something else). */
+  name?: string;
+  /** Initial term, so a server-rendered search stays in the box. */
+  find?: string;
+  /** Contract-page nav order; when set it rides along as `?nav=` so paging
+   *  through results keeps the order you chose. */
+  sort?: string;
+  /** The contract you are already on, dimmed in the list. */
+  currentId?: string;
+  placeholder?: string;
+  label?: string;
 }) {
   const router = useRouter();
   const [term, setTerm] = useState(find);
@@ -57,6 +68,15 @@ export function ContractSearch({
   const [busy, setBusy] = useState(false);
   const [active, setActive] = useState(-1);
   const boxRef = useRef<HTMLDivElement>(null);
+
+  // A combobox must name the list it controls, and the highlighted option, or
+  // a screen reader announces neither. More than one of these can be on a page
+  // (the contract page has its own), so the ids must be per-instance —
+  // useId rather than a module counter, which would hand the server and the
+  // client different values and mismatch on hydration.
+  const uid = useId();
+  const listId = `${uid}-results`;
+  const optionId = (i: number) => `${uid}-option-${i}`;
 
   useEffect(() => {
     const q = term.trim();
@@ -100,7 +120,7 @@ export function ContractSearch({
 
   const go = (id: string) => {
     setOpen(false);
-    router.push(`/contracts/${id}?nav=${sort}`);
+    router.push(sort ? `/contracts/${id}?nav=${sort}` : `/contracts/${id}`);
   };
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -125,7 +145,7 @@ export function ContractSearch({
     <div ref={boxRef} className="relative min-w-0 flex-1">
       <input
         type="search"
-        name="find"
+        name={name}
         value={term}
         onChange={(e) => {
           setTerm(e.target.value);
@@ -133,10 +153,10 @@ export function ContractSearch({
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
-        placeholder="Jump to another contract — name, no., or item…"
-        aria-label="Search contracts"
+        placeholder={placeholder}
+        aria-label={label}
         aria-expanded={show}
-        aria-controls={LIST_ID}
+        aria-controls={listId}
         aria-activedescendant={active >= 0 && hits[active] ? optionId(active) : undefined}
         aria-autocomplete="list"
         role="combobox"
@@ -151,7 +171,7 @@ export function ContractSearch({
               {busy ? "Searching…" : `No contract matches “${term.trim()}”`}
             </p>
           ) : (
-            <ul id={LIST_ID} role="listbox" className="max-h-72 overflow-y-auto">
+            <ul id={listId} role="listbox" className="max-h-72 overflow-y-auto">
               {hits.map((h, i) => (
                 <li key={h.id}>
                   <button
@@ -163,7 +183,7 @@ export function ContractSearch({
                     onClick={() => go(h.id)}
                     className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left ${
                       i === active ? "bg-surface" : "bg-white"
-                    } ${h.id === contractId ? "opacity-50" : ""}`}
+                    } ${h.id === currentId ? "opacity-50" : ""}`}
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium text-ink">
